@@ -195,10 +195,14 @@ deterministic_scores = check_result["scores"]
 
 ### LLM 评审
 
-读 `.evolve/program.md` 的评估方式：
-- **Codex**：通过 codex CLI 调用
-- **Claude**：spawn 独立 Agent
-- **其他**：按 program.md 配置
+**评审必须由独立模型完成，不能自评。** Claude 作为 Builder 时，不能同时做 Evaluator——自评偏差会导致分数虚高（实测：Claude 自评 8.5-9.0，Codex 独立评审只给 6-7）。
+
+评审优先级：
+1. **Codex**（推荐）：通过 codex CLI 调用，与 Builder 完全独立
+2. **Claude**：仅在 Codex 不可用时降级使用，且必须 spawn 独立 Agent（不能在 Builder 会话内自评）
+3. **其他**：按 program.md 配置
+
+如果同时跑了多个评审，以 Codex 分数决定 pass/fail。
 
 评审 prompt 基于 eval.yml 的维度定义动态生成。只评 `type: llm-judged` 的维度。
 

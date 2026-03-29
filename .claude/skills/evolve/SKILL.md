@@ -174,9 +174,11 @@ for prereq in adapter.prerequisites:
 
 ### Step 6 — 选择 Evaluator（一个问题）
 
+**核心原则：评审必须由独立模型完成，不能自评。** Builder 用 Claude 时，Evaluator 不能是同一个 Claude 实例——自评偏差会导致分数虚高（实测：Claude 自评 8.5-9.0，Codex 独立评审只给 6-7）。
+
 「用什么做评估？」
-- A. Codex（推荐，独立评估最客观）
-- B. Claude（另开一个实例）
+- A. Codex（推荐，独立评估最客观，以 Codex 分数决定 pass/fail）
+- B. Claude（仅在 Codex 不可用时降级，必须 spawn 独立 Agent）
 - C. 其他
 
 将选择记录到 `.evolve/program.md` 的 `## 评估方式` 部分。
