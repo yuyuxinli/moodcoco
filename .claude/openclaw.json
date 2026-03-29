@@ -1,0 +1,35 @@
+{
+  "agents": {
+    "list": [
+      {
+        "name": "coco",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
+      }
+    ],
+    "defaults": {
+      "compaction": "压缩时必须保留：用户的反复情绪模式、核心困扰关键词、人物关系（people/ 目录中的人名）、本次对话中发现的新模式"
+    }
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "envelope": {
+    "timestamp": "on",
+    "elapsed": "on"
+  },
+  "userTimezone": "Asia/Shanghai",
+  "streaming": {
+    "blockDefault": "on",
+    "humanDelay": "natural",
+    "breakPreference": "sentence"
+  },
+  "sessionPruning": {
+    "mode": "cache-ttl",
+    "ttl": "5m"
+  }
+}
