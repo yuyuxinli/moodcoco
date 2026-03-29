@@ -70,9 +70,37 @@
 | 42 | before_prompt_build hook | 每轮注入动态上下文（当天情绪摘要） |
 | 43 | message_sending hook | 发送前安全拦截 |
 
+## 优先级总览（按用户感知排序）
+
+### P0 — 用户直接感知，配置即生效
+- Streaming 逐句输出（"可可在认真想再回我"）
+- Timezone 时间感知（"可可知道我是凌晨在难受"）
+- 语音转文字（"发语音也行"）
+
+### P1 — 用户直接感知，需要一定开发
+- 图片分析（"发截图可可能看"）
+- Poll 轻交互（"点一下就行不用打字"）
+- Presence + Heartbeat（"可可主动来找我了"）
+- Lossless Claw（"聊很久了还记得"）
+
+### P2 — 用户间接感知，影响对话质量
+- Session Pruning（长对话后期回复不跑偏）
+- Lossless Claw（跨月记忆不丢失）
+- Model Failover（深夜不掉线）
+- before_prompt hook（可可知道"你今天记了3条日记"）
+- Compaction 定制（压缩后还记得行为模式）
+
+### P3 — 用户感知不到，基础设施/长期探索
+- Control UI / Remote Access / Plugins / RPC / OAuth
+- OpenProse / identityLinks / Canvas UI
+- Camera / Location / Voice Wake / Gmail
+- Elevated Mode / message_sending hook
+
 ## 总计
 
 - 已使用：13 个
 - 遗漏：30 个
-- 其中 P0（立即可用）：3 个
-- 其中 P1（高价值）：7 个
+- 其中 P0（直接感知+立即可用）：3 个
+- 其中 P1（直接感知+需开发）：4 个
+- 其中 P2（间接感知+影响对话）：5 个
+- 其中 P3（不感知/长期）：18 个
