@@ -22,6 +22,14 @@
 - 每完成一个独立改动就 commit
 - commit message：`<type>: <简短描述>`
 
+## 模型配置
+
+- **推荐主模型**：`minimax-m2.7`（via OpenRouter）+ `thinking: high`
+- **Failover chain**：`minimax-m2.7` → `doubao-seed-2-0-pro-260215` → `openrouter/auto`
+- **不推荐**：`deepseek-v3.2`（慢 80s/条 + 泄漏内部推理）
+- **配置位置**：`openclaw.json` → `agents.list` → `coco` 的 `model` 字段
+- 详见 `docs/model-config.md`
+
 ## 必读文件
 
 docs/product-context.md
