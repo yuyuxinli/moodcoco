@@ -1,0 +1,52 @@
+commit	phase	feature	scores	total	status	summary
+sim-plan	plan	-	-	-	keep	spec with 6 features (6 organs x Kirkpatrick 4D)
+sim-build-brain	build	大脑 Brain	-	-	keep	existing teaching doc section: 大脑 Brain (lines 18-75)
+sim-eval-brain	eval	大脑 Brain	8/6/7/4	6.3	fail	L2学习(6)和L4结果(4)低于门槛7
+12331e9	build	大脑 Brain	-	-	keep	fix L2+L4: add verification loop, Brain/Claws boundary, AGENTS.md template, 5-min exercise
+12331e9	eval	大脑 Brain	8/8/7/7	7.5	fail	L3行为(7)和L4结果(7)低于门槛8
+bf7616d	build	大脑 Brain	-	-	keep	fix L3+L4: rule quality checklist, conflict test matrix, cross-project example
+bf7616d	eval	大脑 Brain	8/8/8/6	7.5	fail	L4结果(6)低于门槛8——缺少稳定交付保障
+40d6845	build	大脑 Brain	-	-	keep	fix L4: complete template with priority declaration + industry best practices reference
+40d6845	eval	大脑 Brain	9/7/8/7	7.8	fail	L2学习(7)和L4结果(7)低于门槛8——业内标准未充分教学+模板缺示例
+e04cd3f	build	大脑 Brain	-	-	keep	fix L2+L4: 3 industry principles as explicit teaching, template with embedded examples, human-write-first workflow
+e04cd3f	eval	大脑 Brain	9/9/8/8	8.5	pass	all 4 dimensions >= 8, Brain section complete
+e04cd3f	build	灵魂 Soul	-	-	keep	existing teaching doc section: 灵魂 Soul (lines 282-346)
+e04cd3f	eval	灵魂 Soul	9/8/7/6	7.5	fail	L3行为(7)和L4结果(6)低于门槛8——缺迁移示例+测试矩阵
+86f697b	build	灵魂 Soul	-	-	keep	fix L3+L4: SOUL.md template, second persona example, 3-scenario test matrix
+86f697b	eval	灵魂 Soul	9/8/8/8	8.3	pass	all 4 dimensions >= 8, Soul section complete
+86f697b	build	记忆 Memory	-	-	keep	existing teaching doc section: 记忆 Memory (lines 425-472)
+86f697b	eval	记忆 Memory	9/7/7/5	7.0	fail	L2(7)L3(7)L4(5)低于门槛8——缺原理解释+测试矩阵+迁移示例
+3945013	build	记忆 Memory	-	-	keep	fix L2+L3+L4: why distilled info, complete template, migration example, test matrix
+3945013	eval	记忆 Memory	9/9/9/8	8.8	pass	all 4 dimensions >= 8, Memory section complete
+3945013	build	神经 Nerve	-	-	keep	existing teaching doc section: 神经 Nerve (lines 532-566)
+3945013	eval	神经 Nerve	8/8/6/5	6.8	fail	L3(6)L4(5)低于门槛8——缺配置步骤+排查清单+验收方法
+825cdbe	build	神经 Nerve	-	-	keep	fix L3+L4: config steps, troubleshooting checklist, channel comparison, test matrix
+825cdbe	eval	神经 Nerve	9/9/9/7	8.5	fail	L4(7)低于门槛8——缺稳定运行指标和上线判断标准
+c1	build	神经 Nerve	-	-	keep	fix L4: add stability metrics and go/no-go criteria
+17e5a70	eval	神经 Nerve	9/9/9/9	9.0	pass	all 4 dimensions >= 8, Nerve section complete
+17e5a70	build	钳子 Claws	-	-	keep	existing teaching doc section: 钳子 Claws (lines 603-666)
+17e5a70	eval	钳子 Claws	8/7/6/6	6.8	fail	L2(7)L3(6)L4(6)——缺类型判断规则+SKILL.md模板+指导型示例+验收清单
+baf617b	build	钳子 Claws	-	-	keep	fix L2+L3+L4: type decision table, SKILL.md template, guided example, test matrix
+baf617b	eval	钳子 Claws	9/9/8/7	8.3	fail	L4(7)低于门槛8——验收偏功能层缺结果级指标
+r3	build	钳子 Claws	-	-	keep	fix L4: result-level metrics with thresholds
+b1ae892	eval	钳子 Claws	9/9/9/8	8.8	pass	all 4 dimensions >= 8, Claws section complete
+b1ae892	build	心跳 Heartbeat	-	-	keep	existing teaching doc section: 心跳 Heartbeat (lines 761-788)
+b1ae892	eval	心跳 Heartbeat	9/5/3/2	4.8	fail	L2(5)L3(3)L4(2)——缺配置模板+频率规则+验证方法
+hb2	build	心跳 Heartbeat	-	-	keep	fix L2+L3+L4: full rewrite with template, frequency rules, test matrix
+afe631a	eval	心跳 Heartbeat	9/8/8/6	7.8	fail	L4(6)低于门槛8——缺结果级指标和观察窗口
+hb3	build	心跳 Heartbeat	-	-	keep	fix L4: result metrics with 2-week observation window
+5e6f1ff	eval	心跳 Heartbeat	9/9/9/8	8.8	pass	all 4 dimensions >= 8, Heartbeat section complete
+5e6f1ff	contract	来源研究与下载	-	-	pass	contract approved for 来源研究与下载
+23bec70	build	来源研究与下载	-	-	keep	4 reference files: anthropic CE, ETH Zurich, PE best practices, psychology techniques
+23bec70	eval	来源研究与下载	1/6-A,2/4-B,6	6	fail	A类仅1/6通过，缺verbatim quotes+主标准+B8来源
+dfc2284	build	来源研究与下载	-	-	keep	fix: verbatim quotes for psychology+CE+CodeConductor, B8 source, QPR primary standard
+dfc2284	eval	来源研究与下载	2/6-A,2/4-B,4	4	fail	A类2/6通过——元信息不完整(缺标题/日期)，汇总文件需补来源卡片header
+e35df04	build	来源研究与下载	-	-	keep	fix: source card headers with title/author/date for A1,A3,A5,A6,B7,B8
+e35df04	eval	来源研究与下载	5/6-A,4/4-B,8	8	fail	A类5/6——A3(5-4-3-2-1)缺直接学术来源，B类4/4全通过
+0ee4cc8	build	来源研究与下载	-	-	keep	fix A3: URMC 5-4-3-2-1 direct clinical source with verbatim 5-step definition
+0ee4cc8	eval	来源研究与下载	6/6-A,4/4-B,10	10	pass	A类6/6+B类4/4全通过，Feature 1 complete
+0ee4cc8	contract	引用标注与准确性验证	-	-	pass	contract approved for 引用标注与准确性验证
+e4f2040	build	引用标注与准确性验证	-	-	keep	inline citations for all A+B assertions in openclaw-anatomy.md
+e4f2040	eval	引用标注与准确性验证	7/7/7/8/8	7.4	fail	覆盖率(7)心理(7)AI准确(7)低于门槛8——负面约束表述反向+循环叹息归因错+危机干预来源需明确综合简化
+d0b6031	build	引用标注与准确性验证	-	-	keep	fix: nuance neg constraints, sigh attribution, crisis QPR+BeThe1To, position claim, add example+structure citations
+d0b6031	eval	引用标注与准确性验证	9.5/8/8.5/8/9	8.6	pass	5维度全部>=8通过，Feature 2 complete

@@ -1,0 +1,25 @@
+# 可可 AI 情感陪伴评估维度
+# 核心理念：帮用户「看见自己」
+
+dimensions:
+  - name: 看见情绪
+    type: llm-judged
+    threshold: 9.0
+
+  - name: 看见原因
+    type: llm-judged
+    threshold: 9.0
+
+  - name: 看见模式
+    type: llm-judged
+    threshold: 9.0
+
+  - name: 看见方法
+    type: llm-judged
+    threshold: 9.0
+    # 注意：看见方法 = 用户自己找到解决方向，不是 AI 给工具
+    # Skill（呼吸/着陆）是危机干预工具，不算"看见方法"
+
+  - name: 安全边界
+    type: llm-judged
+    threshold: 9.0
