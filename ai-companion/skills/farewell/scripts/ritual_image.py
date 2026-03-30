@@ -20,6 +20,8 @@ ritual_image.py — 仪式图片生成
     {"status": "error", "error": "PIL not available"}
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import math
@@ -27,14 +29,19 @@ import random
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 # 尝试导入 PIL — 不可用时输出 error JSON 并退出
+HAS_PIL = False
 try:
     from PIL import Image, ImageDraw, ImageFont
 
     HAS_PIL = True
 except ImportError:
-    HAS_PIL = False
+    pass
+
+if TYPE_CHECKING:
+    from PIL import Image, ImageDraw, ImageFont  # noqa: TC004
 
 
 # ---------------------------------------------------------------------------
@@ -51,13 +58,19 @@ TEXT_LIGHT = (139, 115, 85)  # 浅棕 #8B7355
 
 SIZE = (1080, 1080)
 
+_PIL_ERROR: dict[str, str] = {
+    "status": "error",
+    "error": "PIL not available",
+    "hint": "pip install Pillow",
+}
+
 
 # ---------------------------------------------------------------------------
 # Font helper
 # ---------------------------------------------------------------------------
 
 
-def _get_font(size: int):
+def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     """尝试加载系统中文字体，fallback 到 PIL 默认。"""
     candidates = [
         "/System/Library/Fonts/PingFang.ttc",
@@ -80,25 +93,46 @@ def _get_font(size: int):
 # ---------------------------------------------------------------------------
 
 
-def _draw_circle(draw, cx, cy, r, fill, alpha=255):
+def _draw_circle(
+    draw: ImageDraw.ImageDraw,
+    cx: int,
+    cy: int,
+    r: int,
+    fill: tuple[int, ...],
+    alpha: int = 255,
+) -> None:
     """绘制一个填充圆。"""
     draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill)
 
 
-def _draw_soft_glow(img, cx, cy, radius, color, intensity=0.3):
+def _draw_soft_glow(
+    img: Image.Image,
+    cx: int,
+    cy: int,
+    radius: int,
+    color: tuple[int, int, int],
+    intensity: float = 0.3,
+) -> Image.Image:
     """在图像上叠加一个柔和光晕（用半透明圆层叠模拟）。"""
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     steps = 15
     for i in range(steps, 0, -1):
         r = int(radius * i / steps)
-        alpha = int(255 * intensity * (1 - i / steps))
-        c = (*color, alpha)
+        a = int(255 * intensity * (1 - i / steps))
+        c = (*color, a)
         draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=c)
     return Image.alpha_composite(img.convert("RGBA"), overlay)
 
 
-def _draw_particles(draw, cx, cy, count, spread, colors):
+def _draw_particles(
+    draw: ImageDraw.ImageDraw,
+    cx: int,
+    cy: int,
+    count: int,
+    spread: int,
+    colors: list[tuple[int, ...]],
+) -> None:
     """绘制随机散布的小光点。"""
     random.seed(42)  # 确定性渲染
     for _ in range(count):
@@ -109,7 +143,14 @@ def _draw_particles(draw, cx, cy, count, spread, colors):
         _draw_circle(draw, x, y, r, color)
 
 
-def _draw_text_centered(draw, text, y, font, fill=TEXT_COLOR, img_width=1080):
+def _draw_text_centered(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    y: int,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    fill: tuple[int, ...] = TEXT_COLOR,
+    img_width: int = 1080,
+) -> None:
     """在指定 y 位置水平居中绘制文字。"""
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
@@ -122,7 +163,7 @@ def _draw_text_centered(draw, text, y, font, fill=TEXT_COLOR, img_width=1080):
 # ---------------------------------------------------------------------------
 
 
-def generate_burn(output_path: str, text: str | None = None):
+def generate_burn(output_path: str, text: str | None = None) -> str:
     """烧掉日记/信念 — 纸张在火焰中化为光点。"""
     img = Image.new("RGBA", SIZE, (*BG_COLOR, 255))
     draw = ImageDraw.Draw(img)
@@ -157,8 +198,8 @@ def generate_burn(output_path: str, text: str | None = None):
         x = 540 + random.randint(-120, 120)
         y = 350 - random.randint(0, 200)
         r = random.randint(1, 4)
-        alpha = random.randint(60, 150)
-        draw.ellipse([x - r, y - r, x + r, y + r], fill=(255, 220, 180, alpha))
+        a = random.randint(60, 150)
+        draw.ellipse([x - r, y - r, x + r, y + r], fill=(255, 220, 180, a))
 
     # 标题
     font_title = _get_font(36)
@@ -178,7 +219,7 @@ def generate_burn(output_path: str, text: str | None = None):
 
 def generate_capsule(
     output_path: str, open_date: str | None = None, text: str | None = None
-):
+) -> str:
     """时间胶囊封印 — 封好的信封/瓶子。"""
     img = Image.new("RGBA", SIZE, (*BG_COLOR, 255))
     draw = ImageDraw.Draw(img)
@@ -253,7 +294,7 @@ def generate_capsule(
     return output_path
 
 
-def generate_letter(output_path: str, text: str | None = None):
+def generate_letter(output_path: str, text: str | None = None) -> str:
     """未寄出的信 — 一封温暖的信纸。"""
     img = Image.new("RGBA", SIZE, (*BG_COLOR, 255))
     draw = ImageDraw.Draw(img)
@@ -329,24 +370,16 @@ def generate_letter(output_path: str, text: str | None = None):
 # Main
 # ---------------------------------------------------------------------------
 
-GENERATORS = {
+GENERATORS: dict[str, Any] = {
     "burn": generate_burn,
     "capsule": generate_capsule,
     "letter": generate_letter,
 }
 
 
-def main():
+def main() -> None:
     if not HAS_PIL:
-        print(
-            json.dumps(
-                {
-                    "status": "error",
-                    "error": "PIL not available",
-                    "hint": "pip install Pillow",
-                }
-            )
-        )
+        print(json.dumps(_PIL_ERROR))
         sys.exit(1)
 
     parser = argparse.ArgumentParser(description="仪式图片生成")
@@ -373,7 +406,7 @@ def main():
 
     try:
         gen_func = GENERATORS[args.type]
-        kwargs = {}
+        kwargs: dict[str, str] = {}
         if args.type == "capsule" and args.open_date:
             kwargs["open_date"] = args.open_date
         if args.text:
@@ -381,7 +414,7 @@ def main():
 
         gen_func(output_path, **kwargs)
 
-        result = {
+        result: dict[str, Any] = {
             "status": "ok",
             "type": args.type,
             "output_path": output_path,

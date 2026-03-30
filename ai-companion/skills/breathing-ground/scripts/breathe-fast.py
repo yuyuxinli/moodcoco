@@ -101,6 +101,7 @@ if not DRY_RUN:
         )
     )
     # 等待 connect 响应，跳过事件消息
+    resp: dict[str, Any] = {}
     while True:
         resp = json.loads(ws.recv())
         if resp.get("type") == "res" and resp.get("id") == connect_id:

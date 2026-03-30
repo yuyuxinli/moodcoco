@@ -1,0 +1,49 @@
+# ============================================================
+# Ruff — lint + 格式化
+# ============================================================
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",     # pycodestyle 错误
+    "W",     # pycodestyle 警告
+    "F",     # Pyflakes
+    "I",     # isort（import 排序）
+    "B",     # flake8-bugbear（常见 bug）
+    "C4",    # flake8-comprehensions
+    "UP",    # pyupgrade（自动升级旧语法）
+    "SIM",   # flake8-simplify
+    "TC",    # 把仅用于类型标注的 import 移到 TYPE_CHECKING 块
+    "RET",   # return 语句问题
+    "PTH",   # 用 pathlib 替代 os.path
+    "RUF",   # Ruff 专属规则
+]
+ignore = ["E501", "RUF001", "RUF002", "RUF003"]  # 中文全角标点是正常的
+fixable = ["ALL"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ai_companion"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+# ============================================================
+# Pyright — 类型检查
+# ============================================================
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+include = ["ai-companion/skills"]
+exclude = ["**/__pycache__", ".venv", ".evolve", ".claude"]
+reportMissingTypeStubs = false
+
+# ============================================================
+# pytest — 测试
+# ============================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "-q"]
+filterwarnings = ["error", "ignore::DeprecationWarning"]

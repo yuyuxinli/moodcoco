@@ -307,7 +307,7 @@ def _archive_diary_entry(text: str, name: str) -> str:
     current_section_lines = []
     current_section_header = ""
 
-    def flush_section():
+    def flush_section() -> None:
         """输出当前 section，检查是否需要封存。"""
         if not current_section_header:
             result_lines.extend(current_section_lines)
@@ -353,7 +353,9 @@ def _archive_diary_entry(text: str, name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def delete_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -> dict[str, Any]:
+def delete_person(
+    people_dir: str, diary_dir: str, memory_dir: str, name: str
+) -> dict[str, Any]:
     """彻底删除一个人的所有数据。
 
     返回 {"deleted_files": [...], "errors": [...]}
@@ -603,7 +605,7 @@ def open_time_capsule(memory_dir: str, capsule_id: str) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage:")
         print(

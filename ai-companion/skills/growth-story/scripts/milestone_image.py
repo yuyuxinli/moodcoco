@@ -15,19 +15,27 @@ milestone_image.py — 里程碑纪念图生成
     {"status": "ok", "count": 30, "output_path": "...", "width": 1080, "height": 810}
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import random
 import sys
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
+# 尝试导入 PIL — 不可用时输出 error JSON 并退出
+HAS_PIL = False
 try:
     from PIL import Image, ImageDraw, ImageFont
 
     HAS_PIL = True
 except ImportError:
-    HAS_PIL = False
+    pass
+
+if TYPE_CHECKING:
+    from PIL import Image, ImageDraw, ImageFont  # noqa: TC004
 
 # ---------------------------------------------------------------------------
 # 色板
@@ -59,7 +67,8 @@ DEFAULT_MESSAGE = ("又是一个小里程碑", "谢谢你信任我")
 # ---------------------------------------------------------------------------
 
 
-def _get_font(size: int):
+def _get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """尝试加载系统中文字体，fallback 到 PIL 默认。"""
     candidates = [
         "/System/Library/Fonts/PingFang.ttc",
         "/System/Library/Fonts/STHeiti Light.ttc",
@@ -76,14 +85,30 @@ def _get_font(size: int):
     return ImageFont.load_default()
 
 
-def _draw_text_centered(draw, text, y, font, fill=TEXT_COLOR, img_width=1080):
+def _draw_text_centered(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    y: int,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    fill: tuple[int, ...] = TEXT_COLOR,
+    img_width: int = 1080,
+) -> None:
+    """在指定 y 位置水平居中绘制文字。"""
     bbox = draw.textbbox((0, 0), text, font=font)
     text_width = bbox[2] - bbox[0]
     x = (img_width - text_width) // 2
     draw.text((x, y), text, fill=fill, font=font)
 
 
-def _draw_soft_glow(img, cx, cy, radius, color, intensity=0.3):
+def _draw_soft_glow(
+    img: Image.Image,
+    cx: int,
+    cy: int,
+    radius: int,
+    color: tuple[int, int, int],
+    intensity: float = 0.3,
+) -> Image.Image:
+    """在图像上叠加一个柔和光晕。"""
     overlay = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
     steps = 12
@@ -100,7 +125,9 @@ def _draw_soft_glow(img, cx, cy, radius, color, intensity=0.3):
 # ---------------------------------------------------------------------------
 
 
-def generate_milestone(count: int, output_path: str, username: str | None = None):
+def generate_milestone(
+    count: int, output_path: str, username: str | None = None
+) -> str:
     """生成里程碑纪念图。"""
     img = Image.new("RGBA", SIZE, (*BG_COLOR, 255))
     draw = ImageDraw.Draw(img)
@@ -190,7 +217,7 @@ def generate_milestone(count: int, output_path: str, username: str | None = None
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> None:
     if not HAS_PIL:
         print(
             json.dumps(

@@ -14,27 +14,77 @@ pattern_engine.py — 跨关系模式匹配引擎
     有 current_event：输出当前事件与历史的匹配结果
 """
 
+from __future__ import annotations
+
 import json
 import re
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import TypedDict
+
+# ---------------------------------------------------------------------------
+# Type Definitions
+# ---------------------------------------------------------------------------
+
+
+class StageEntry(TypedDict):
+    date: str
+    stage: str
+    user_words: str
+    raw: str
+
+
+class ExitSignal(TypedDict):
+    date: str
+    trigger: str
+    reaction: str
+    outcome: str
+    raw: str
+
+
+class PersonData(TypedDict):
+    name: str
+    file: str
+    relationship_type: str
+    current_status: str
+    stages: list[StageEntry]
+    exit_signals: list[ExitSignal]
+    patterns: list[str]
+    cross_matches: list[str]
+    key_events: list[str]
+
+
+class CrossPattern(TypedDict):
+    dimension: str
+    description: str
+    people: list[str]
+    details: list[str]
+
+
+class HistoryMatch(TypedDict):
+    person: str
+    date: str
+    trigger: str
+    reaction: str
+    matching_keywords: list[str]
+
 
 # ---------------------------------------------------------------------------
 # Markdown Parsing
 # ---------------------------------------------------------------------------
 
 
-def parse_people_file(filepath: str) -> dict:
+def parse_people_file(filepath: str) -> PersonData | None:
     """解析单个 people/*.md 文件，提取结构化数据。"""
     path = Path(filepath)
     if not path.exists():
-        return {}
+        return None
 
     text = path.read_text(encoding="utf-8")
     name = path.stem
 
-    result = {
+    result: PersonData = {
         "name": name,
         "file": str(path),
         "relationship_type": "",
@@ -100,7 +150,7 @@ def parse_people_file(filepath: str) -> dict:
     return result
 
 
-def _parse_stage_entry(entry: str) -> dict:
+def _parse_stage_entry(entry: str) -> StageEntry:
     """解析关系阶段条目：'2026-01: 热恋期，"他好体贴"'"""
     match = re.match(r"(\d{4}-\d{2}(?:-\d{2})?)\s*[:：]\s*(.+)", entry)
     if match:
@@ -118,11 +168,17 @@ def _parse_stage_entry(entry: str) -> dict:
     return {"date": "", "stage": entry, "user_words": "", "raw": entry}
 
 
-def _parse_exit_signal(entry: str) -> dict:
+def _parse_exit_signal(entry: str) -> ExitSignal:
     """解析退出信号条目：
     '2026-03: 触发事件 "对方聊未来" → 用户反应 "我觉得不舒服" → 结果 "冷静了"'
     """
-    result = {"date": "", "trigger": "", "reaction": "", "outcome": "", "raw": entry}
+    result: ExitSignal = {
+        "date": "",
+        "trigger": "",
+        "reaction": "",
+        "outcome": "",
+        "raw": entry,
+    }
 
     date_match = re.match(r"(\d{4}-\d{2}(?:-\d{2})?)\s*[:：]\s*", entry)
     if date_match:
@@ -156,26 +212,26 @@ def _parse_exit_signal(entry: str) -> dict:
 # Cross-Relationship Pattern Matching
 # ---------------------------------------------------------------------------
 
-MATCH_DIMENSIONS = ["timing", "trigger", "reaction", "outcome"]
+MATCH_DIMENSIONS: list[str] = ["timing", "trigger", "reaction", "outcome"]
 
 
-def parse_people_files(people_dir: str) -> list:
+def parse_people_files(people_dir: str) -> list[PersonData]:
     """解析 people/ 目录下所有 .md 文件，返回结构化数据列表。
 
     这是 parse_people_file() 的批量包装，供外部调用使用。
     """
-    result = []
+    result: list[PersonData] = []
     path = Path(people_dir)
     if not path.exists():
         return result
     for f in sorted(path.glob("*.md")):
         data = parse_people_file(str(f))
-        if data:
+        if data is not None:
             result.append(data)
     return result
 
 
-def update_cross_patterns(people_dir: str, patterns: list) -> None:
+def update_cross_patterns(people_dir: str, patterns: list[CrossPattern]) -> None:
     """将发现的跨关系模式写回 people/*.md 的"跨关系匹配"段。
 
     对每个涉及的 people file，更新其 ## 跨关系匹配 段落。
@@ -185,7 +241,7 @@ def update_cross_patterns(people_dir: str, patterns: list) -> None:
         return
 
     # Group patterns by person
-    person_patterns: dict[str, list] = {}
+    person_patterns: dict[str, list[CrossPattern]] = {}
     for p in patterns:
         for name in p.get("people", []):
             if name not in person_patterns:
@@ -199,7 +255,7 @@ def update_cross_patterns(people_dir: str, patterns: list) -> None:
 
         text = filepath.read_text(encoding="utf-8")
         lines = text.split("\n")
-        new_lines = []
+        new_lines: list[str] = []
         in_cross_section = False
         for line in lines:
             stripped = line.strip()
@@ -227,7 +283,7 @@ def update_cross_patterns(people_dir: str, patterns: list) -> None:
         filepath.write_text("\n".join(new_lines), encoding="utf-8")
 
 
-def find_cross_patterns(people_data: list) -> list:
+def find_cross_patterns(people_data: list[PersonData]) -> list[CrossPattern]:
     """跨文件匹配相似模式。
 
     匹配维度：
@@ -237,7 +293,7 @@ def find_cross_patterns(people_data: list) -> list:
 
     至少 2 段关系有相似模式才报告。
     """
-    patterns = []
+    patterns: list[CrossPattern] = []
 
     # Filter to people with exit signals
     with_signals = [p for p in people_data if p.get("exit_signals")]
@@ -246,12 +302,12 @@ def find_cross_patterns(people_data: list) -> list:
 
     # --- Timing patterns ---
     # Extract month-in-relationship for each exit signal
-    timing_groups = {}  # month -> [(name, signal)]
+    timing_groups: dict[int, list[tuple[str, ExitSignal]]] = {}
     for person in with_signals:
         stages = person.get("stages", [])
         if not stages:
             continue
-        first_stage_date = stages[0].get("date", "")
+        first_stage_date: str = stages[0].get("date", "")
         if not first_stage_date:
             continue
 
@@ -260,7 +316,7 @@ def find_cross_patterns(people_data: list) -> list:
                 continue
             months = _months_between(first_stage_date, signal["date"])
             if months is not None:
-                bucket = months  # exact month
+                bucket: int = months  # exact month
                 if bucket not in timing_groups:
                     timing_groups[bucket] = []
                 timing_groups[bucket].append((person["name"], signal))
@@ -270,8 +326,8 @@ def find_cross_patterns(people_data: list) -> list:
         unique_people = list({e[0] for e in entries})
         if len(unique_people) >= 2:
             # 每个人只取最近一条信号
-            seen = set()
-            deduped = []
+            seen: set[str] = set()
+            deduped: list[tuple[str, ExitSignal]] = []
             for name, sig in entries:
                 if name not in seen:
                     seen.add(name)
@@ -289,14 +345,14 @@ def find_cross_patterns(people_data: list) -> list:
 
     # --- Trigger patterns ---
     # Group exit signals by trigger keywords
-    trigger_keywords = {}
+    trigger_keywords: dict[str, list[tuple[str, ExitSignal]]] = {}
     for person in with_signals:
         for signal in person["exit_signals"]:
-            trigger = signal.get("trigger", "").lower()
-            if not trigger:
+            trigger_text: str = signal.get("trigger", "").lower()
+            if not trigger_text:
                 continue
             # Simple keyword extraction
-            for keyword in _extract_keywords(trigger):
+            for keyword in _extract_keywords(trigger_text):
                 if keyword not in trigger_keywords:
                     trigger_keywords[keyword] = []
                 trigger_keywords[keyword].append((person["name"], signal))
@@ -314,13 +370,13 @@ def find_cross_patterns(people_data: list) -> list:
             )
 
     # --- Reaction patterns ---
-    reaction_keywords = {}
+    reaction_keywords: dict[str, list[tuple[str, ExitSignal]]] = {}
     for person in with_signals:
         for signal in person["exit_signals"]:
-            reaction = signal.get("reaction", "").lower()
-            if not reaction:
+            reaction_text: str = signal.get("reaction", "").lower()
+            if not reaction_text:
                 continue
-            for keyword in _extract_keywords(reaction):
+            for keyword in _extract_keywords(reaction_text):
                 if keyword not in reaction_keywords:
                     reaction_keywords[keyword] = []
                 reaction_keywords[keyword].append((person["name"], signal))
@@ -340,13 +396,13 @@ def find_cross_patterns(people_data: list) -> list:
             )
 
     # --- Outcome patterns ---
-    outcome_keywords = {}
+    outcome_keywords: dict[str, list[tuple[str, ExitSignal]]] = {}
     for person in with_signals:
         for signal in person["exit_signals"]:
-            outcome = signal.get("outcome", "").lower()
-            if not outcome:
+            outcome_text: str = signal.get("outcome", "").lower()
+            if not outcome_text:
                 continue
-            for keyword in _extract_outcome_keywords(outcome):
+            for keyword in _extract_outcome_keywords(outcome_text):
                 if keyword not in outcome_keywords:
                     outcome_keywords[keyword] = []
                 outcome_keywords[keyword].append((person["name"], signal))
@@ -366,21 +422,22 @@ def find_cross_patterns(people_data: list) -> list:
     return patterns
 
 
-def match_current_to_history(current_event: str, people_data: list) -> list:
+def match_current_to_history(
+    current_event: str,
+    people_data: list[PersonData],
+) -> list[HistoryMatch]:
     """当前事件与历史退出信号的匹配。
 
     返回匹配到的历史事件列表，供 AI 在对话中引用。
     """
-    matches = []
+    matches: list[HistoryMatch] = []
     current_keywords = set(_extract_keywords(current_event.lower()))
 
     for person in people_data:
         for signal in person.get("exit_signals", []):
-            trigger_keywords = set(_extract_keywords(signal.get("trigger", "").lower()))
-            reaction_keywords = set(
-                _extract_keywords(signal.get("reaction", "").lower())
-            )
-            all_signal_keywords = trigger_keywords | reaction_keywords
+            trigger_kws = set(_extract_keywords(signal.get("trigger", "").lower()))
+            reaction_kws = set(_extract_keywords(signal.get("reaction", "").lower()))
+            all_signal_keywords = trigger_kws | reaction_kws
 
             overlap = current_keywords & all_signal_keywords
             if overlap:
@@ -405,10 +462,10 @@ def match_current_to_history(current_event: str, people_data: list) -> list:
 def _months_between(start_date: str, end_date: str) -> int | None:
     """计算两个日期之间的月数（粗略）。"""
     try:
-        fmt = "%Y-%m-%d" if len(start_date) > 7 else "%Y-%m"
-        start = datetime.strptime(start_date, fmt)
-        fmt = "%Y-%m-%d" if len(end_date) > 7 else "%Y-%m"
-        end = datetime.strptime(end_date, fmt)
+        start_fmt = "%Y-%m-%d" if len(start_date) > 7 else "%Y-%m"
+        start = datetime.strptime(start_date, start_fmt)
+        end_fmt = "%Y-%m-%d" if len(end_date) > 7 else "%Y-%m"
+        end = datetime.strptime(end_date, end_fmt)
         return (end.year - start.year) * 12 + (end.month - start.month)
     except (ValueError, TypeError):
         return None
@@ -416,7 +473,7 @@ def _months_between(start_date: str, end_date: str) -> int | None:
 
 # Chinese relationship-related keywords for matching
 # 对齐 diary SKILL.md 的退出信号检测关键词 + 扩展覆盖
-_KEYWORD_PATTERNS = [
+_KEYWORD_PATTERNS: list[str] = [
     # 分手意图（diary SKILL.md 定义）
     "分手",
     "不想继续",
@@ -486,9 +543,9 @@ _KEYWORD_PATTERNS = [
 ]
 
 
-def _extract_keywords(text: str) -> list:
+def _extract_keywords(text: str) -> list[str]:
     """从文本中提取关系相关关键词。"""
-    found = []
+    found: list[str] = []
     for kw in _KEYWORD_PATTERNS:
         if kw in text:
             found.append(kw)
@@ -496,7 +553,7 @@ def _extract_keywords(text: str) -> list:
 
 
 # Outcome-specific keywords for cross-relationship result matching
-_OUTCOME_KEYWORDS = [
+_OUTCOME_KEYWORDS: list[str] = [
     "分手",
     "冷战",
     "和好",
@@ -512,9 +569,9 @@ _OUTCOME_KEYWORDS = [
 ]
 
 
-def _extract_outcome_keywords(text: str) -> list:
+def _extract_outcome_keywords(text: str) -> list[str]:
     """从结果文本中提取结局相关关键词。"""
-    found = []
+    found: list[str] = []
     for kw in _OUTCOME_KEYWORDS:
         if kw in text:
             found.append(kw)
@@ -526,13 +583,13 @@ def _extract_outcome_keywords(text: str) -> list:
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print("Usage: pattern_engine.py <people_dir> [current_event]")
         sys.exit(1)
 
     people_dir = Path(sys.argv[1])
-    current_event = sys.argv[2] if len(sys.argv) > 2 else None
+    current_event: str | None = sys.argv[2] if len(sys.argv) > 2 else None
 
     # Parse all people files
     people_data = parse_people_files(str(people_dir))
