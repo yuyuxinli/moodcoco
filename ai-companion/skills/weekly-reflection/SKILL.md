@@ -26,7 +26,7 @@ description: 周日回顾——帮用户看见这周的全貌。周日 20:00 Hea
 调用 `exec` 运行两个脚本：
 
 ```
-python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format json --people-dir people/
+python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format json --people-dir people/ --memory-dir memory/
 python3 ai-companion/skills/diary/scripts/growth_tracker.py diary/
 ```
 
@@ -46,7 +46,7 @@ weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触
 | 同一人物 ≥3 天出现 | 匹配 people/ 目录下已有的 *.md 文件名 |
 | 同一触发因素 ≥2 次 | 从 diary 条目的触发字段检测 |
 
-**情绪语义分组**（同族内视为"同一情绪"）：
+**情绪语义分组**（同族内视为"同一情绪"，定义在 `config/emotion_groups.json`）：
 
 | 情绪族 | 包含词汇 |
 |--------|---------|
@@ -57,7 +57,7 @@ weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触
 | 疲惫族 | 累、疲惫、有点累、倦、心累 |
 | 平静族 | 平静、一般、还行、中性、无感 |
 
-语义分组后同一族内情绪词总计 ≥3 次，纳入重复主题。
+语义分组后同一族内情绪词总计 ≥3 次，纳入重复主题。weekly_review.py 启动时从 `skills/weekly-reflection/config/emotion_groups.json` 加载分组表。
 
 **成长信号检测**（轻量级，仅比较相邻两周）：
 

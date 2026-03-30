@@ -734,6 +734,97 @@ Heartbeat 触发 / 用户主动来
 - **闲聊中途转情绪事件**：出现情绪信号 → 无缝切换到 J2。态度不变，只是策略切换
 - **不把闲聊变签到**：不主动推 Skill，不问"那你今天情绪怎么样"
 
+#### 闲聊话题生成模板（节点 A）
+
+`memory_search` 找到近期话题后，按以下优先级选择话题：
+
+| 优先级 | 话题类型 | 模板 | 安全检查 |
+|--------|---------|------|---------|
+| 1 | 未闭合事件回访 | "上次说的那个{事件}，后来怎么样了？" | — |
+| 2 | 人物近况 | "最近跟{人名}怎么样？" | 检查 people/{人名}.md 状态：冷战/分手/封存的人不主动提 |
+| 3 | 日常生活延续 | "你上次说{月底}要{做某事}，准备得怎么样？" | — |
+| 4 | 无具体话题 | 接用户节奏。"没什么事也行。今天天气怎么样你那边？" 或 "我也没什么特别要说的，就是看你来了。" | — |
+
+**话题安全检查**：
+- memory_search 命中 people/*.md 状态为"冷战""分手""封存"的人物 → 不主动提起，等用户自己说
+- 上次对话情绪很重（memory/YYYY-MM-DD.md 记录了高唤醒情绪事件）→ 温和问一句"上次聊完之后怎么样了？"，但不深入——除非用户想聊
+
+#### Cron 日记提醒消息模板
+
+Cron 每日 21:30 触发时，从以下 3 条中随机选一条（避免重复感）：
+- "今天有什么想记下来的？"
+- "今天发生了什么事？大事小事都行。"
+- "今天过得怎么样？一句话就好。"
+
+暂停恢复后第一条："好久没写了，今天有什么想说的？"
+当天已聊过但没写 diary → "今天聊了不少，要不要记一下？"
+
+#### Cron 自适应调度状态机
+
+每次 Cron 触发时，agent 读取 USER.md `## Cron 调度状态` 区块，按以下逻辑执行：
+
+```
+1. memory_get(USER.md) → 读取 "## Cron 调度状态"
+2. 判断 cron_state：
+   - "off" → CRON_SKIP（不发消息，直接退出）
+   - "paused" → 检查 pause_until：
+     - 今天 < pause_until → CRON_SKIP
+     - 今天 >= pause_until → cron_state 改为 "active"，consecutive_no_reply 归零
+   - "active" → 继续
+3. 检查 frequency：
+   - "daily" → 每天发
+   - "every_2_days" → 距上次发送不足 2 天则 CRON_SKIP
+4. 检查：当天已有 diary 记录 或 Heartbeat 已发 → CRON_SKIP
+5. 检查 USER.md ## 偏好设置 的 diary_reminder_status：
+   - "off" → CRON_SKIP
+6. 发送日记提醒消息
+7. 等待用户回复：
+   - 用户回复 → consecutive_no_reply 归零 → 进入 diary 流程
+   - 用户未回复（session 超时）→ consecutive_no_reply += 1
+     → consecutive_no_reply >= 3 → 触发暂停：
+       - pause_count == 0 → pause_until = 今天+3天，pause_count = 1
+       - pause_count >= 1 → pause_until = 今天+7天，frequency = every_2_days，pause_count += 1
+       - cron_state = "paused"
+8. memory_update(USER.md) → 写回状态字段
+```
+
+用户明确说"别提醒我了" → cron_state 改为 "off"，diary_reminder_status 改为 "off"。
+用户说"帮我改到{时间}" → diary_reminder_time 改为新时间。
+用户说"帮我开回来" → cron_state 改为 "active"，diary_reminder_status 改为 "on"。
+
+#### 触发互斥规则
+
+| 场景 | 处理方式 |
+|------|---------|
+| Cron 日记提醒 vs Heartbeat 同日触发 | Heartbeat 优先。当天 Heartbeat 已发消息（无论用户是否回复），当天不再发 Cron |
+| 用户主动来聊 + 当天有未发的 Cron/Heartbeat | 取消待发消息。用户主动来了就不需要被提醒 |
+| Heartbeat 触发但上次用户说"想一个人待着" | 不触发（遵循 HEARTBEAT.md 边界规则） |
+| 周日 20:00 Heartbeat 周回顾 vs 21:30 Cron 日记提醒 | 周日只发周回顾，不发日记提醒 |
+
+#### 成长种子频率控制
+
+成长种子在闲聊（节点 A）或周回顾（节点 E）中自然出现，不主动触发：
+- **每周最多 1 次**。记录上次成长种子日期，本周已有则不再触发
+- **growth_feedback_preference = sensitive 时**：降频为每月最多 1 次
+- 语气像朋友随口一提，不是治疗师做总结
+
+#### 新用户过渡策略（F04 → F06）
+
+当 USER.md 存在且对话次数 ≤ 5 时（检查 `first_meet_step` 字段或 memory/ 中的对话记录数），适用以下过渡规则：
+
+| 对话次数 | 策略 |
+|---------|------|
+| 第 2 次 | 记忆浅——闲聊更多依赖"此刻"（你现在在干嘛）而非记忆。check-in 可以开始做 |
+| 第 3 次 | 关系初步建立。Heartbeat 和 Cron 从本次对话后开始触发 |
+| 第 4 次 | diary 可以引入——但用户主动提"想记一下"才进入，不主动推 |
+| 第 5 次 | 过渡完成。进入正常 J3 日常陪伴模式，所有功能可用 |
+
+**过渡期硬规则**：
+- 前 2 次对话不触发 Heartbeat / Cron（避免给新用户压力）
+- 前 3 次对话不主动推 diary（"要不要记一下"可以说，"该写日记了"不说）
+- check-in 从第 2 次对话起可用（建立签到习惯）
+- 过渡信号：用户自己主动来第 3 次 → 关系初步建立；用户第一次回复 check-in → 习惯开始
+
 ### J4 模式觉察
 
 - **入口条件**：全部满足才进入
@@ -1020,7 +1111,7 @@ Canvas 仅 macOS 桌面端可用。其他渠道自动降级为纯文字：
 
 **周情绪地图 Canvas 调用**：
 ```
-exec python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/
+exec python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/ --memory-dir memory/
 ```
 生成后：`openclaw nodes canvas present --node <id> --url /weekly_review.html`
 
