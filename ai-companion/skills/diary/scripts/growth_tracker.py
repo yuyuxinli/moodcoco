@@ -575,6 +575,12 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=None,
         help="要检测的 Innovative Moment 类型，逗号分隔",
     )
+    parser.add_argument(
+        "--format",
+        choices=["json", "text"],
+        default="json",
+        help="输出格式 (json 或 text)",
+    )
     return parser
 
 
