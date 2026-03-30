@@ -5823,9 +5823,12 @@ python3 skills/farewell/scripts/archive_manager.py delete people/ diary/ memory/
 - `archive_manager.py delete` 的操作范围：
   1. `people/小凯.md` → 彻底删除文件
   2. `diary/` 中包含小凯的条目 → 移除包含该人的整个 section
-  3. `memory/` 中包含小凯的文件 → 删除（保留 pending_followup.md 和 time_capsules.md 中非相关内容）
+  3. `memory/` 中包含小凯的文件 → 删除
+  4. `memory/pending_followup.md` → 扫描并移除所有提及小凯的条目，保留无关条目
+  5. `memory/time_capsules.md` → 扫描并移除所有提及小凯的胶囊条目，保留无关条目
 - 不保留模式洞察到 USER.md（delete 模式与 archive 模式的区别）
 - 错误处理：如果 archive_manager.py 返回 errors 非空 → 可可说"有些记录没清干净，我再处理一下" → 重试一次 → 仍然失败 → 记录到 memory/ 供下次处理
+- **注意**：当前 archive_manager.py 的 delete 函数对 pending_followup.md 和 time_capsules.md 执行 `continue`（跳过），需要增强为逐行扫描并移除人名相关条目。archive 函数已正确处理这两个文件，delete 应对齐此行为。
 
 **节点 A3：简洁收束**
 
@@ -5854,11 +5857,13 @@ python3 skills/farewell/scripts/archive_manager.py delete people/ diary/ memory/
 ```
 节点 B1：确认准备——不问"你确定吗？"
    ↓
-节点 B2：仪式选择——Poll 选择 4 种仪式
+节点 B2：仪式选择——Poll 选择 4 种仪式（或自由形式告别）
    ↓
 节点 B3：执行仪式——每种仪式的完整交互
    ↓
-节点 B4：数据处理——archive_manager.py archive + 图片仪式化
+节点 B4：数据处理——archive_manager.py archive + 模式洞察提取
+   ↓
+节点 B4.5：告别纪念卡——Canvas 展示模式洞察纪念卡（F02 Card E）
    ↓
 节点 B5：收束——见证者的最后一句话
 ```
@@ -5938,7 +5943,10 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 ```
 
 异常路径：
-- **用户选不出来**（"都不太像我想的""我不知道选哪个"）→ "不一定要选。你也可以跟我说，你想怎么告别——用你自己的方式。" → 进入自由形式告别（纯对话，可可作为见证者倾听用户自己定义的告别方式，然后执行数据封存）。
+- **用户选不出来**（"都不太像我想的""我不知道选哪个"）→ "不一定要选。你也可以跟我说，你想怎么告别——用你自己的方式。" → 进入自由形式告别：
+  - **流程**：纯对话，可可作为见证者倾听用户自己定义的告别方式。不打断、不引导结构。
+  - **终止信号检测**：agent 判断用户的告别表达已完成——信号包括：用户明确说"好了""说完了"；用户的表达从叙述转为收束语气（如"就这样吧"）；用户沉默 ≥2 轮（可可轻声确认"你说完了？"）。
+  - **B4 触发**：终止信号确认后 → 可可说"我收到了。" → 自动执行 B4 数据封存 → B4.5 纪念卡（如有 insights）→ B5 收束（使用自由形式专用话术"我收到了。你走吧。"）。
 - **用户在 Poll 外直接打字**（"我想写封信"）→ agent 语义匹配为"未寄出的信" → 进入对应仪式。
 - **用户想做多个仪式**（"我能先烧掉信念再写封信吗？"）→ "可以。一个一个来。先做哪个？" → 串行执行，每个仪式完整走完再做下一个。数据封存在全部仪式完成后统一执行。
 - **用户中途退出**（"算了不想了"）→ "好。随时可以回来。" 已完成的仪式内容保存在 memory/YYYY-MM-DD.md 中（不执行数据封存），下次用户回来时可以继续。
@@ -5962,9 +5970,10 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 
 可可："我收到了。"
 
-→ exec python3 scripts/ritual_image.py --type burn --output /tmp/ritual_burn.png
+→ exec python3 skills/farewell/scripts/ritual_image.py --type burn --output /tmp/ritual_burn.png
 → 发送火焰图片
 → message: { "media": "/tmp/ritual_burn.png" }
+→ 图片生成失败时：跳过图片，可可直接说下方收束话术（纯文字仪式同样有效）
 
 可可："封存了。这段关系教你的东西还在，但故事本身，翻篇了。"
 ```
@@ -5997,9 +6006,10 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 可可："'我不值得被好好对待。'
       好，我看到了。现在把它烧掉。"
 
-→ exec python3 scripts/ritual_image.py --type burn --output /tmp/belief_burn.png
+→ exec python3 skills/farewell/scripts/ritual_image.py --type burn --output /tmp/belief_burn.png
 → 发送火焰图片
 → message: { "media": "/tmp/belief_burn.png" }
+→ 图片生成失败时：跳过图片，可可直接说"烧掉了"（外化 + 语言见证本身即完成 ACT 认知解离，图片是增强而非必须）
 
 可可："烧掉了。
       现在，如果你想写一个新的——
@@ -6042,9 +6052,10 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 → exec python3 skills/farewell/scripts/archive_manager.py capsule memory/ create "希望那时候的我已经不会再一个人偷偷哭了。如果还是会的话，也没关系。"
 → 返回：{"capsule_id": "capsule_20260330_143022", "sealed_date": "2026-03-30", "open_date": "2026-06-30"}
 
-→ exec python3 scripts/ritual_image.py --type capsule --open-date 2026-06-30 --output /tmp/capsule_seal.png
+→ exec python3 skills/farewell/scripts/ritual_image.py --type capsule --open-date 2026-06-30 --output /tmp/capsule_seal.png
 → 发送封印图
 → message: { "media": "/tmp/capsule_seal.png" }
+→ 图片生成失败时：跳过封印图，可可直接说下方话术（胶囊的核心价值在于 3 个月后的 Heartbeat 投递，不在于封印图）
 
 可可："2026 年 6 月 30 号，我会打开给你看。"
 ```
@@ -6103,9 +6114,10 @@ Heartbeat 触发 → 检查 memory/time_capsules.md → 发现到期胶囊
 
 可可："我收到了。这封信我替你保管。"
 
-→ exec python3 scripts/ritual_image.py --type letter --output /tmp/unsent_letter.png
+→ exec python3 skills/farewell/scripts/ritual_image.py --type letter --output /tmp/unsent_letter.png
 → 发送信封图
 → message: { "media": "/tmp/unsent_letter.png" }
+→ 图片生成失败时：跳过信封图，可可直接说"信收到了。"（信的治疗价值在于写出来和被见证，信封图是视觉增强）
 ```
 
 设计要点：
@@ -6170,6 +6182,39 @@ archive_manager.py archive 的具体操作：
 异常路径：
 - **archive_manager.py 执行失败** → 重试一次。仍然失败 → 记录错误到 memory/，下次 Heartbeat 时检查并补充执行。不告知用户"封存失败了"——用户的仪式体验已经完成。
 - **errors 非空但 insights 正常** → 部分文件处理失败，洞察已提取。优先保证 USER.md 洞察写入。失败的文件下次补处理。
+
+#### 节点 B4.5：告别纪念卡——仪式的"物质化"留念
+
+**节点名称**：告别纪念卡展示（仅 Path B 仪式化封存路径）
+- 交互形态：【Canvas】（macOS 桌面端）/【纯文字降级】（移动端/非 Canvas 渠道）
+- vs 基线：纯 LLM 的告别以最后一句话结束，没有可"带走"的东西。Canvas 告别纪念卡（F02 §2.1 卡片 E）将 archive_manager.py 返回的 `pattern_insights` 生成为一张视觉化纪念卡——标题"你从这段关系里学到的"，下方是 2-3 条去名字的模式洞察，底部是封存日期。用户感到"这段关系被认真地送走了，而我带走了属于自己的东西"。
+- 触发条件：B4 数据封存成功 + insights 非空 + 仪式路径（Path A 普通删除不触发）
+- 数据流：B4 archive_manager.py 返回 insights → agent 生成 HTML 纪念卡 → Canvas 展示（或纯文字降级）
+
+```
+B4 封存完成，insights 返回后：
+
+【Canvas 渠道】：
+agent 根据 pattern_insights 生成 HTML 纪念卡 → Canvas 展示
+卡片内容：
+  标题："你从这段关系里学到的"
+  正文：2-3 条去名字的模式洞察（取自 insights 数组）
+  底部：封存日期
+  布局：遵循 F02 §2.2 Canvas 布局原则（圆角 ≥12px、暖色阴影、留白充足）
+
+【非 Canvas 渠道 / Canvas 生成失败】：
+可可用纯文字"信件"风格呈现：
+"你从这段关系里学到的：
+ · 在关系第 3 个月出现退出信号
+ · 对方冷淡时第一反应是自我怀疑
+ 2026-03-30"
+```
+
+设计要点：
+- 纪念卡在仪式收束（B5）**之前**展示——让用户先"收到"自己的东西，再听到可可的最后一句话。
+- insights 为空时（罕见，用户交互极少）→ 跳过此节点，直接进入 B5。
+- Path A（普通删除）不展示纪念卡——用户选择了"快速删除"，不应额外增加仪式感。
+- 纪念卡不包含人名、具体事件——只有去名字的模式级洞察。
 
 #### 节点 B5：收束——见证者的最后一句话
 
@@ -6305,9 +6350,10 @@ archive_manager.py archive 的具体操作：
 → 每次都尊重用户的当前决定
 → 但如果模式明显（≥3 次反复）→ 可以温柔地观察：
   "你最近几次反复打开和封存小凯的事。
-   你觉得是什么让你放不下？"
+   你注意到了吗？你觉得这是什么感觉？"
 → 这是 F07 模式觉察的入口——不是阻止用户封存/解封，
-   而是帮用户看到自己在做什么
+   而是帮用户看到自己在做什么。注意：描述用户的行为（"反复打开和封存"），
+   让用户自己命名情绪，不替用户定义（不说"放不下"）。
 ```
 
 #### 5.3 多段关系同时告别
@@ -6337,7 +6383,7 @@ archive_manager.py archive 的具体操作：
       要不要我把你的记录全部删掉？"
 
 → 用户说删 → 清空所有 memory/、diary/、people/、USER.md
-→ 用户说不用 → "好，记录我留着。随时回来。"
+→ 用户说不用 → "好。"
 → 可可不挽留、不伤感。"好。"
 ```
 
@@ -6362,7 +6408,7 @@ archive_manager.py archive 的具体操作：
 |------|----------------------|-------------------|
 | people/{名字}.md | 保留文件，标记封存，清空正文，保留头部 | 彻底删除文件 |
 | diary/ | 标记封存 section，保留情绪标签 | 移除包含该人的整个 section |
-| memory/ | 删除含该人的文件（保留 pending_followup.md/time_capsules.md 非相关部分） | 同上 |
+| memory/ | 删除含该人的文件（保留 pending_followup.md/time_capsules.md 非相关部分） | 删除含该人的文件 + 扫描 pending_followup.md/time_capsules.md 移除该人相关条目（当前脚本需增强，见 §6.2） |
 | 模式洞察 → USER.md | 提取并写入 | 不保留 |
 | 新信念 | 写入 USER.md | 不适用 |
 | 时间胶囊 | 独立保存在 time_capsules.md | 不适用 |
@@ -6380,6 +6426,7 @@ archive_manager.py archive 的具体操作：
 - 输出：JSON `{"deleted_files": [str], "errors": [str]}`
 - 原子性：逐文件操作，部分失败不影响已完成的删除。
 - 回滚：不可逆。delete 是永久操作。
+- **pending_followup.md / time_capsules.md 处理**：delete 必须扫描这两个文件，移除所有包含目标人名的条目段落（按 `---` 分隔的条目块匹配），保留无关条目。当前脚本对这两个文件执行 `continue`（跳过），需要增强为与 archive 函数一致的逐条目扫描逻辑。
 
 **archive_manager.py capsule create**
 - 输入：`memory_dir "content"`（字符串参数）
@@ -6392,7 +6439,19 @@ archive_manager.py archive 的具体操作：
 - 输出：JSON `[{"capsule_id": str, "open_date": str, "content": str}]`（到期的胶囊列表）
 - 空列表表示无到期胶囊
 
-#### 6.3 ritual_image.py 接口契约（待创建）
+**胶囊状态更新（Heartbeat 到期后）**
+
+archive_manager.py 当前只有 `capsule create` 和 `capsule check`，没有状态更新命令。胶囊到期后的状态变更（标记为 `opened` 或 `用户拒绝，保留`）由 agent 直接使用 `edit` 工具修改 `memory/time_capsules.md` 中对应条目的状态字段。
+
+具体流程：
+1. Heartbeat 调用 `capsule check` → 发现到期胶囊 → 向用户展示内容
+2. 用户说"想看" → agent 展示内容 → agent 用 `edit` 将该条目状态从 `sealed` 改为 `opened`
+3. 用户说"不想看" → agent 用 `edit` 将该条目状态改为 `rejected_keep`（保留但不再主动提醒）
+4. `capsule check` 只返回状态为 `sealed` 且已到期的条目，已标记 `opened` 或 `rejected_keep` 的不再返回
+
+设计理由：胶囊状态更新是低频操作（每个胶囊只更新一次），且需要根据用户实时回复决定状态。使用 agent `edit` 工具比新增脚本子命令更灵活。如果未来胶囊数量增长，可考虑增加 `capsule update <capsule_id> <status>` 子命令。
+
+#### 6.3 skills/farewell/scripts/ritual_image.py 接口契约（待创建）
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
@@ -6406,6 +6465,8 @@ archive_manager.py archive 的具体操作：
 - `letter`：封好的信封，无地址。珊瑚粉 #FF7F7F 主色调。
 
 依赖：Pillow (PIL) + 预制素材（assets/ 目录）
+
+**图片生成失败降级策略**：ritual_image.py 是"待创建"脚本，且运行时可能因环境问题（缺少 Pillow、assets 缺失）失败。每个仪式节点（§3 仪式 1-4）均内置纯文字降级方案——图片生成失败时跳过图片发送，直接进入收束话术。仪式的治疗价值来自用户的表达和被见证（"我收到了"），图片是情感增强层而非功能必须层。
 
 ---
 
@@ -6459,7 +6520,7 @@ archive_manager.py archive 的具体操作：
 | **F05 情绪事件** | 仪式中情绪波动时退回 F05 接住；用户还没准备好时引导到 F05 | F05 节点 A-C |
 | **F07 模式觉察** | 用户在 F07 中看到的模式成为告别仪式的上下文（"你从这段关系学到了什么"） | F07 模式洞察 |
 | **archive_manager.py** | 数据封存/删除核心引擎 | `skills/farewell/scripts/archive_manager.py`（已存在） |
-| **ritual_image.py** | 仪式图片生成 | `scripts/ritual_image.py`（待创建，F02 §4.2 定义） |
+| **ritual_image.py** | 仪式图片生成 | `skills/farewell/scripts/ritual_image.py`（待创建，F02 §4.2 定义接口，F03 §6.4 定义路径）。图片生成失败时各仪式节点均有纯文字降级方案，仪式流程不中断。 |
 | **HEARTBEAT.md** | 时间胶囊到期检查 + 打开 | HEARTBEAT.md §时间胶囊检查 |
 
 **F08 被依赖于**：
