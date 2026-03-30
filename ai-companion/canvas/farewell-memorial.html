@@ -1,7 +1,7 @@
 <!--
   Canvas 卡片 E：告别纪念卡（Farewell Memorial）
   F08 节点 B4.5 使用，当仪式化封存完成 + insights 非空 + macOS 桌面端时展示。
-  Agent 根据 archive_manager.py 返回的 pattern_insights 填充模板变量，生成完整 HTML。
+  Agent 根据 archive_manager.py 返回的 insights 填充模板变量，生成完整 HTML。
 
   模板变量说明：
     {insights}         — 去名字的模式洞察 HTML（重复 .insight 块，2-3 条）
@@ -14,7 +14,7 @@
 
   触发条件：
     - farewell 流程 Path B Phase 4 数据处理完成后
-    - pattern_insights 非空
+    - insights 非空
     - Path A（普通删除）不触发此卡片
 
   降级：
@@ -28,7 +28,7 @@
   <h2 style="color:#8B7E74; font-size:18px; margin:0 0 24px 0; font-weight:500;">你从这段关系里学到的</h2>
 
   <div class="insights" style="text-align:left; margin:24px 0;">
-    <!-- 2-3 条去名字的模式洞察（agent 根据 pattern_insights 重复生成） -->
+    <!-- 2-3 条去名字的模式洞察（agent 根据 insights 重复生成） -->
     <!-- 每条洞察：
     <div class="insight" style="background:white; border-radius:12px; padding:16px; margin-bottom:12px; border-left:3px solid #C5A3FF; box-shadow:0 2px 8px rgba(255,180,150,0.15);">
       <p style="color:#8B7E74; font-size:15px; margin:0; line-height:1.6;">{洞察内容，已去除名字}</p>

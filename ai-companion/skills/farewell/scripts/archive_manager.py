@@ -254,14 +254,14 @@ def archive_person(
     - ritual_type: 告别仪式类型（standard / gentle / quick），默认 standard
 
     返回 spec-compliant JSON:
-    {"status": "ok", "action": "archive", "person": ..., "pattern_insights": [...],
+    {"status": "ok", "action": "archive", "person": ..., "insights": [...],
      "files_affected": [...], "backup_path": "...", "error": null}
     """
     result: dict[str, Any] = {
         "status": "ok",
         "action": "archive",
         "person": name,
-        "pattern_insights": [],
+        "insights": [],
         "files_affected": [],
         "backup_path": "",
         "error": None,
@@ -274,7 +274,7 @@ def archive_person(
             "status": "not_found",
             "action": "archive",
             "person": name,
-            "pattern_insights": [],
+            "insights": [],
             "files_affected": [],
             "backup_path": "",
             "error": f"Person '{name}' not found in people/",
@@ -287,7 +287,7 @@ def archive_person(
             "status": "already_archived",
             "action": "archive",
             "person": name,
-            "pattern_insights": [],
+            "insights": [],
             "files_affected": [],
             "backup_path": "",
             "error": f"Person '{name}' is already archived",
@@ -301,7 +301,7 @@ def archive_person(
 
     # Step 2: Extract insights before archiving
     insights = extract_pattern_insights(str(people_path))
-    result["pattern_insights"] = [i["content"] for i in insights]
+    result["insights"] = [i["content"] for i in insights]
 
     # Step 3: Rewrite people file: keep header, clear body
     archived_text = _archive_people_file(text, name, ritual_type)
@@ -458,7 +458,7 @@ def restore_person(
         "status": "ok",
         "action": "restore",
         "person": name,
-        "pattern_insights": [],
+        "insights": [],
         "files_affected": [],
         "backup_path": "",
         "error": None,
@@ -471,7 +471,7 @@ def restore_person(
             "status": "not_found",
             "action": "restore",
             "person": name,
-            "pattern_insights": [],
+            "insights": [],
             "files_affected": [],
             "backup_path": "",
             "error": "Backup not found",
@@ -488,7 +488,7 @@ def restore_person(
             "status": "not_found",
             "action": "restore",
             "person": name,
-            "pattern_insights": [],
+            "insights": [],
             "files_affected": [],
             "backup_path": "",
             "error": f"Backup not found for '{name}'",
@@ -549,7 +549,7 @@ def status_person(
             "status": "not_found",
             "action": "status",
             "person": name,
-            "pattern_insights": [],
+            "insights": [],
             "files_affected": [],
             "backup_path": "",
             "error": f"Person '{name}' not found in people/",
@@ -573,7 +573,7 @@ def status_person(
         "status": "ok" if is_archived else "already_active",
         "action": "status",
         "person": name,
-        "pattern_insights": [],
+        "insights": [],
         "files_affected": [str(people_path)],
         "backup_path": backup_path,
         "error": None,

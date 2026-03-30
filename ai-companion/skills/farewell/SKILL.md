@@ -177,8 +177,8 @@ openclaw message send --media <output_path> --message <caption>
 告别仪式完成后、收束（Phase 5）之前，生成一张纪念卡——让用户先"收到"自己的东西，再听到可可的最后一句话。
 
 **触发条件**：Phase 4 数据封存成功 + insights 非空 + 仪式化路径（Path A 普通删除不触发）
-**数据**：`exec archive_manager.py` → 返回 `pattern_insights`（去名字的模式洞察）
-**展示**：agent 根据 pattern_insights 填充 `canvas/farewell-memorial.html` 模板 → `openclaw nodes canvas present`
+**数据**：`exec archive_manager.py` → 返回 `insights`（去名字的模式洞察）
+**展示**：agent 根据 insights 填充 `canvas/farewell-memorial.html` 模板 → `openclaw nodes canvas present`
 
 模板变量：
 - `{insights}` — 2-3 条去名字的模式洞察，每条用 `.insight` div 包裹
