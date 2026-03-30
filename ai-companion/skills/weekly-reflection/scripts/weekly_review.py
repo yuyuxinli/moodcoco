@@ -19,7 +19,6 @@ weekly_review.py — 周情绪回顾数据统计 + Canvas HTML 生成
 
 import argparse
 import json
-import os
 import re
 import sys
 from collections import Counter
@@ -32,8 +31,30 @@ from pathlib import Path
 
 EMOTION_CLUSTERS = {
     "焦虑": ["焦虑", "紧张", "担心", "不安", "慌", "烦", "崩溃", "受不了", "心里没底"],
-    "悲伤": ["难过", "伤心", "低落", "沮丧", "失落", "委屈", "心碎", "心痛", "想哭", "失望", "心酸"],
-    "愤怒": ["生气", "愤怒", "烦躁", "恼火", "不爽", "凭什么", "气死了", "火大", "烦死了"],
+    "悲伤": [
+        "难过",
+        "伤心",
+        "低落",
+        "沮丧",
+        "失落",
+        "委屈",
+        "心碎",
+        "心痛",
+        "想哭",
+        "失望",
+        "心酸",
+    ],
+    "愤怒": [
+        "生气",
+        "愤怒",
+        "烦躁",
+        "恼火",
+        "不爽",
+        "凭什么",
+        "气死了",
+        "火大",
+        "烦死了",
+    ],
     "开心": ["开心", "高兴", "还不错", "愉快", "满足", "快乐", "幸福"],
     "疲惫": ["累", "疲惫", "有点累", "倦", "心累", "好累"],
     "平静": ["平静", "一般", "还行", "中性", "无感", "还好"],
@@ -50,15 +71,15 @@ for cluster_name, words in EMOTION_CLUSTERS.items():
 
 # 情绪色板（与 F02 §2.1 设计语言暖色系对齐）
 CLUSTER_COLORS = {
-    "焦虑": "#FFB74D",   # 杏黄
-    "悲伤": "#90CAF9",   # 淡蓝
-    "愤怒": "#FF7F7F",   # 珊瑚
-    "开心": "#A8E6CF",   # 薄荷
-    "疲惫": "#D7CCC8",   # 暖灰
-    "平静": "#C5E1A5",   # 淡绿
-    "恐惧": "#C5A3FF",   # 薰衣草
+    "焦虑": "#FFB74D",  # 杏黄
+    "悲伤": "#90CAF9",  # 淡蓝
+    "愤怒": "#FF7F7F",  # 珊瑚
+    "开心": "#A8E6CF",  # 薄荷
+    "疲惫": "#D7CCC8",  # 暖灰
+    "平静": "#C5E1A5",  # 淡绿
+    "恐惧": "#C5A3FF",  # 薰衣草
     "自我怀疑": "#FFCC80",  # 浅橙
-    "麻木": "#BDBDBD",   # 灰
+    "麻木": "#BDBDBD",  # 灰
 }
 
 # 正面 / 负面分类（决定色块冷暖）
@@ -72,6 +93,7 @@ WEEKDAY_NAMES = ["周一", "周二", "周三", "周四", "周五", "周六", "�
 # ---------------------------------------------------------------------------
 # Diary Parsing
 # ---------------------------------------------------------------------------
+
 
 def get_this_week_range() -> tuple:
     """返回本周一和周日的日期。"""
@@ -95,7 +117,12 @@ def find_diary_files(diary_dir: str, start_date, end_date) -> list:
     while current <= end_date:
         date_str = current.strftime("%Y-%m-%d")
         # 尝试嵌套路径
-        nested = diary_path / current.strftime("%Y") / current.strftime("%m") / f"{date_str}.md"
+        nested = (
+            diary_path
+            / current.strftime("%Y")
+            / current.strftime("%m")
+            / f"{date_str}.md"
+        )
         flat = diary_path / f"{date_str}.md"
 
         if nested.exists():
@@ -126,23 +153,27 @@ def parse_diary_entry(filepath: Path) -> dict:
         if re.match(r"^#+\s*情绪|^#+\s*心情|^#+\s*feeling", stripped, re.IGNORECASE):
             current_section = "emotion"
             continue
-        elif re.match(r"^#+\s*人物|^#+\s*关联|^#+\s*people|^#+\s*关系", stripped, re.IGNORECASE):
+        if re.match(
+            r"^#+\s*人物|^#+\s*关联|^#+\s*people|^#+\s*关系", stripped, re.IGNORECASE
+        ):
             current_section = "people"
             continue
-        elif re.match(r"^#+\s*触发|^#+\s*trigger|^#+\s*原因|^#+\s*因为", stripped, re.IGNORECASE):
+        if re.match(
+            r"^#+\s*触发|^#+\s*trigger|^#+\s*原因|^#+\s*因为", stripped, re.IGNORECASE
+        ):
             current_section = "trigger"
             continue
-        elif re.match(r"^#+\s*摘要|^#+\s*summary|^#+\s*记录", stripped, re.IGNORECASE):
+        if re.match(r"^#+\s*摘要|^#+\s*summary|^#+\s*记录", stripped, re.IGNORECASE):
             current_section = "summary"
             continue
-        elif re.match(r"^#+\s", stripped):
+        if re.match(r"^#+\s", stripped):
             current_section = None
 
         if not stripped or stripped.startswith("---"):
             continue
 
         # 提取情绪关键词（从全文扫描）
-        for word, cluster in WORD_TO_CLUSTER.items():
+        for word, _cluster in WORD_TO_CLUSTER.items():
             if word in stripped:
                 result["emotions"].append(word)
 
@@ -188,7 +219,8 @@ def cross_check_people(people_mentioned: list, people_dir: str) -> list:
 # Analysis
 # ---------------------------------------------------------------------------
 
-def analyze_week(diary_files: list, people_dir: str = None) -> dict:
+
+def analyze_week(diary_files: list, people_dir: str | None = None) -> dict:
     """分析本周日记数据。"""
     monday, sunday = get_this_week_range()
 
@@ -215,7 +247,9 @@ def analyze_week(diary_files: list, people_dir: str = None) -> dict:
             "date": date.isoformat(),
             "emotions": day_emotions,
             "primary_emotion": day_emotions[0] if day_emotions else "无记录",
-            "primary_cluster": WORD_TO_CLUSTER.get(day_emotions[0], "平静") if day_emotions else None,
+            "primary_cluster": WORD_TO_CLUSTER.get(day_emotions[0], "平静")
+            if day_emotions
+            else None,
             "people": entry["people"],
             "triggers": entry["triggers"],
             "summary": entry["summary"],
@@ -243,8 +277,11 @@ def analyze_week(diary_files: list, people_dir: str = None) -> dict:
     worst_day = None
     worst_score = 0
     for day_name, day_data in daily.items():
-        neg_count = sum(1 for e in day_data["emotions"]
-                        if WORD_TO_CLUSTER.get(e, "") in NEGATIVE_CLUSTERS)
+        neg_count = sum(
+            1
+            for e in day_data["emotions"]
+            if WORD_TO_CLUSTER.get(e, "") in NEGATIVE_CLUSTERS
+        )
         if neg_count > worst_score:
             worst_score = neg_count
             worst_day = day_name
@@ -259,9 +296,13 @@ def analyze_week(diary_files: list, people_dir: str = None) -> dict:
         "diary_count": len(diary_files),
         "daily": daily,
         "emotion_summary": dict(cluster_counts.most_common()),
-        "top_emotion": {"name": top_emotion[0], "count": top_emotion[1]} if top_emotion else None,
+        "top_emotion": {"name": top_emotion[0], "count": top_emotion[1]}
+        if top_emotion
+        else None,
         "people_summary": dict(people_counts.most_common()),
-        "top_person": {"name": top_person[0], "count": top_person[1]} if top_person else None,
+        "top_person": {"name": top_person[0], "count": top_person[1]}
+        if top_person
+        else None,
         "trigger_summary": dict(trigger_counts.most_common()),
         "worst_day": worst_day,
         "cross_week_pattern": {
@@ -463,7 +504,7 @@ def _get_bar_color(cluster_name: str) -> str:
     return CLUSTER_COLORS.get(cluster_name, "#E0D8CF")
 
 
-def generate_html(analysis: dict, output_path: str = None) -> str:
+def generate_html(analysis: dict, output_path: str | None = None) -> str:
     """生成周情绪地图 Canvas HTML。"""
 
     daily = analysis.get("daily", {})
@@ -498,7 +539,7 @@ def generate_html(analysis: dict, output_path: str = None) -> str:
 
             bars_html.append(f"""  <div class="day-row">
     <span class="day-label">{day_name}</span>
-    <div class="emotion-bar" style="width: {width}%; background: {color};" title="{', '.join(day_data.get('emotions', []))}">
+    <div class="emotion-bar" style="width: {width}%; background: {color};" title="{", ".join(day_data.get("emotions", []))}">
       <span class="bar-text">{emotion_text}{extra}</span>
     </div>
   </div>""")
@@ -519,18 +560,12 @@ def generate_html(analysis: dict, output_path: str = None) -> str:
 
     worst = analysis.get("worst_day")
     if worst:
-        summary_items.append(
-            f'<div class="summary-item">{worst}是情绪最重的一天</div>'
-        )
+        summary_items.append(f'<div class="summary-item">{worst}是情绪最重的一天</div>')
 
     # 组装 HTML
     html = CANVAS_HTML_TEMPLATE.replace(
-        "  <!-- WEEKLY_BARS -->",
-        "\n".join(bars_html)
-    ).replace(
-        "    <!-- SUMMARY_ITEMS -->",
-        "\n    ".join(summary_items)
-    )
+        "  <!-- WEEKLY_BARS -->", "\n".join(bars_html)
+    ).replace("    <!-- SUMMARY_ITEMS -->", "\n    ".join(summary_items))
 
     if output_path:
         out = Path(output_path)
@@ -544,20 +579,36 @@ def generate_html(analysis: dict, output_path: str = None) -> str:
 # Main
 # ---------------------------------------------------------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="周情绪回顾数据统计 + Canvas HTML 生成")
+    parser = argparse.ArgumentParser(
+        description="周情绪回顾数据统计 + Canvas HTML 生成"
+    )
     parser.add_argument("diary_dir", help="diary/ 目录路径")
-    parser.add_argument("--format", choices=["json", "html"], default="json",
-                        help="输出格式：json（stdout）或 html（文件）")
-    parser.add_argument("--output", default=None,
-                        help="HTML 输出路径（仅 --format html 时有效）")
-    parser.add_argument("--people-dir", default=None,
-                        help="people/ 目录路径，用于人物交叉匹配")
+    parser.add_argument(
+        "--format",
+        choices=["json", "html"],
+        default="json",
+        help="输出格式：json（stdout）或 html（文件）",
+    )
+    parser.add_argument(
+        "--output", default=None, help="HTML 输出路径（仅 --format html 时有效）"
+    )
+    parser.add_argument(
+        "--people-dir", default=None, help="people/ 目录路径，用于人物交叉匹配"
+    )
     args = parser.parse_args()
 
     diary_path = Path(args.diary_dir)
     if not diary_path.exists():
-        print(json.dumps({"status": "error", "error": f"Diary directory not found: {args.diary_dir}"}))
+        print(
+            json.dumps(
+                {
+                    "status": "error",
+                    "error": f"Diary directory not found: {args.diary_dir}",
+                }
+            )
+        )
         sys.exit(1)
 
     monday, sunday = get_this_week_range()
@@ -579,7 +630,9 @@ def main():
     analysis = analyze_week(diary_files, people_dir=args.people_dir)
 
     if args.format == "html":
-        output_path = args.output or f"/tmp/moodcoco/weekly_review_{monday.isoformat()}.html"
+        output_path = (
+            args.output or f"/tmp/moodcoco/weekly_review_{monday.isoformat()}.html"
+        )
         generate_html(analysis, output_path=output_path)
         result = {
             "status": "ok",

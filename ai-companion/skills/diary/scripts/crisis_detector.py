@@ -5,7 +5,6 @@ emotion-journal skill 模块
 """
 
 import json
-import re
 from pathlib import Path
 
 
@@ -16,7 +15,7 @@ class CrisisDetector:
     def _load_crisis_data(self) -> dict:
         """加载危机关键词数据"""
         refs_path = Path(__file__).parent.parent / "references" / "crisis_keywords.json"
-        with open(refs_path, 'r', encoding='utf-8') as f:
+        with refs_path.open(encoding="utf-8") as f:
             return json.load(f)
 
     def detect(self, text: str) -> dict:
@@ -40,24 +39,45 @@ class CrisisDetector:
             "level": None,
             "type": None,
             "matched_keywords": [],
-            "response": None
+            "response": None,
         }
 
         # 优先级：自杀 > 自伤 > 崩溃
         suicide_kw = crisis_signals.get("suicide", [])
         matched = [kw for kw in suicide_kw if kw in text_lower]
         if matched:
-            results.update({"has_crisis": True, "level": "high", "type": "suicide", "matched_keywords": matched})
+            results.update(
+                {
+                    "has_crisis": True,
+                    "level": "high",
+                    "type": "suicide",
+                    "matched_keywords": matched,
+                }
+            )
         else:
             self_harm_kw = crisis_signals.get("self_harm", [])
             matched = [kw for kw in self_harm_kw if kw in text_lower]
             if matched:
-                results.update({"has_crisis": True, "level": "high", "type": "self_harm", "matched_keywords": matched})
+                results.update(
+                    {
+                        "has_crisis": True,
+                        "level": "high",
+                        "type": "self_harm",
+                        "matched_keywords": matched,
+                    }
+                )
             else:
                 breakdown_kw = crisis_signals.get("severe_breakdown", [])
                 matched = [kw for kw in breakdown_kw if kw in text_lower]
                 if matched:
-                    results.update({"has_crisis": True, "level": "medium", "type": "breakdown", "matched_keywords": matched})
+                    results.update(
+                        {
+                            "has_crisis": True,
+                            "level": "medium",
+                            "type": "breakdown",
+                            "matched_keywords": matched,
+                        }
+                    )
 
         if results["has_crisis"]:
             results["response"] = self._generate_response(results["type"])
@@ -98,6 +118,6 @@ if __name__ == "__main__":
         r = detector.detect(text)
         print(f"Input: {text}")
         print(f"  has_crisis={r['has_crisis']}, level={r['level']}, type={r['type']}")
-        if r['response']:
+        if r["response"]:
             print(f"  response: {r['response'][:60]}...")
         print()

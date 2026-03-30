@@ -20,10 +20,10 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Markdown Parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_people_file(filepath: str) -> dict:
     """解析单个 people/*.md 文件，提取结构化数据。"""
@@ -63,19 +63,19 @@ def parse_people_file(filepath: str) -> dict:
         if stripped.startswith("## 关系阶段"):
             current_section = "stages"
             continue
-        elif stripped.startswith("## 退出信号"):
+        if stripped.startswith("## 退出信号"):
             current_section = "exit_signals"
             continue
-        elif stripped.startswith("## 我们之间的模式"):
+        if stripped.startswith("## 我们之间的模式"):
             current_section = "patterns"
             continue
-        elif stripped.startswith("## 跨关系匹配"):
+        if stripped.startswith("## 跨关系匹配"):
             current_section = "cross_matches"
             continue
-        elif stripped.startswith("## 关键事件"):
+        if stripped.startswith("## 关键事件"):
             current_section = "key_events"
             continue
-        elif stripped.startswith("## "):
+        if stripped.startswith("## "):
             current_section = ""
             continue
 
@@ -108,7 +108,7 @@ def _parse_stage_entry(entry: str) -> dict:
         rest = match.group(2)
         # Extract quoted user words if present
         quote_match = re.search(r'[""「](.+?)[""」]', rest)
-        stage = re.split(r'[,，]', rest)[0].strip()
+        stage = re.split(r"[,，]", rest)[0].strip()
         return {
             "date": date_str,
             "stage": stage,
@@ -127,7 +127,7 @@ def _parse_exit_signal(entry: str) -> dict:
     date_match = re.match(r"(\d{4}-\d{2}(?:-\d{2})?)\s*[:：]\s*", entry)
     if date_match:
         result["date"] = date_match.group(1)
-        entry = entry[date_match.end():]
+        entry = entry[date_match.end() :]
 
     # Extract trigger, reaction, outcome from arrow-separated format
     parts = re.split(r"\s*→\s*", entry)
@@ -135,13 +135,19 @@ def _parse_exit_signal(entry: str) -> dict:
         part = part.strip()
         if part.startswith("触发事件"):
             quote = re.search(r'[""「](.+?)[""」]', part)
-            result["trigger"] = quote.group(1) if quote else part.replace("触发事件", "").strip()
+            result["trigger"] = (
+                quote.group(1) if quote else part.replace("触发事件", "").strip()
+            )
         elif part.startswith("用户反应"):
             quote = re.search(r'[""「](.+?)[""」]', part)
-            result["reaction"] = quote.group(1) if quote else part.replace("用户反应", "").strip()
+            result["reaction"] = (
+                quote.group(1) if quote else part.replace("用户反应", "").strip()
+            )
         elif part.startswith("结果"):
             quote = re.search(r'[""「](.+?)[""」]', part)
-            result["outcome"] = quote.group(1) if quote else part.replace("结果", "").strip()
+            result["outcome"] = (
+                quote.group(1) if quote else part.replace("结果", "").strip()
+            )
 
     return result
 
@@ -195,21 +201,20 @@ def update_cross_patterns(people_dir: str, patterns: list) -> None:
         lines = text.split("\n")
         new_lines = []
         in_cross_section = False
-        cross_written = False
-
         for line in lines:
             stripped = line.strip()
             if stripped.startswith("## 跨关系匹配"):
                 in_cross_section = True
                 new_lines.append(line)
-                new_lines.append("<!-- 由 pattern_engine.py 自动写入，diary skill 不手动编辑此段 -->")
+                new_lines.append(
+                    "<!-- 由 pattern_engine.py 自动写入，diary skill 不手动编辑此段 -->"
+                )
                 for pat in pats:
                     other_people = [n for n in pat["people"] if n != name]
                     others = "、".join(other_people)
                     new_lines.append(f"- 与 {others} 的相似模式：{pat['description']}")
-                cross_written = True
                 continue
-            elif in_cross_section:
+            if in_cross_section:
                 if stripped.startswith("## "):
                     # New section starts — end of cross section
                     in_cross_section = False
@@ -217,8 +222,7 @@ def update_cross_patterns(people_dir: str, patterns: list) -> None:
                     new_lines.append(line)
                 # Skip old cross-match content (list items, comments, empty lines)
                 continue
-            else:
-                new_lines.append(line)
+            new_lines.append(line)
 
         filepath.write_text("\n".join(new_lines), encoding="utf-8")
 
@@ -263,7 +267,7 @@ def find_cross_patterns(people_data: list) -> list:
 
     for month, entries in timing_groups.items():
         # 按去重后的关系数计，避免同一人多条信号被算成"跨关系"
-        unique_people = list(set(e[0] for e in entries))
+        unique_people = list({e[0] for e in entries})
         if len(unique_people) >= 2:
             # 每个人只取最近一条信号
             seen = set()
@@ -272,14 +276,16 @@ def find_cross_patterns(people_data: list) -> list:
                 if name not in seen:
                     seen.add(name)
                     deduped.append((name, sig))
-            patterns.append({
-                "dimension": "timing",
-                "description": f"第 {month} 个月出现退出信号",
-                "people": unique_people,
-                "details": [
-                    f"{name}: \"{sig['reaction']}\"" for name, sig in deduped
-                ],
-            })
+            patterns.append(
+                {
+                    "dimension": "timing",
+                    "description": f"第 {month} 个月出现退出信号",
+                    "people": unique_people,
+                    "details": [
+                        f'{name}: "{sig["reaction"]}"' for name, sig in deduped
+                    ],
+                }
+            )
 
     # --- Trigger patterns ---
     # Group exit signals by trigger keywords
@@ -296,16 +302,16 @@ def find_cross_patterns(people_data: list) -> list:
                 trigger_keywords[keyword].append((person["name"], signal))
 
     for keyword, entries in trigger_keywords.items():
-        unique_people = list(set(e[0] for e in entries))
+        unique_people = list({e[0] for e in entries})
         if len(unique_people) >= 2:
-            patterns.append({
-                "dimension": "trigger",
-                "description": f"被「{keyword}」相关事件触发退出",
-                "people": unique_people,
-                "details": [
-                    f"{name}: \"{sig['trigger']}\"" for name, sig in entries
-                ],
-            })
+            patterns.append(
+                {
+                    "dimension": "trigger",
+                    "description": f"被「{keyword}」相关事件触发退出",
+                    "people": unique_people,
+                    "details": [f'{name}: "{sig["trigger"]}"' for name, sig in entries],
+                }
+            )
 
     # --- Reaction patterns ---
     reaction_keywords = {}
@@ -320,16 +326,18 @@ def find_cross_patterns(people_data: list) -> list:
                 reaction_keywords[keyword].append((person["name"], signal))
 
     for keyword, entries in reaction_keywords.items():
-        unique_people = list(set(e[0] for e in entries))
+        unique_people = list({e[0] for e in entries})
         if len(unique_people) >= 2:
-            patterns.append({
-                "dimension": "reaction",
-                "description": f"相似反应：「{keyword}」",
-                "people": unique_people,
-                "details": [
-                    f"{name}: \"{sig['reaction']}\"" for name, sig in entries
-                ],
-            })
+            patterns.append(
+                {
+                    "dimension": "reaction",
+                    "description": f"相似反应：「{keyword}」",
+                    "people": unique_people,
+                    "details": [
+                        f'{name}: "{sig["reaction"]}"' for name, sig in entries
+                    ],
+                }
+            )
 
     # --- Outcome patterns ---
     outcome_keywords = {}
@@ -344,16 +352,16 @@ def find_cross_patterns(people_data: list) -> list:
                 outcome_keywords[keyword].append((person["name"], signal))
 
     for keyword, entries in outcome_keywords.items():
-        unique_people = list(set(e[0] for e in entries))
+        unique_people = list({e[0] for e in entries})
         if len(unique_people) >= 2:
-            patterns.append({
-                "dimension": "outcome",
-                "description": f"相似结果：「{keyword}」",
-                "people": unique_people,
-                "details": [
-                    f"{name}: \"{sig['outcome']}\"" for name, sig in entries
-                ],
-            })
+            patterns.append(
+                {
+                    "dimension": "outcome",
+                    "description": f"相似结果：「{keyword}」",
+                    "people": unique_people,
+                    "details": [f'{name}: "{sig["outcome"]}"' for name, sig in entries],
+                }
+            )
 
     return patterns
 
@@ -369,18 +377,22 @@ def match_current_to_history(current_event: str, people_data: list) -> list:
     for person in people_data:
         for signal in person.get("exit_signals", []):
             trigger_keywords = set(_extract_keywords(signal.get("trigger", "").lower()))
-            reaction_keywords = set(_extract_keywords(signal.get("reaction", "").lower()))
+            reaction_keywords = set(
+                _extract_keywords(signal.get("reaction", "").lower())
+            )
             all_signal_keywords = trigger_keywords | reaction_keywords
 
             overlap = current_keywords & all_signal_keywords
             if overlap:
-                matches.append({
-                    "person": person["name"],
-                    "date": signal.get("date", ""),
-                    "trigger": signal.get("trigger", ""),
-                    "reaction": signal.get("reaction", ""),
-                    "matching_keywords": list(overlap),
-                })
+                matches.append(
+                    {
+                        "person": person["name"],
+                        "date": signal.get("date", ""),
+                        "trigger": signal.get("trigger", ""),
+                        "reaction": signal.get("reaction", ""),
+                        "matching_keywords": list(overlap),
+                    }
+                )
 
     return matches
 
@@ -388,6 +400,7 @@ def match_current_to_history(current_event: str, people_data: list) -> list:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _months_between(start_date: str, end_date: str) -> int | None:
     """计算两个日期之间的月数（粗略）。"""
@@ -405,26 +418,71 @@ def _months_between(start_date: str, end_date: str) -> int | None:
 # 对齐 diary SKILL.md 的退出信号检测关键词 + 扩展覆盖
 _KEYWORD_PATTERNS = [
     # 分手意图（diary SKILL.md 定义）
-    "分手", "不想继续", "结束", "我们结束吧",
+    "分手",
+    "不想继续",
+    "结束",
+    "我们结束吧",
     # 退缩冲动（diary SKILL.md 定义）
-    "想跑", "退缩", "不对", "不是对的人", "退后一步",
+    "想跑",
+    "退缩",
+    "不对",
+    "不是对的人",
+    "退后一步",
     # 持续不满（diary SKILL.md 定义）
-    "差一点", "不满足", "缺了什么", "觉得差",
+    "差一点",
+    "不满足",
+    "缺了什么",
+    "觉得差",
     # 热情衰减感知（diary SKILL.md 定义）
-    "没那么喜欢", "热情", "追我", "不行了", "变了", "冷淡",
+    "没那么喜欢",
+    "热情",
+    "追我",
+    "不行了",
+    "变了",
+    "冷淡",
     # 关系事件触发
-    "未来", "承诺", "结婚", "搬家", "见家长", "同居",
+    "未来",
+    "承诺",
+    "结婚",
+    "搬家",
+    "见家长",
+    "同居",
     # 情绪状态
-    "不舒服", "不安", "焦虑", "害怕", "安全感", "恐惧",
-    "逃避", "窒息", "压力", "透不过气",
+    "不舒服",
+    "不安",
+    "焦虑",
+    "害怕",
+    "安全感",
+    "恐惧",
+    "逃避",
+    "窒息",
+    "压力",
+    "透不过气",
     # 沟通问题
-    "冷战", "吵架", "已读不回", "不回消息", "忽视",
-    "不在乎", "不理我", "敷衍",
+    "冷战",
+    "吵架",
+    "已读不回",
+    "不回消息",
+    "忽视",
+    "不在乎",
+    "不理我",
+    "敷衍",
     # 关系动态
-    "控制", "自由", "空间", "依赖", "粘人", "独立",
-    "付出", "不对等", "单方面",
+    "控制",
+    "自由",
+    "空间",
+    "依赖",
+    "粘人",
+    "独立",
+    "付出",
+    "不对等",
+    "单方面",
     # 自我怀疑
-    "我的问题", "太敏感", "太作", "不够好", "配不上",
+    "我的问题",
+    "太敏感",
+    "太作",
+    "不够好",
+    "配不上",
 ]
 
 
@@ -439,8 +497,18 @@ def _extract_keywords(text: str) -> list:
 
 # Outcome-specific keywords for cross-relationship result matching
 _OUTCOME_KEYWORDS = [
-    "分手", "冷战", "和好", "复合", "断联", "删除",
-    "结束", "挽回", "道歉", "原谅", "冷淡", "疏远",
+    "分手",
+    "冷战",
+    "和好",
+    "复合",
+    "断联",
+    "删除",
+    "结束",
+    "挽回",
+    "道歉",
+    "原谅",
+    "冷淡",
+    "疏远",
 ]
 
 
@@ -456,6 +524,7 @@ def _extract_outcome_keywords(text: str) -> list:
 # ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
+
 
 def main():
     if len(sys.argv) < 2:

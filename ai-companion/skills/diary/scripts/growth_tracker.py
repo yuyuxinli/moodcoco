@@ -19,7 +19,6 @@ import re
 import sys
 from pathlib import Path
 
-
 # ---------------------------------------------------------------------------
 # Innovative Moment Markers
 # ---------------------------------------------------------------------------
@@ -29,44 +28,82 @@ IM_MARKERS = {
     "action": {
         "description": "用户做了不同于旧模式的行为",
         "positive": [
-            "第一次", "没有立刻", "忍住了", "选择了", "决定先",
-            "这次我", "我试着", "我主动", "没有像以前",
-            "我没有追问", "我没有发消息", "我先冷静了",
+            "第一次",
+            "没有立刻",
+            "忍住了",
+            "选择了",
+            "决定先",
+            "这次我",
+            "我试着",
+            "我主动",
+            "没有像以前",
+            "我没有追问",
+            "我没有发消息",
+            "我先冷静了",
         ],
     },
     "reflection": {
         "description": "从行动转向反思",
         "positive": [
-            "我想搞清楚", "我在想为什么", "我发现", "我注意到",
-            "我觉得可能是", "也许是因为", "我开始意识到",
-            "想了想", "反思", "回头看",
+            "我想搞清楚",
+            "我在想为什么",
+            "我发现",
+            "我注意到",
+            "我觉得可能是",
+            "也许是因为",
+            "我开始意识到",
+            "想了想",
+            "反思",
+            "回头看",
         ],
         "contrast_with": [
-            "算了", "不管了", "管他呢", "分就分", "不想了",
+            "算了",
+            "不管了",
+            "管他呢",
+            "分就分",
+            "不想了",
         ],
     },
     "protest": {
         "description": "挑战旧信念",
         "positive": [
-            "也许不是我的问题", "不一定是我", "我不觉得",
-            "凭什么", "我不应该", "这不是我的错",
-            "我有权", "我值得", "我不需要",
+            "也许不是我的问题",
+            "不一定是我",
+            "我不觉得",
+            "凭什么",
+            "我不应该",
+            "这不是我的错",
+            "我有权",
+            "我值得",
+            "我不需要",
         ],
     },
     "reconceptualization": {
         "description": "重新定义自己",
         "positive": [
-            "也许我只是还没学会", "我在成长", "我变了",
-            "以前的我", "现在的我", "我跟以前不一样了",
-            "我学到了", "这让我知道", "我理解了",
+            "也许我只是还没学会",
+            "我在成长",
+            "我变了",
+            "以前的我",
+            "现在的我",
+            "我跟以前不一样了",
+            "我学到了",
+            "这让我知道",
+            "我理解了",
         ],
     },
     "performing_change": {
         "description": "用户在新场景中展现新模式",
         "positive": [
-            "我想跟你说说", "我主动聊了", "这次我没有逃避",
-            "我跟他说了", "我表达了", "我坦白了",
-            "我没有回避", "我直接面对了", "我开口了",
+            "我想跟你说说",
+            "我主动聊了",
+            "这次我没有逃避",
+            "我跟他说了",
+            "我表达了",
+            "我坦白了",
+            "我没有回避",
+            "我直接面对了",
+            "我开口了",
         ],
     },
 }
@@ -75,6 +112,7 @@ IM_MARKERS = {
 # ---------------------------------------------------------------------------
 # Diary Parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_diary_entries(diary_dir: str) -> list:
     """解析 diary/ 目录下所有日记条目。
@@ -117,23 +155,25 @@ def parse_diary_entries(diary_dir: str) -> list:
                 quotes = re.findall(r'>\s*"(.+?)"', content)
 
             # Extract emotion
-            emotion_match = re.search(r'\*\*情绪\*\*[：:]\s*(.+)', content)
+            emotion_match = re.search(r"\*\*情绪\*\*[：:]\s*(.+)", content)
             emotion = emotion_match.group(1).strip() if emotion_match else ""
 
             # Extract intensity
-            intensity_match = re.search(r'\*\*强度\*\*[：:]\s*(\d+)', content)
+            intensity_match = re.search(r"\*\*强度\*\*[：:]\s*(\d+)", content)
             intensity = int(intensity_match.group(1)) if intensity_match else 0
 
-            entries.append({
-                "date": date,
-                "time": time_str,
-                "title": title,
-                "content": content,
-                "user_quotes": quotes,
-                "emotion": emotion,
-                "intensity": intensity,
-                "file": str(md_file),
-            })
+            entries.append(
+                {
+                    "date": date,
+                    "time": time_str,
+                    "title": title,
+                    "content": content,
+                    "user_quotes": quotes,
+                    "emotion": emotion,
+                    "intensity": intensity,
+                    "file": str(md_file),
+                }
+            )
 
             i += 3
 
@@ -143,6 +183,7 @@ def parse_diary_entries(diary_dir: str) -> list:
 # ---------------------------------------------------------------------------
 # Growth Node Detection
 # ---------------------------------------------------------------------------
+
 
 def extract_growth_nodes(diary_dir: str) -> list:
     """扫描所有日记条目，检测 Innovative Moments。
@@ -168,14 +209,20 @@ def extract_growth_nodes(diary_dir: str) -> list:
                 if marker in searchable:
                     # Find the matching quote or content line
                     evidence = _find_evidence(entry, marker)
-                    nodes.append({
-                        "date": entry["date"],
-                        "im_type": im_type,
-                        "im_description": config["description"],
-                        "evidence": evidence,
-                        "quote": entry["user_quotes"][0] if entry["user_quotes"] else "",
-                        "context": f"{entry['title']} ({entry['emotion']})" if entry["emotion"] else entry["title"],
-                    })
+                    nodes.append(
+                        {
+                            "date": entry["date"],
+                            "im_type": im_type,
+                            "im_description": config["description"],
+                            "evidence": evidence,
+                            "quote": entry["user_quotes"][0]
+                            if entry["user_quotes"]
+                            else "",
+                            "context": f"{entry['title']} ({entry['emotion']})"
+                            if entry["emotion"]
+                            else entry["title"],
+                        }
+                    )
                     break  # One IM per type per entry
 
     return nodes
@@ -200,6 +247,7 @@ def _find_evidence(entry: dict, marker: str) -> str:
 # Contrast Pairs
 # ---------------------------------------------------------------------------
 
+
 def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
     """找到可对比的成长节点对。
 
@@ -222,12 +270,16 @@ def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
         for marker in IM_MARKERS["reflection"].get("contrast_with", []):
             if marker in searchable:
                 evidence = _find_evidence(entry, marker)
-                early_dismissals.append({
-                    "date": entry["date"],
-                    "evidence": evidence,
-                    "quote": entry["user_quotes"][0] if entry["user_quotes"] else "",
-                    "context": entry["title"],
-                })
+                early_dismissals.append(
+                    {
+                        "date": entry["date"],
+                        "evidence": evidence,
+                        "quote": entry["user_quotes"][0]
+                        if entry["user_quotes"]
+                        else "",
+                        "context": entry["title"],
+                    }
+                )
                 break
 
     # Pair early dismissals with later reflection nodes
@@ -236,24 +288,26 @@ def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
     for dismissal in early_dismissals:
         for reflection in reflection_nodes:
             if reflection["date"] > dismissal["date"]:
-                pairs.append({
-                    "type": "reflection_growth",
-                    "before": {
-                        "date": dismissal["date"],
-                        "text": dismissal["evidence"],
-                        "quote": dismissal["quote"],
-                    },
-                    "after": {
-                        "date": reflection["date"],
-                        "text": reflection["evidence"],
-                        "quote": reflection["quote"],
-                    },
-                    "narrative": (
-                        f"{dismissal['date']} 你说\u201c{dismissal['evidence']}\u201d。"
-                        f"{reflection['date']} 你说\u201c{reflection['evidence']}\u201d。"
-                        f"你觉得这两个你，有什么不同？"
-                    ),
-                })
+                pairs.append(
+                    {
+                        "type": "reflection_growth",
+                        "before": {
+                            "date": dismissal["date"],
+                            "text": dismissal["evidence"],
+                            "quote": dismissal["quote"],
+                        },
+                        "after": {
+                            "date": reflection["date"],
+                            "text": reflection["evidence"],
+                            "quote": reflection["quote"],
+                        },
+                        "narrative": (
+                            f"{dismissal['date']} 你说\u201c{dismissal['evidence']}\u201d。"
+                            f"{reflection['date']} 你说\u201c{reflection['evidence']}\u201d。"
+                            f"你觉得这两个你，有什么不同？"
+                        ),
+                    }
+                )
                 break  # One pair per dismissal
 
     # Pair early non-action with later action nodes
@@ -261,19 +315,20 @@ def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
     if action_nodes:
         # The first action node is itself a contrast with the previous default behavior
         for action in action_nodes:
-            pairs.append({
-                "type": "action_growth",
-                "before": None,  # Implicit: the old pattern
-                "after": {
-                    "date": action["date"],
-                    "text": action["evidence"],
-                    "quote": action["quote"],
-                },
-                "narrative": (
-                    f"你注意到了吗？{action['evidence']}\n"
-                    f"这本身就已经不一样了。"
-                ),
-            })
+            pairs.append(
+                {
+                    "type": "action_growth",
+                    "before": None,  # Implicit: the old pattern
+                    "after": {
+                        "date": action["date"],
+                        "text": action["evidence"],
+                        "quote": action["quote"],
+                    },
+                    "narrative": (
+                        f"你注意到了吗？{action['evidence']}\n这本身就已经不一样了。"
+                    ),
+                }
+            )
 
     return pairs
 
@@ -281,6 +336,7 @@ def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
 # ---------------------------------------------------------------------------
 # Conversation Formatting
 # ---------------------------------------------------------------------------
+
 
 def format_for_conversation(contrast_pair: dict) -> str:
     """将一个对比对格式化为可可可以在对话中直接使用的成长叙事文本。
@@ -301,18 +357,18 @@ def format_for_conversation(contrast_pair: dict) -> str:
             f"{after['date']} 你说\u201c{after_text}\u201d。\n"
             f"你觉得这两个你，有什么不同？"
         )
-    elif pair_type == "action_growth":
+    if pair_type == "action_growth":
         after = contrast_pair.get("after", {})
         evidence = after.get("text", "")
         return f"你注意到了吗？{evidence}\n这本身就已经不一样了。"
-    else:
-        # Fallback: use the pre-built narrative if available
-        return contrast_pair.get("narrative", "")
+    # Fallback: use the pre-built narrative if available
+    return contrast_pair.get("narrative", "")
 
 
 # ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
+
 
 def main():
     if len(sys.argv) < 2:

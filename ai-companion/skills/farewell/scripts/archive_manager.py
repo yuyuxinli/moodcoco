@@ -17,18 +17,20 @@ archive_manager.py — 数据封存与删除管理器
     python3 .../archive_manager.py capsule <memory_dir> open <capsule_id>
 """
 
-import json
-import re
-import sys
-from datetime import datetime, timedelta
-from pathlib import Path
+from __future__ import annotations
 
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Pattern Insight Extraction
 # ---------------------------------------------------------------------------
 
-def extract_pattern_insights(people_file: str) -> list:
+
+def extract_pattern_insights(people_file: str) -> list[dict[str, str]]:
     """从 people/{name}.md 提取模式级洞察（去掉名字）。
 
     提取内容：
@@ -53,13 +55,13 @@ def extract_pattern_insights(people_file: str) -> list:
         if stripped.startswith("## 我们之间的模式"):
             current_section = "patterns"
             continue
-        elif stripped.startswith("## 退出信号"):
+        if stripped.startswith("## 退出信号"):
             current_section = "exit_signals"
             continue
-        elif stripped.startswith("## 跨关系匹配"):
+        if stripped.startswith("## 跨关系匹配"):
             current_section = "cross_matches"
             continue
-        elif stripped.startswith("## "):
+        if stripped.startswith("## "):
             current_section = ""
             continue
 
@@ -77,25 +79,32 @@ def extract_pattern_insights(people_file: str) -> list:
             if content_line:
                 anonymized = _anonymize(content_line, name)
                 if anonymized.strip():
-                    insights.append({
-                        "source": current_section,
-                        "content": anonymized,
-                    })
+                    insights.append(
+                        {
+                            "source": current_section,
+                            "content": anonymized,
+                        }
+                    )
 
     return insights
 
 
-def _get_name_variants(name: str) -> list:
+def _get_name_variants(name: str) -> list[str]:
     """生成人名的所有可能变体（昵称、称呼等）。"""
     variants = [name]
     if len(name) >= 2:
         last_char = name[-1]
         first_char = name[0] if len(name) == 2 else name[1]
-        variants.extend([
-            f"阿{last_char}", f"{last_char}{last_char}",
-            f"{last_char}哥", f"{last_char}姐",
-            f"小{last_char}", f"老{last_char}",
-        ])
+        variants.extend(
+            [
+                f"阿{last_char}",
+                f"{last_char}{last_char}",
+                f"{last_char}哥",
+                f"{last_char}姐",
+                f"小{last_char}",
+                f"老{last_char}",
+            ]
+        )
         if len(name) == 2:
             variants.append(first_char + first_char)
     return list(set(variants))
@@ -103,10 +112,7 @@ def _get_name_variants(name: str) -> list:
 
 def _text_contains_name(text: str, name: str) -> bool:
     """检查文本是否包含人名或其任何变体。"""
-    for variant in _get_name_variants(name):
-        if variant in text:
-            return True
-    return False
+    return any(variant in text for variant in _get_name_variants(name))
 
 
 def _anonymize(text: str, name: str) -> str:
@@ -172,8 +178,14 @@ def _remove_sections_mentioning(text: str, name: str) -> str:
 # Archive (封存)
 # ---------------------------------------------------------------------------
 
-def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str,
-                    ritual_type: str = "standard") -> dict:
+
+def archive_person(
+    people_dir: str,
+    diary_dir: str,
+    memory_dir: str,
+    name: str,
+    ritual_type: str = "standard",
+) -> dict[str, Any]:
     """封存一个人的所有数据。
 
     操作：
@@ -187,7 +199,12 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str,
 
     返回 {"insights": [...], "archived_files": [...], "errors": [], "ritual_type": ...}
     """
-    result = {"insights": [], "archived_files": [], "errors": [], "ritual_type": ritual_type}
+    result = {
+        "insights": [],
+        "archived_files": [],
+        "errors": [],
+        "ritual_type": ritual_type,
+    }
 
     people_path = Path(people_dir) / f"{name}.md"
 
@@ -248,9 +265,9 @@ def _archive_people_file(text: str, name: str, ritual_type: str = "standard") ->
             continue
 
         if in_header and (
-            stripped.startswith("关系类型") or
-            stripped.startswith("认识时间") or
-            stripped.startswith("首次提及")
+            stripped.startswith("关系类型")
+            or stripped.startswith("认识时间")
+            or stripped.startswith("首次提及")
         ):
             archived_lines.append(line)
             continue
@@ -270,7 +287,10 @@ def _archive_people_file(text: str, name: str, ritual_type: str = "standard") ->
 
     # Add archive marker at top
     archived_lines.insert(1, "")
-    archived_lines.insert(2, f"> **已封存** — 仪式类型：{ritual_type} | 具体内容已清除，模式级洞察已保留到 USER.md")
+    archived_lines.insert(
+        2,
+        f"> **已封存** — 仪式类型：{ritual_type} | 具体内容已清除，模式级洞察已保留到 USER.md",
+    )
     archived_lines.insert(3, "")
 
     return "\n".join(archived_lines)
@@ -294,7 +314,9 @@ def _archive_diary_entry(text: str, name: str) -> str:
             return
 
         section_text = "\n".join(current_section_lines)
-        if _text_contains_name(current_section_header, name) or _text_contains_name(section_text, name):
+        if _text_contains_name(current_section_header, name) or _text_contains_name(
+            section_text, name
+        ):
             # Archive this section: keep header + emotion/intensity only
             result_lines.append(current_section_header)
             result_lines.append(f"> *与{name}相关的内容已封存*")
@@ -330,7 +352,8 @@ def _archive_diary_entry(text: str, name: str) -> str:
 # Delete (彻底删除)
 # ---------------------------------------------------------------------------
 
-def delete_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -> dict:
+
+def delete_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -> dict[str, Any]:
     """彻底删除一个人的所有数据。
 
     返回 {"deleted_files": [...], "errors": [...]}
@@ -424,6 +447,7 @@ CAPSULE_DURATION_MONTHS = 3
 def _add_months(dt: datetime, months: int) -> datetime:
     """精确加 N 个月（处理月末溢出）。"""
     import calendar
+
     month = dt.month - 1 + months
     year = dt.year + month // 12
     month = month % 12 + 1
@@ -431,7 +455,7 @@ def _add_months(dt: datetime, months: int) -> datetime:
     return dt.replace(year=year, month=month, day=day)
 
 
-def create_time_capsule(memory_dir: str, content: str) -> dict:
+def create_time_capsule(memory_dir: str, content: str) -> dict[str, str]:
     """创建一个时间胶囊。
 
     封存用户写的内容，精确 3 个自然月后可可打开。
@@ -449,8 +473,8 @@ def create_time_capsule(memory_dir: str, content: str) -> dict:
     entry = f"""
 ## {capsule_id}
 
-- 封存日期：{now.strftime('%Y-%m-%d')}
-- 开启日期：{open_date.strftime('%Y-%m-%d')}
+- 封存日期：{now.strftime("%Y-%m-%d")}
+- 开启日期：{open_date.strftime("%Y-%m-%d")}
 - 状态：sealed
 
 > {content}
@@ -467,19 +491,19 @@ def create_time_capsule(memory_dir: str, content: str) -> dict:
 
     return {
         "capsule_id": capsule_id,
-        "sealed_date": now.strftime('%Y-%m-%d'),
-        "open_date": open_date.strftime('%Y-%m-%d'),
+        "sealed_date": now.strftime("%Y-%m-%d"),
+        "open_date": open_date.strftime("%Y-%m-%d"),
     }
 
 
-def check_time_capsules(memory_dir: str) -> list:
+def check_time_capsules(memory_dir: str) -> list[dict[str, str]]:
     """检查是否有到期的时间胶囊。"""
     capsule_file = Path(memory_dir) / "time_capsules.md"
     if not capsule_file.exists():
         return []
 
     text = capsule_file.read_text(encoding="utf-8")
-    today = datetime.now().strftime('%Y-%m-%d')
+    today = datetime.now().strftime("%Y-%m-%d")
     due_capsules = []
 
     current_id = ""
@@ -500,17 +524,19 @@ def check_time_capsules(memory_dir: str) -> list:
             current_content = stripped[2:].strip()
         elif stripped == "---" and current_id:
             if current_status == "sealed" and current_open_date <= today:
-                due_capsules.append({
-                    "capsule_id": current_id,
-                    "open_date": current_open_date,
-                    "content": current_content,
-                })
+                due_capsules.append(
+                    {
+                        "capsule_id": current_id,
+                        "open_date": current_open_date,
+                        "content": current_content,
+                    }
+                )
             current_id = ""
 
     return due_capsules
 
 
-def open_time_capsule(memory_dir: str, capsule_id: str) -> dict:
+def open_time_capsule(memory_dir: str, capsule_id: str) -> dict[str, str]:
     """打开一个时间胶囊，返回内容并标记为 opened。
 
     1. 读取 time_capsules.md
@@ -542,7 +568,9 @@ def open_time_capsule(memory_dir: str, capsule_id: str) -> dict:
             continue
 
         if in_target:
-            if stripped == "---" or (stripped.startswith("## ") and capsule_id not in stripped):
+            if stripped == "---" or (
+                stripped.startswith("## ") and capsule_id not in stripped
+            ):
                 in_target = False
                 new_lines.append(line)
                 continue
@@ -566,7 +594,7 @@ def open_time_capsule(memory_dir: str, capsule_id: str) -> dict:
     return {
         "capsule_id": capsule_id,
         "content": content,
-        "opened_date": datetime.now().strftime('%Y-%m-%d'),
+        "opened_date": datetime.now().strftime("%Y-%m-%d"),
     }
 
 
@@ -574,11 +602,16 @@ def open_time_capsule(memory_dir: str, capsule_id: str) -> dict:
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 
+
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name> [ritual_type]")
-        print("  archive_manager.py delete <people_dir> <diary_dir> <memory_dir> <name>")
+        print(
+            "  archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name> [ritual_type]"
+        )
+        print(
+            "  archive_manager.py delete <people_dir> <diary_dir> <memory_dir> <name>"
+        )
         print("  archive_manager.py capsule <memory_dir> create <content>")
         print("  archive_manager.py capsule <memory_dir> check")
         print("  archive_manager.py capsule <memory_dir> open <capsule_id>")
@@ -588,8 +621,9 @@ def main():
 
     if command == "archive" and len(sys.argv) >= 6:
         ritual_type = sys.argv[6] if len(sys.argv) >= 7 else "standard"
-        result = archive_person(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5],
-                                ritual_type=ritual_type)
+        result = archive_person(
+            sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], ritual_type=ritual_type
+        )
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
     elif command == "delete" and len(sys.argv) >= 6:
