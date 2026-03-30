@@ -10,10 +10,11 @@ archive_manager.py — 数据封存与删除管理器
 只用 Python 标准库。
 
 用法（由 AI agent 通过 exec 调用）：
-    python3 .../archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name>
+    python3 .../archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name> [ritual_type]
     python3 .../archive_manager.py delete <people_dir> <diary_dir> <memory_dir> <name>
     python3 .../archive_manager.py capsule <memory_dir> create "<content>"
     python3 .../archive_manager.py capsule <memory_dir> check
+    python3 .../archive_manager.py capsule <memory_dir> open <capsule_id>
 """
 
 import json
@@ -171,7 +172,8 @@ def _remove_sections_mentioning(text: str, name: str) -> str:
 # Archive (封存)
 # ---------------------------------------------------------------------------
 
-def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -> dict:
+def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str,
+                    ritual_type: str = "standard") -> dict:
     """封存一个人的所有数据。
 
     操作：
@@ -180,9 +182,12 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
     3. memory/ → 删除含该人名字的记忆文件
     4. 返回保留的模式级洞察（供写入 USER.md）
 
-    返回 {"insights": [...], "archived_files": [...], "errors": [...]}
+    参数：
+    - ritual_type: 告别仪式类型（standard / gentle / quick），默认 standard
+
+    返回 {"insights": [...], "archived_files": [...], "errors": [], "ritual_type": ...}
     """
-    result = {"insights": [], "archived_files": [], "errors": []}
+    result = {"insights": [], "archived_files": [], "errors": [], "ritual_type": ritual_type}
 
     people_path = Path(people_dir) / f"{name}.md"
 
@@ -192,7 +197,7 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
 
         # Rewrite people file: keep header, clear body
         text = people_path.read_text(encoding="utf-8")
-        archived_text = _archive_people_file(text, name)
+        archived_text = _archive_people_file(text, name, ritual_type)
         people_path.write_text(archived_text, encoding="utf-8")
         result["archived_files"].append(str(people_path))
     else:
@@ -228,7 +233,7 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
     return result
 
 
-def _archive_people_file(text: str, name: str) -> str:
+def _archive_people_file(text: str, name: str, ritual_type: str = "standard") -> str:
     """重写 people file：保留头部信息，清空正文，标记为封存。"""
     lines = text.split("\n")
     archived_lines = []
@@ -265,7 +270,7 @@ def _archive_people_file(text: str, name: str) -> str:
 
     # Add archive marker at top
     archived_lines.insert(1, "")
-    archived_lines.insert(2, "> **已封存** — 具体内容已清除，模式级洞察已保留到 USER.md")
+    archived_lines.insert(2, f"> **已封存** — 仪式类型：{ritual_type} | 具体内容已清除，模式级洞察已保留到 USER.md")
     archived_lines.insert(3, "")
 
     return "\n".join(archived_lines)
@@ -505,6 +510,66 @@ def check_time_capsules(memory_dir: str) -> list:
     return due_capsules
 
 
+def open_time_capsule(memory_dir: str, capsule_id: str) -> dict:
+    """打开一个时间胶囊，返回内容并标记为 opened。
+
+    1. 读取 time_capsules.md
+    2. 找到匹配 capsule_id 的段落
+    3. 提取 content
+    4. 将状态从 "sealed" 改为 "opened"
+    5. 写回文件
+    6. 返回 {"capsule_id": ..., "content": ..., "opened_date": ...}
+    """
+    capsule_file = Path(memory_dir) / "time_capsules.md"
+    if not capsule_file.exists():
+        return {"error": f"time_capsules.md not found in {memory_dir}"}
+
+    text = capsule_file.read_text(encoding="utf-8")
+    lines = text.split("\n")
+
+    found = False
+    content = ""
+    new_lines = []
+    in_target = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if stripped.startswith("## ") and capsule_id in stripped:
+            in_target = True
+            found = True
+            new_lines.append(line)
+            continue
+
+        if in_target:
+            if stripped == "---" or (stripped.startswith("## ") and capsule_id not in stripped):
+                in_target = False
+                new_lines.append(line)
+                continue
+
+            # Extract content from blockquote
+            if stripped.startswith("> "):
+                content = stripped[2:].strip()
+
+            # Transition state: sealed -> opened
+            if stripped == "- 状态：sealed":
+                new_lines.append(line.replace("sealed", "opened"))
+                continue
+
+        new_lines.append(line)
+
+    if not found:
+        return {"error": f"capsule {capsule_id} not found"}
+
+    capsule_file.write_text("\n".join(new_lines), encoding="utf-8")
+
+    return {
+        "capsule_id": capsule_id,
+        "content": content,
+        "opened_date": datetime.now().strftime('%Y-%m-%d'),
+    }
+
+
 # ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
@@ -512,16 +577,19 @@ def check_time_capsules(memory_dir: str) -> list:
 def main():
     if len(sys.argv) < 2:
         print("Usage:")
-        print("  archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name>")
+        print("  archive_manager.py archive <people_dir> <diary_dir> <memory_dir> <name> [ritual_type]")
         print("  archive_manager.py delete <people_dir> <diary_dir> <memory_dir> <name>")
         print("  archive_manager.py capsule <memory_dir> create <content>")
         print("  archive_manager.py capsule <memory_dir> check")
+        print("  archive_manager.py capsule <memory_dir> open <capsule_id>")
         sys.exit(1)
 
     command = sys.argv[1]
 
     if command == "archive" and len(sys.argv) >= 6:
-        result = archive_person(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5])
+        ritual_type = sys.argv[6] if len(sys.argv) >= 7 else "standard"
+        result = archive_person(sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5],
+                                ritual_type=ritual_type)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
     elif command == "delete" and len(sys.argv) >= 6:
@@ -535,6 +603,9 @@ def main():
         elif sys.argv[3] == "check":
             capsules = check_time_capsules(sys.argv[2])
             print(json.dumps(capsules, ensure_ascii=False, indent=2))
+        elif sys.argv[3] == "open" and len(sys.argv) >= 5:
+            result = open_time_capsule(sys.argv[2], sys.argv[4])
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         else:
             print("Unknown capsule command")
             sys.exit(1)

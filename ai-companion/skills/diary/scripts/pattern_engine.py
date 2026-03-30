@@ -150,7 +150,7 @@ def _parse_exit_signal(entry: str) -> dict:
 # Cross-Relationship Pattern Matching
 # ---------------------------------------------------------------------------
 
-MATCH_DIMENSIONS = ["timing", "trigger", "reaction"]
+MATCH_DIMENSIONS = ["timing", "trigger", "reaction", "outcome"]
 
 
 def parse_people_files(people_dir: str) -> list:
@@ -331,6 +331,30 @@ def find_cross_patterns(people_data: list) -> list:
                 ],
             })
 
+    # --- Outcome patterns ---
+    outcome_keywords = {}
+    for person in with_signals:
+        for signal in person["exit_signals"]:
+            outcome = signal.get("outcome", "").lower()
+            if not outcome:
+                continue
+            for keyword in _extract_outcome_keywords(outcome):
+                if keyword not in outcome_keywords:
+                    outcome_keywords[keyword] = []
+                outcome_keywords[keyword].append((person["name"], signal))
+
+    for keyword, entries in outcome_keywords.items():
+        unique_people = list(set(e[0] for e in entries))
+        if len(unique_people) >= 2:
+            patterns.append({
+                "dimension": "outcome",
+                "description": f"相似结果：「{keyword}」",
+                "people": unique_people,
+                "details": [
+                    f"{name}: \"{sig['outcome']}\"" for name, sig in entries
+                ],
+            })
+
     return patterns
 
 
@@ -408,6 +432,22 @@ def _extract_keywords(text: str) -> list:
     """从文本中提取关系相关关键词。"""
     found = []
     for kw in _KEYWORD_PATTERNS:
+        if kw in text:
+            found.append(kw)
+    return found
+
+
+# Outcome-specific keywords for cross-relationship result matching
+_OUTCOME_KEYWORDS = [
+    "分手", "冷战", "和好", "复合", "断联", "删除",
+    "结束", "挽回", "道歉", "原谅", "冷淡", "疏远",
+]
+
+
+def _extract_outcome_keywords(text: str) -> list:
+    """从结果文本中提取结局相关关键词。"""
+    found = []
+    for kw in _OUTCOME_KEYWORDS:
         if kw in text:
             found.append(kw)
     return found
