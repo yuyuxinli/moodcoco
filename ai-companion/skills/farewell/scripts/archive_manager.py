@@ -416,10 +416,20 @@ def _remove_person_from_diary(text: str, name: str) -> str:
 CAPSULE_DURATION_MONTHS = 3
 
 
+def _add_months(dt: datetime, months: int) -> datetime:
+    """精确加 N 个月（处理月末溢出）。"""
+    import calendar
+    month = dt.month - 1 + months
+    year = dt.year + month // 12
+    month = month % 12 + 1
+    day = min(dt.day, calendar.monthrange(year, month)[1])
+    return dt.replace(year=year, month=month, day=day)
+
+
 def create_time_capsule(memory_dir: str, content: str) -> dict:
     """创建一个时间胶囊。
 
-    封存用户写的内容，3 个月后可可打开。
+    封存用户写的内容，精确 3 个自然月后可可打开。
     写入 memory/time_capsules.md。
     """
     memory_path = Path(memory_dir)
@@ -427,7 +437,7 @@ def create_time_capsule(memory_dir: str, content: str) -> dict:
     capsule_file = memory_path / "time_capsules.md"
 
     now = datetime.now()
-    open_date = now + timedelta(days=CAPSULE_DURATION_MONTHS * 30)
+    open_date = _add_months(now, CAPSULE_DURATION_MONTHS)
 
     capsule_id = f"capsule_{now.strftime('%Y%m%d_%H%M%S')}"
 
