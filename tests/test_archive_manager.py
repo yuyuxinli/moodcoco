@@ -217,3 +217,123 @@ def test_restore_not_found(tmp_path: Path) -> None:
         str(people_dir), str(tmp_path / "diary"), str(tmp_path / "memory"), "不存在"
     )
     assert result["status"] == "not_found"
+
+
+# ---------------------------------------------------------------------------
+# delete_person — pending_followup + time_capsules cleanup (P0 bug fix)
+# ---------------------------------------------------------------------------
+
+_PENDING_FOLLOWUP_CONTENT = """\
+# Pending Followup
+
+## 小凯冷战后续
+- 类型：情绪跟进
+- 人物：小凯
+- 日期：2025-01-20
+
+---
+
+## 工作压力跟进
+- 类型：日常关怀
+- 日期：2025-01-22
+
+---
+"""
+
+_TIME_CAPSULES_CONTENT = """\
+# 时间胶囊
+
+## capsule_20250115_220000
+
+- 封存日期：2025-01-15
+- 开启日期：2025-04-15
+- 状态：sealed
+
+> 希望小凯和我都能找到更好的自己
+
+---
+
+## capsule_20250120_100000
+
+- 封存日期：2025-01-20
+- 开启日期：2025-04-20
+- 状态：sealed
+
+> 希望三个月后工作顺利
+
+---
+"""
+
+
+def test_delete_cleans_pending_followup(tmp_path: Path) -> None:
+    """delete_person() removes person-related entries from pending_followup.md."""
+    people_dir, diary_dir, memory_dir = _setup_workspace(tmp_path)
+    (memory_dir / "pending_followup.md").write_text(
+        _PENDING_FOLLOWUP_CONTENT, encoding="utf-8"
+    )
+
+    result = archive_manager.delete_person(
+        str(people_dir), str(diary_dir), str(memory_dir), "小凯"
+    )
+
+    # pending_followup.md should still exist (has unrelated entries)
+    pf = memory_dir / "pending_followup.md"
+    assert pf.exists()
+    pf_text = pf.read_text(encoding="utf-8")
+
+    # 小凯-related section should be removed
+    assert "小凯" not in pf_text, (
+        "pending_followup.md should not contain 小凯 after delete"
+    )
+    # Unrelated entry should be preserved
+    assert "工作压力跟进" in pf_text, (
+        "Unrelated entries in pending_followup.md should be preserved"
+    )
+    # Should be listed in deleted_files
+    assert any("pending_followup" in f for f in result["deleted_files"])
+
+
+def test_delete_cleans_time_capsules(tmp_path: Path) -> None:
+    """delete_person() removes person-related entries from time_capsules.md."""
+    people_dir, diary_dir, memory_dir = _setup_workspace(tmp_path)
+    (memory_dir / "time_capsules.md").write_text(
+        _TIME_CAPSULES_CONTENT, encoding="utf-8"
+    )
+
+    result = archive_manager.delete_person(
+        str(people_dir), str(diary_dir), str(memory_dir), "小凯"
+    )
+
+    tc = memory_dir / "time_capsules.md"
+    assert tc.exists()
+    tc_text = tc.read_text(encoding="utf-8")
+
+    # 小凯-related capsule should be removed
+    assert "小凯" not in tc_text, (
+        "time_capsules.md should not contain 小凯 after delete"
+    )
+    # Unrelated capsule should be preserved
+    assert "工作顺利" in tc_text, (
+        "Unrelated capsules in time_capsules.md should be preserved"
+    )
+    assert any("time_capsules" in f for f in result["deleted_files"])
+
+
+def test_delete_basic_functionality(tmp_path: Path) -> None:
+    """delete_person() removes people file, diary mentions, and memory files."""
+    people_dir, diary_dir, memory_dir = _setup_workspace(tmp_path)
+
+    result = archive_manager.delete_person(
+        str(people_dir), str(diary_dir), str(memory_dir), "小凯"
+    )
+
+    # People file should be deleted
+    assert not (people_dir / "小凯.md").exists()
+    assert any("小凯.md" in f for f in result["deleted_files"])
+
+    # Diary should be cleaned
+    diary_text = (diary_dir / "2025-01-15.md").read_text(encoding="utf-8")
+    assert "小凯" not in diary_text
+
+    # Memory file should be deleted
+    assert not (memory_dir / "pattern_log.md").exists()

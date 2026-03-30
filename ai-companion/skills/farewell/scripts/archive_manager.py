@@ -614,10 +614,17 @@ def delete_person(
     memory_path = Path(memory_dir)
     if memory_path.exists():
         for md_file in memory_path.glob("*.md"):
-            if md_file.name in ("pending_followup.md", "time_capsules.md"):
-                continue
             text = md_file.read_text(encoding="utf-8")
-            if _text_contains_name(text, name):
+            if not _text_contains_name(text, name):
+                continue
+
+            if md_file.name in ("pending_followup.md", "time_capsules.md"):
+                # Section-level cleanup: remove sections mentioning this person,
+                # keep unrelated sections intact (aligned with archive_person behavior)
+                cleaned = _remove_sections_mentioning(text, name)
+                md_file.write_text(cleaned, encoding="utf-8")
+                result["deleted_files"].append(f"cleaned: {md_file}")
+            else:
                 md_file.unlink()
                 result["deleted_files"].append(f"deleted: {md_file}")
 
