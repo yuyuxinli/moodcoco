@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from collections import Counter
@@ -213,7 +212,7 @@ def parse_diary_entry(filepath: Path) -> dict[str, Any]:
             continue
 
         # 提取情绪关键词（从全文扫描）
-        for word, _cluster in WORD_TO_CLUSTER.items():
+        for word in WORD_TO_CLUSTER:
             if word in stripped:
                 result["emotions"].append(word)
 
@@ -497,7 +496,7 @@ def analyze_week(
     # 人物重复：同一人出现 ≥3 天
     # 统计每个人出现在哪些天
     person_day_counts: Counter[str] = Counter()
-    for day_name, day_data in daily.items():
+    for _day_name, day_data in daily.items():
         for person in day_data.get("people", []):
             person_day_counts[person] += 1
     for person, day_count in person_day_counts.items():
@@ -682,9 +681,9 @@ def _theme_key(theme: dict[str, Any]) -> str | None:
     t = theme.get("type", "")
     if t == "emotion":
         return f"emotion:{theme.get('word', '')}"
-    elif t == "person":
+    if t == "person":
         return f"person:{theme.get('name', '')}"
-    elif t == "trigger":
+    if t == "trigger":
         return f"trigger:{theme.get('word', '')}"
     return None
 
@@ -694,9 +693,9 @@ def _theme_description(theme: dict[str, Any]) -> str:
     t = theme.get("type", "")
     if t == "emotion":
         return theme.get("word", "未知情绪")
-    elif t == "person":
+    if t == "person":
         return f"关于{theme.get('name', '某人')}的反复提及"
-    elif t == "trigger":
+    if t == "trigger":
         return theme.get("word", "未知触发")
     return str(theme)
 
@@ -830,7 +829,7 @@ def detect_growth_signals(
         })
 
     # --- 需要上周缓存的信号 ---
-    last_monday, last_sunday = get_last_week_range()
+    last_monday, _last_sunday = get_last_week_range()
     last_week_label = iso_week_label(last_monday)
     last_cache = _load_weekly_cache(memory_dir, last_week_label)
 
@@ -995,12 +994,12 @@ def write_weekly_cache(
 
 def _cleanup_old_caches(cache_root: Path, keep: int = 8) -> None:
     """保留最近 N 周的缓存，删除更早的。"""
+    import contextlib
+
     cache_files = sorted(cache_root.glob("*.json"), reverse=True)
     for old_file in cache_files[keep:]:
-        try:
+        with contextlib.suppress(OSError):
             old_file.unlink()
-        except OSError:
-            pass
 
 
 def _extract_group_counts_from_cache(cache: dict[str, Any]) -> dict[str, int]:
