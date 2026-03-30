@@ -1,0 +1,42 @@
+<!--
+  Canvas 卡片 E：告别纪念卡（Farewell Memorial）
+  F08 节点 B4.5 使用，当仪式化封存完成 + insights 非空 + macOS 桌面端时展示。
+  Agent 根据 archive_manager.py 返回的 pattern_insights 填充模板变量，生成完整 HTML。
+
+  模板变量说明：
+    {insights}         — 去名字的模式洞察 HTML（重复 .insight 块，2-3 条）
+    {archive_date}     — 封存日期（如"2026-03-30"）
+
+  遵循 canvas/design-guide.md 设计规范：
+    - 暖白背景 #FFF8F0 / 暖灰文字 #8B7E74 / 薰衣草洞察边框 #C5A3FF
+    - 圆角 16px / 暖色阴影 / 留白充足
+    - 内容只有 2-3 条去名字的洞察 + 日期，不泄露具体人物
+
+  触发条件：
+    - farewell 流程 Path B Phase 4 数据处理完成后
+    - pattern_insights 非空
+    - Path A（普通删除）不触发此卡片
+
+  降级：
+    - 非 macOS 端 / Canvas 不可用 → 纯文字"信件"风格纪念：
+      "你从这段关系里学到的：
+       · {洞察1}
+       · {洞察2}
+       {封存日期}"
+-->
+<div class="canvas-card" style="background:#FFF8F0; border-radius:16px; padding:32px; max-width:500px; font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif; text-align:center; box-shadow:0 4px 16px rgba(255,180,150,0.15);">
+  <h2 style="color:#8B7E74; font-size:18px; margin:0 0 24px 0; font-weight:500;">你从这段关系里学到的</h2>
+
+  <div class="insights" style="text-align:left; margin:24px 0;">
+    <!-- 2-3 条去名字的模式洞察（agent 根据 pattern_insights 重复生成） -->
+    <!-- 每条洞察：
+    <div class="insight" style="background:white; border-radius:12px; padding:16px; margin-bottom:12px; border-left:3px solid #C5A3FF; box-shadow:0 2px 8px rgba(255,180,150,0.15);">
+      <p style="color:#8B7E74; font-size:15px; margin:0; line-height:1.6;">{洞察内容，已去除名字}</p>
+    </div>
+    -->
+    {insights}
+  </div>
+
+  <p style="color:#8B7E74; font-size:13px; margin:24px 0 8px 0; opacity:0.7;">{archive_date}</p>
+  <p style="color:#C5A3FF; font-size:12px; margin:0;">这段关系被认真地送走了。</p>
+</div>
