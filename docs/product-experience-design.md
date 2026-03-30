@@ -6549,7 +6549,519 @@ archive_manager.py 当前只有 `capsule create` 和 `capsule check`，没有状
 
 ## F09 基础设施 × 旅程绑定
 
-*（待设计）*
+*Version: 1.0 | 2026-03-30*
+
+F09 不产生新功能，它是一面镜子：验证 F01-F03 三层基础设施在 F04-F08 五条旅程中是否被正确、完整、一致地调用。同时统一 F01-F08 设计过程中产生的命名和格式不一致。
+
+---
+
+### 1. 记忆体系 × 旅程绑定矩阵
+
+#### 1.1 记忆读取矩阵（READ）
+
+| 记忆资源 | F04 首次相遇 | F05 情绪事件 | F06 日常陪伴 | F07 模式觉察 | F08 关系告别 |
+|---------|------------|------------|------------|------------|------------|
+| **USER.md** | ❌ 不存在（用于判断首次用户） | ✅ 会话启动必读 | ✅ 会话启动必读 + 偏好检查 | ✅ 对话计数 + 核心模式 | ✅ 封存后行为规则读取 |
+| **people/{名字}.md** | ❌ 不存在 | ✅ 人名触发读取 + 退出信号检测 | ✅ 闲聊话题发现 | ✅ 全量读取（≥2 档案做跨关系比较） | ✅ 封存目标确认 + 关系历史回顾 |
+| **diary/*.md** | ❌ 不存在 | ✅ memory_search 命中 | ✅ 周回顾 weekly_review.py 批量读取 | ✅ growth_tracker.py 纵向扫描 | ❌ 不读取（封存/删除目标，不读内容） |
+| **memory/*.md** | ❌ 不存在 | ✅ memory_search 命中 | ✅ memory_search 话题发现 | ✅ pattern_log.md 频率检查 | ❌ 不读取 |
+| **memory/pending_followup.md** | ❌ 不存在 | ❌ 不读（写入方） | ✅ Heartbeat 读取判断回访 | ✅ Heartbeat 跟进 | ✅ delete/archive 时清理 |
+| **memory/time_capsules.md** | ❌ 不存在 | ❌ 不涉及 | ✅ Heartbeat 到期检查 | ❌ 不涉及 | ✅ capsule create 写入 + delete/archive 时清理 |
+| **memory/pattern_log.md** | ❌ 不存在 | ❌ 不涉及 | ❌ 不涉及 | ✅ 频率保护（14 天同模式冷却 / 30 天拒绝冷却） | ❌ 不涉及 |
+| **MEMORY.md** | ❌ 首次不写入 | ✅ Compaction 后恢复上下文 | ✅ Compaction 后恢复上下文 | ✅ Compaction 后恢复上下文 | ❌ 不涉及 |
+| **memory_search** | ❌ 无历史数据 | ✅ 每次对话开始提取关键词搜索 | ✅ 闲聊话题 + Heartbeat 内容 | ✅ 模式预检 + 原话回响检测 | ✅ 人物识别（人名搜索） |
+
+#### 1.2 记忆写入矩阵（WRITE）
+
+| 记忆资源 | F04 首次相遇 | F05 情绪事件 | F06 日常陪伴 | F07 模式觉察 | F08 关系告别 |
+|---------|------------|------------|------------|------------|------------|
+| **USER.md** | ✅ 首次创建（write） | ✅ 情绪触发点 + 有效方法更新（edit） | ✅ 偏好字段 + 核心困扰更新（edit） | ✅ 反复模式 + 成长节点更新（edit） | ✅ 模式级洞察（去名字）+ 新信念写入（edit） |
+| **people/{名字}.md** | ✅ 首次创建（write） | ✅ 六维度更新：感受/模式/事件/退出信号（edit） | ✅ 关键事件 + 关系阶段更新（edit） | ✅ 跨关系匹配段写入（edit） | ✅ 封存标记 / 删除（archive_manager.py） |
+| **diary/*.md** | ❌ 不创建 | ✅ 六元组日记（write） | ✅ 六元组日记（write） | ✅ 觉察后事件记录（write） | ✅ 告别信记录 + 封存标记（write/edit） |
+| **memory/*.md** | ✅ 首次会话摘要（write） | ✅ 模式发现 + IM 记录（write） | ✅ check-in 记录 + 闲聊摘要（write） | ✅ 觉察要点记录（write） | ❌ 不写入（清理目标） |
+| **memory/pending_followup.md** | ❌ 不涉及 | ✅ decision-cooling 触发时写入（edit） | ❌ 不写（读取方） | ❌ 不写（读取方） | ✅ archive/delete 时清理相关条目（edit） |
+| **memory/time_capsules.md** | ❌ 不涉及 | ❌ 不涉及 | ❌ 不涉及（Heartbeat 读取后 edit 更新状态） | ❌ 不涉及 | ✅ capsule create 写入（archive_manager.py） |
+| **memory/pattern_log.md** | ❌ 不涉及 | ❌ 不涉及 | ❌ 不涉及 | ✅ 每次模式呈现后写入（时间/类型/用户反应/冷却期） | ❌ 不涉及 |
+
+#### 1.3 记忆个性化矩阵（PERSONALIZATION）
+
+| 个性化行为 | 依赖的记忆 | 使用旅程 | 最低数据门槛 |
+|-----------|---------|---------|------------|
+| 记住用户称呼 | USER.md 称呼字段 | F05/F06/F07/F08 | 1 次对话 |
+| 引用上次聊的事 | memory_search + people/*.md | F05/F06 | 2 次对话 |
+| 单段关系模式识别 | people/{名字}.md 模式段 | F05/F06 | 同一触发 ≥3 次 |
+| 跨关系模式呈现 | people/*.md × N + pattern_engine.py | F07 | ≥2 段关系 + ≥5 次对话 |
+| 成长叙事（纵向原话对比） | diary/*.md + growth_tracker.py | F07 | diary ≥2 周 |
+| 周情绪回顾 | diary/本周/*.md + weekly_review.py | F06 | diary ≥3 条/周 |
+| Heartbeat 具体关怀 | USER.md + pending_followup.md | F06 | pending_followup 有待回访 |
+| 告别仪式的关系回顾 | people/{名字}.md 关系阶段 + 时长 | F08 | 目标人物有档案 |
+| 去名字的模式引用（封存后） | USER.md 模式级洞察段 | F05/F06/F07 | 至少 1 次 farewell 仪式 |
+| 深夜模式语气调整 | envelopeTimestamp + userTimezone | F05 | 无（平台能力） |
+
+#### 1.4 记忆流缺口分析
+
+**已确认无缺口**：
+
+| 写入方 | 写入内容 | 读取方 | 读取时机 | 闭环状态 |
+|--------|---------|--------|---------|---------|
+| F04 onboarding | USER.md 首次创建 | F05/F06/F07/F08 | 会话启动必读 | ✅ 闭环 |
+| F04 onboarding | people/{名字}.md 首次创建 | F05 对话中 memory_get | 人名触发 | ✅ 闭环 |
+| F05 diary skill | diary/*.md 六元组 | F06 weekly_review.py | 周日批量读取 | ✅ 闭环 |
+| F05 diary skill | people/*.md 退出信号段 | F07 pattern_engine.py | 跨关系匹配 | ✅ 闭环 |
+| F05 decision-cooling | pending_followup.md 写入 | F06 Heartbeat | 主动关怀读取 | ✅ 闭环 |
+| F07 pattern-mirror | people/*.md 跨关系匹配段 | F08 archive insights | 模式洞察提取 | ✅ 闭环 |
+| F08 farewell archive | USER.md 模式级洞察 | F05/F07 后续对话 | memory_search 命中 | ✅ 闭环 |
+| F08 capsule create | time_capsules.md 写入 | F06 Heartbeat capsule check | 到期检查 | ✅ 闭环 |
+
+**潜在注意点（非缺口，但需关注）**：
+
+1. **memory/pattern_log.md 只有 F07 读写**：该文件是 F07 的私有状态文件（频率保护），不被其他旅程使用。这是正确的——但 F10 旅程流转设计时需考虑：如果用户从 F06 周回顾自然过渡到 F07 模式觉察，频率保护状态仍从 pattern_log.md 读取。
+2. **check-in 记录（memory/YYYY-MM-DD.md）→ weekly_review.py**：F06 §7.1 明确 check-in 记录写入 memory/YYYY-MM-DD.md，§6 明确 weekly_review.py 读取 diary/ 目录。check-in 的轻量记录不在 diary/ 中，而在 memory/ 中——weekly_review.py 输入规范中应明确同时扫描 memory/ 目录的 check-in 条目。**这一点在 F06 §5.3 Cron 自适应调度中已标注"check-in 记录虽轻量，但仍计入 weekly_review.py 的数据统计"，但 weekly_review.py 的输入参数（F01 §5.5）只接收 `--diary-dir`，缺少 `--memory-dir` 参数。→ 见 §4 勘误 #5。**
+
+---
+
+### 2. 交互系统 × 旅程绑定矩阵
+
+#### 2.1 交互形态使用矩阵
+
+| 交互形态 | F04 首次相遇 | F05 情绪事件 | F06 日常陪伴 | F07 模式觉察 | F08 关系告别 |
+|---------|------------|------------|------------|------------|------------|
+| **纯对话** | ✅ 主要形态 | ✅ 主要形态 | ✅ 主要形态 | ✅ 主要形态 | ✅ 主要形态 |
+| **Canvas** | ❌ 不使用 | ✅ 可选：模式对比卡 C | ✅ 周情绪地图 A | ✅ 模式对比卡 C + 成长轨迹卡 D | ✅ 告别纪念卡 E |
+| **Poll** | ✅ 有限 1 次（来访原因） | ✅ 可选（情绪精细化 P2） | ✅ 周回顾深聊询问 | ❌ 不使用 | ✅ 仪式选择 P1 |
+| **图片** | ❌ 仅请求分支（聊天截图分析） | ❌ 不使用 | ❌ 不使用 | ❌ 不使用 | ✅ 仪式图（火焰/封印/信封） |
+| **exec** | ✅ 仅危机分支（breathe-fast.py） | ✅ pattern_engine.py + growth_tracker.py | ✅ weekly_review.py | ✅ pattern_engine.py + growth_tracker.py | ✅ archive_manager.py + ritual_image.py |
+| **Streaming** | ✅ humanDelay 全程 | ✅ humanDelay 全程 | ✅ humanDelay 全程 | ✅ humanDelay 全程 | ✅ humanDelay 全程 |
+| **Heartbeat** | ✅ 24h+ 未回来触发首次关怀 | ✅ 决策冷却回访 + 后续关怀 | ✅ 主动关怀 + Cron 日记提醒 + 周回顾 | ✅ 模式觉察后跟进 + 周回顾入口 | ✅ 时间胶囊到期检查 |
+
+#### 2.2 F02 交互决策树合规检查
+
+| 决策规则 | F04 | F05 | F06 | F07 | F08 |
+|---------|-----|-----|-----|-----|-----|
+| **情绪高峰 → 纯对话** | ✅ 危机分支不用 Canvas/Poll | ✅ 节点 A 接住全程纯对话 | ✅ 情绪切换到 F05 流程 | ✅ 情绪淹没退回 F05 | ✅ 仪式中情绪爆发暂停仪式 |
+| **结构化数据 ≥3 维度 → Canvas** | N/A 无数据 | ✅ 模式对比卡仅稳定后 | ✅ 周情绪地图 | ✅ 多维度匹配用 Canvas | ✅ 纪念卡展示洞察 |
+| **有限选项 → Poll/编号选择** | ✅ 来访原因 3 选项 | ✅ 情绪词 3-4 选项 | ✅ 周回顾 2-3 选项 | ❌ 不需要选择 | ✅ 仪式 4 选项 |
+| **仪式时刻 → 图片** | N/A | N/A | N/A | N/A | ✅ 火焰/封印/信封图 |
+| **后台计算 → exec** | ✅ 呼吸脚本 | ✅ 模式匹配/成长检测 | ✅ 周统计 | ✅ 模式匹配/成长检测 | ✅ 封存/图片 |
+| **Canvas 降级方案** | N/A | ✅ 纯文字对比 | ✅ 纯文字回顾 | ✅ 纯文字引用 | ✅ 纯文字"信件"风格 |
+| **Poll 降级方案** | ✅ 文字选择 | ✅ 纯对话逐一询问 | ✅ 纯对话 | N/A | ✅ 编号文字选择 |
+
+#### 2.3 Canvas 卡片类型 × 旅程映射
+
+| Canvas 卡片 | 定义位置 | 使用旅程 | 触发条件 | 数据源 |
+|------------|---------|---------|---------|-------|
+| **卡片 A：周情绪地图** | F02 §2.1 | F06 节点 E | Heartbeat 周日 + diary ≥3 条 | weekly_review.py JSON → HTML |
+| **卡片 B：关系时间线** | F02 §2.1 | F05（可选）/ F07（可选） | 用户请求或模式觉察 | people/{名字}.md → agent 生成 HTML |
+| **卡片 C：模式对比卡** | F02 §2.1 | F05 节点 D / F07 节点 D | ≥2 匹配维度 + macOS | pattern_engine.py JSON → agent 生成 HTML |
+| **卡片 D：成长轨迹卡** | F02 §2.1 | F07 节点 F（路径 F-2） | 多个 IM + macOS | growth_tracker.py JSON → agent 生成 HTML |
+| **卡片 E：告别纪念卡** | F02 §2.1 | F08 节点 B4.5 | 仪式化封存 + insights 非空 | archive_manager.py insights → agent 生成 HTML |
+
+**卡片 B 使用场景补充说明**：F02 §2.1 定义了卡片 B（关系时间线），F07 §2 节点 D 描述模式呈现时提到"双列时间线并排展示"——这对应的是卡片 C（模式对比卡）而非卡片 B。卡片 B 是单段关系的时间线，当前没有旅程节点明确标注使用它。**实际使用场景**：当用户主动请求"帮我看看我和小凯的关系"时，agent 可以生成卡片 B。这是一个按需触发的能力，不绑定到特定旅程节点——在 F05 深入讨论和 F07 模式觉察中都可能出现。
+
+#### 2.4 渐进式解锁验证
+
+F02 §7.4 定义了交互形态随记忆积累的渐进式解锁。验证各旅程是否遵守：
+
+| 记忆阶段 | 可用形态 | F04 | F05 | F06 | F07 | F08 |
+|---------|---------|-----|-----|-----|-----|-----|
+| 第 1 次 | 纯对话 only | ✅ | N/A（第 1 次走 F04） | N/A | N/A | N/A |
+| 第 3 次 | + Poll | ✅（F04 有 1 次 Poll） | ✅（情绪精细化 Poll） | ✅（check-in 可选 Poll） | N/A（≥5 次才进入） | N/A（用户主动触发） |
+| 第 10 次 | + Canvas（周地图） | N/A | ✅ | ✅（diary ≥3 条门槛） | N/A | N/A |
+| 第 15 次 | + Canvas（时间线）+ exec | N/A | ✅ | ✅ | N/A（≥5 次 + ≥2 关系） | N/A |
+| 第 30 次 | + Canvas（模式对比/成长）+ 图片 | N/A | ✅ | ✅ | ✅ | ✅ |
+| 告别时 | + Poll + 图片 + Canvas | N/A | N/A | N/A | N/A | ✅ |
+
+**合规结论**：各旅程严格遵守渐进式解锁约束。F04 首次对话只用纯对话 + 1 次 Poll（例外已在 F02 中说明），F07 的硬性前置条件（≥5 次 + ≥2 关系）天然确保数据量足够使用 Canvas 和 exec。
+
+---
+
+### 3. Skill 体系 × 旅程绑定矩阵
+
+#### 3.1 Skill 触发矩阵
+
+| Skill | F04 首次相遇 | F05 情绪事件 | F06 日常陪伴 | F07 模式觉察 | F08 关系告别 |
+|-------|------------|------------|------------|------------|------------|
+| **onboarding** | ✅ 核心 Skill | ❌ | ❌ | ❌ | ❌ |
+| **breathing-ground** | ✅ 危机分支 | ✅ 情绪淹没时 | ✅ 日常中突然崩溃 | ✅ E3 淹没分支 | ✅ 仪式中情绪爆发 |
+| **diary** | ❌ 首次不推 | ✅ 节点 F 记录 | ✅ Cron 提醒 + 自然过渡 | ✅ 节点 G 收尾记录 | ✅ 告别信记录 |
+| **relationship-guide** | ❌ 首次不触发 | ✅ 用户想改善沟通时 | ❌ 日常不触发 | ✅ 节点 F 深入探索 | ❌ |
+| **decision-cooling** | ❌ | ✅ 冲动行动时 | ✅ 日常中冲动 | ✅ 节点 G 冲动决定 | ❌ |
+| **pattern-mirror** | ❌ | ✅ 条件全满足时 | ❌ | ✅ 核心 Skill（节点 A 预算→节点 D 呈现） | ❌ |
+| **check-in** | ❌ | ❌ | ✅ Heartbeat + 闲聊入口 | ❌ | ❌ |
+| **growth-story** | ❌ | ❌ | ❌ | ✅ 节点 F 路径 F-2 | ❌ |
+| **weekly-reflection** | ❌ | ❌ | ✅ Heartbeat 周日 20:00 | ✅ 入口之一（周回顾发现重复） | ❌ |
+| **farewell** | ❌ | ❌ | ❌ | ❌ | ✅ 核心 Skill |
+
+#### 3.2 F03 路由树合规检查
+
+F03 §5.1 路由树定义了 12 个节点的优先级决策。验证各旅程的 Skill 触发是否与路由树一致：
+
+| 路由节点 | 路由规则 | 旅程中的实际行为 | 合规 |
+|---------|---------|---------------|------|
+| 0. 安全前置 | 危机信号 → 安全协议 | F04 §4.1 / F05 §3 前置 / F06 全程 / F07 全程 / F08 §5.5 | ✅ |
+| 1. 情绪淹没 | → breathing-ground | F04 §4.1 优先于 onboarding / F05 节点 A | ✅ |
+| 2. 首次用户 | USER.md 不存在 → onboarding | F04 核心流程 | ✅ |
+| 3. 冲动行动 | → decision-cooling | F05 节点 E / F06 任意节点 / F07 节点 G | ✅ |
+| 4. 关系问题 | → relationship-guide | F05 节点 E / F07 节点 F | ✅ |
+| 5. 退出意图+条件全满足 | → pattern-mirror | F05 节点 D / F07 节点 A-D | ✅ |
+| 6. 自我否定+数据足够 | → growth-story | F07 节点 F 路径 F-2 | ✅ |
+| 7. 告别意愿 | → farewell | F08 全部 | ✅ |
+| 8. 想记录 | → diary | F05 节点 F / F06 节点 D | ✅ |
+| 9. Heartbeat 触发 | 按子优先级 | F06 §1 三触发 | ✅ |
+| 10. 情绪模糊 | → diary | F05 节点 B 情绪精细化 | ✅ |
+| 11. 都不匹配 | → 纯对话 | F06 节点 A 闲聊模式 | ✅ |
+
+#### 3.3 Skill 互斥规则验证
+
+F03 §5.2 + 各旅程定义的互斥规则：
+
+| 互斥规则 | 来源 | 旅程检查 | 合规 |
+|---------|------|---------|------|
+| 一次对话最多 2 个 Skill | F05 §5 / F06 §6 / F07 §4 | F05: breathing-ground + 另一个 ✅ / F06: check-in + diary ✅ / F07: pattern-mirror + growth-story ✅ | ✅ |
+| breathing-ground 先完成再触发其他 | F05 §5 | F04 §4.1: 呼吸后从节点 C 开始 ✅ / F07 §E3: 退回 F05 ✅ | ✅ |
+| decision-cooling 和 relationship-guide 不同时 | F05 §5 | F05: 要么冷却要么沟通 ✅ | ✅ |
+| pattern-mirror 和 decision-cooling 不同时 | F05 §5 / F07 §4 | F07: 看到模式后不适合冷却 ✅ | ✅ |
+| weekly-reflection 执行中不触发其他 | F06 §6 | F06: 周回顾是独立流程 ✅ | ✅ |
+
+#### 3.4 Skill × 脚本依赖验证
+
+F03 §6.4 定义了 Skill 与 Python 脚本的对应关系。验证各旅程的 exec 调用是否引用了正确路径：
+
+| 脚本 | F03 定义路径 | 旅程中引用 | 一致 |
+|------|------------|-----------|------|
+| breathe-fast.py | `skills/breathing-ground/scripts/breathe-fast.py` | F04 §4.1 / F05 §5 | ✅ |
+| pattern_engine.py | `skills/diary/scripts/pattern_engine.py` | F05 §6.2 / F07 §1.1 / F07 §2 节点 A | ✅ |
+| growth_tracker.py | `skills/diary/scripts/growth_tracker.py` | F05 §6.4 / F07 §4 growth-story | ✅ |
+| archive_manager.py | `skills/farewell/scripts/archive_manager.py` | F08 §2 / §3 / §6 | ✅ |
+| weekly_review.py | `skills/weekly-reflection/scripts/weekly_review.py` | F06 §4 / F06 §6 weekly-reflection | ✅ |
+| ritual_image.py | `skills/farewell/scripts/ritual_image.py` | F08 §3 仪式 1-4 | ✅ |
+| milestone_image.py | `skills/growth-story/scripts/milestone_image.py` | F06 里程碑检测（非特定节点） | ✅ |
+
+---
+
+### 4. 跨 Feature 命名统一（勘误表）
+
+以下是 F01-F08 设计中发现的命名和格式不一致，每条附统一决议。**不修改 F01-F08 原文**，以勘误表形式记录，实现时按此表为准。
+
+#### 勘误 #1：ritual_image.py `--type` 参数命名不一致
+
+| 位置 | 值 | 用意 |
+|------|-----|------|
+| F03 §6.4 | `fire \| seal \| release` | 按仪式意象命名（火/封印/释放） |
+| F02 §5.4 | `burn \| capsule \| letter` | 按仪式操作命名（烧/胶囊/信） |
+| F08 §3 + §6.3 | `burn \| capsule \| letter` | 与 F02 一致 |
+
+**统一决议**：采用 `burn | capsule | letter`。理由：(1) F02 和 F08 两处已一致，F03 是孤例；(2) `burn/capsule/letter` 与用户可见的仪式选项直接对应（烧掉日记/时间胶囊/未寄出的信），开发者更容易理解。
+
+**需修改**：F03 §6.4 脚本清单表中 `ritual_type: "fire"|"seal"|"release"` → 改为 `ritual_type: "burn"|"capsule"|"letter"`。
+
+#### 勘误 #2：`pattern_insights` vs `insights` 字段名不一致
+
+| 位置 | 字段名 | 上下文 |
+|------|--------|-------|
+| F01 §5.5 archive_manager.py | `pattern_insights` | archive 操作返回值 |
+| F02 §2.1 卡片 E + §2.3 数据绑定 | `pattern_insights` | Canvas 纪念卡数据源 |
+| F08 §3 节点 B4 archive_manager.py 返回 JSON | `insights` | archive 返回值实际字段 |
+| F08 §3 节点 B4.5 | `pattern_insights` | Canvas 纪念卡引用 |
+
+**统一决议**：采用 `insights`。理由：(1) F08 §3 节点 B4 给出了最详细的 JSON 返回示例，字段名为 `insights`，每个 item 包含 `{source, content}`，比单一的 `pattern_insights` 数组更有结构；(2) 该字段不仅包含 pattern 洞察，还包含 exit_signals 和 cross_matches 来源的洞察，"insights" 更准确。
+
+**需修改**：
+- F01 §5.5 archive_manager.py 输出示例：`pattern_insights` → `insights`
+- F02 §2.1 卡片 E + §2.3：`pattern_insights` → `insights`
+- F08 §3 节点 B4.5 描述中的 `pattern_insights` → `insights`
+
+#### 勘误 #3：pending_followup.md 格式不一致
+
+| 位置 | 格式描述 |
+|------|---------|
+| F05 §8.6 | `## [status]` 标题格式，9 字段 schema，完整示例 |
+| F08 §6.2 archive_manager.py delete | "按 `---` 分隔的条目块匹配" |
+
+**统一决议**：采用 F05 §8.6 的 `## [status]` 标题格式。理由：(1) F05 §8.6 是 pending_followup.md 格式的首次完整定义，包含 9 字段 schema 和示例；(2) `## [status]` 格式允许 agent 通过 Markdown 标题级别快速定位条目。
+
+**需修改**：F08 §6.2 "按 `---` 分隔的条目块匹配" → "按 `## [status]` 标题级别的条目块匹配（格式详见 F05 §8.6）"。
+
+#### 勘误 #4：F03 §4.1 总表交互形态标注缺失
+
+| Skill | §4.1 总表标注 | §6.2 交互矩阵 | 缺失 |
+|-------|-------------|-------------|------|
+| pattern-mirror | 纯对话 + exec | 纯对话 + Canvas（条件）+ exec | §4.1 缺 Canvas |
+| weekly-reflection | exec + Canvas/纯对话 | exec + Canvas/纯对话 + Poll | §4.1 缺 Poll |
+
+**统一决议**：以 §6.2 交互矩阵为准（更详细、有使用条件说明）。§4.1 总表是概要，在实现时参考 §6.2。
+
+**需修改**：
+- F03 §4.1 总表 pattern-mirror 交互形态：`纯对话 + exec` → `纯对话 + exec + Canvas（条件）`
+- F03 §4.1 总表 weekly-reflection 交互形态：`exec + Canvas/纯对话` → `exec + Canvas/纯对话 + Poll`
+
+#### 勘误 #5：weekly_review.py 输入参数缺 memory/ 扫描
+
+| 位置 | 输入参数 |
+|------|---------|
+| F01 §5.5 weekly_review.py 接口契约 | `--diary-dir diary/ --people-dir people/` |
+| F06 §7.1 check-in 数据流 | check-in 记录写入 memory/YYYY-MM-DD.md |
+| F06 §3.2（check-in 边界说明） | "check-in 记录虽轻量，但仍计入 weekly_review.py 的数据统计" |
+
+check-in 的记录存储在 memory/YYYY-MM-DD.md 中（非 diary/ 目录），但 weekly_review.py 当前接口只接收 `--diary-dir`。
+
+**统一决议**：为 weekly_review.py 新增 `--memory-dir memory/` 可选参数，用于扫描 check-in 条目。
+
+**需修改**：F01 §5.5 weekly_review.py 调用方式新增参数：`--memory-dir memory/`（可选，默认不扫描。有此参数时，脚本在统计情绪频率时也计入 memory/ 中的 check-in 记录）。
+
+#### 勘误 #6：F03 §7.1 relationship-guide references 文件计数错误
+
+F03 §7.1 Step 2 描述"共 8 个文件"，但实际列出了 9 个（anchor-cards.md, assurance-cards.md, communication-tools.md, demon-dialogues.md, forgiving-injuries.md, golden-concepts.md, ifs-parts-process.md, reconnection.md, repair-process.md）。
+
+**统一决议**：修正为"共 9 个文件"。
+
+**需修改**：F03 §7.1 Step 2 "共 8 个文件" → "共 9 个文件"。
+
+#### 勘误 #7：archive_manager.py delete 对 pending_followup.md / time_capsules.md 的处理
+
+F08 §2 节点 A2 和 §6.2 都标注了"当前脚本对这两个文件执行 `continue`（跳过），需要增强为逐条目扫描逻辑"。这与 archive 函数的行为不一致（archive 已正确处理这两个文件）。
+
+**统一决议**：delete 函数必须与 archive 函数对齐——扫描 pending_followup.md 和 time_capsules.md，移除目标人名相关条目。此为实现层面的脚本增强，不影响产品设计。
+
+**需修改**：无产品文档修改需求，脚本实现时对齐即可。F08 §6.2 已正确标注了此需求。
+
+---
+
+### 5. 共享组件清单
+
+#### 5.1 共享脚本
+
+| 脚本 | 所属 Skill | 被调用旅程 | 功能 |
+|------|-----------|-----------|------|
+| `pattern_engine.py` | diary | F05（模式检测）、F07（核心匹配） | 跨关系模式匹配 |
+| `growth_tracker.py` | diary | F05（成长对比）、F07（IM 检测） | 成长节点检测 |
+| `archive_manager.py` | farewell | F08（封存/删除/胶囊） | 关系数据生命周期管理 |
+| `weekly_review.py` | weekly-reflection | F06（周回顾统计） | 周情绪统计 + HTML 生成 |
+| `ritual_image.py` | farewell | F08（仪式图片） | 仪式场景图片生成 |
+| `milestone_image.py` | growth-story | F06（里程碑纪念） | 里程碑纪念图生成 |
+| `breathe-fast.py` | breathing-ground | F04/F05/F06/F07/F08（情绪淹没） | 节奏化呼吸引导 |
+
+**跨旅程复用度最高的脚本**：
+1. `pattern_engine.py`（2 条旅程）和 `growth_tracker.py`（2 条旅程）是核心分析引擎。
+2. `breathe-fast.py` 被 breathing-ground skill 包裹，而 breathing-ground 在所有 5 条旅程中都作为情绪淹没的安全网存在。
+
+#### 5.2 共享数据文件
+
+| 数据文件 | 写入旅程 | 读取旅程 | 生命周期 |
+|---------|---------|---------|---------|
+| **USER.md** | F04 创建 → F05/F06/F07 更新 → F08 洞察写入 | F05/F06/F07/F08 | 全生命周期存活，不删除 |
+| **people/{名字}.md** | F04 创建 → F05/F06 更新 → F07 匹配写入 | F05/F06/F07/F08 | F08 archive 标记封存或 delete 删除 |
+| **diary/*.md** | F05/F06 创建 | F06/F07 读取 | F08 archive 标记封存或 delete 清理 |
+| **memory/YYYY-MM-DD.md** | F04/F05/F06/F07 写入 | F05/F06/F07 搜索命中 | 30 天半衰期自动降权；F08 清理 |
+| **memory/pending_followup.md** | F05 写入 | F06 Heartbeat 读取 | F08 archive/delete 清理相关条目 |
+| **memory/time_capsules.md** | F08 capsule create | F06 Heartbeat capsule check | 开封后状态更新；F08 archive/delete 清理 |
+| **memory/pattern_log.md** | F07 写入 | F07 读取 | 持续累积，不清理 |
+| **MEMORY.md** | Compaction 时写入 | 所有旅程 Compaction 后 | 长期锚点，不受衰减 |
+
+#### 5.3 共享交互模式
+
+| 交互模式 | 使用旅程 | 触发条件 | 一致性检查 |
+|---------|---------|---------|----------|
+| **情绪接住（AGENTS.md Step 1）** | F04 节点 C / F05 节点 A-B / F06 闲聊转情绪 / F07 节点 A / F08 仪式中情绪波动 | 用户表达情绪 | ✅ 全部遵循"先接住再深入"原则 |
+| **情绪精细化命名** | F04 节点 C-D / F05 节点 B / F06 check-in 中性词追问 | 用户情绪模糊 | ✅ 全部遵循"一次试探一个词"原则 |
+| **日记邀请** | F05 节点 F / F06 节点 D / F06 Cron 提醒 | 对话自然暂停或定时触发 | ✅ 全部遵循"不给压力，不写就不追"原则 |
+| **安全前置检查（AGENTS.md §0）** | 所有旅程 | 每条消息必检 | ✅ 全部旅程声明了危机信号处理 |
+| **Heartbeat 冷却机制** | F05 §7.3 / F06 §1 / F07 §6 | 触发后 24-48h 冷却 | ✅ 规则一致 |
+| **收尾回指** | F04 节点 G / F05 节点 F / F06 节点 G | 对话结束 | ✅ 全部要求结尾包含本次对话具体细节 |
+
+---
+
+### 6. 数据生命周期
+
+#### 6.1 people/{名字}.md 生命周期
+
+```
+创建（F04/F05）
+  ├── F04 onboarding：用户首次提到人物 → write 创建
+  │   内容：关系类型 + 当前状态 + 首次提及日期 + 首次事件
+  │
+  └── F05 diary skill：对话中首次提到新人物 → write 创建
+      内容：同上
+
+更新（F05/F06）
+  ├── F05 每次情绪事件后 → edit 更新六维度
+  │   · 感受段：新原话追加（不覆盖旧的）
+  │   · 模式段：同一情绪 ≥3 次时写入
+  │   · 退出信号段：检测到退出意图时写入
+  │   · 关键事件段：每次新事件追加
+  │   · 关系阶段段：状态变化时更新
+  │
+  └── F06 日常陪伴 → edit 轻量更新
+      · 关键事件段：闲聊中提到的新信息
+
+模式匹配写入（F07）
+  └── F07 pattern-mirror 完成后 → edit 写入跨关系匹配段
+      · 匹配描述 + 匹配维度 + 日期 + 用户确认状态
+
+封存 / 删除（F08）
+  ├── archive → 标记封存，清空正文，保留头部
+  │   · people/{名字}.md 文件保留
+  │   · 正文内容清除
+  │   · 模式洞察提取到 USER.md
+  │
+  └── delete → 彻底删除文件
+      · people/{名字}.md 文件删除
+      · 不保留洞察
+
+封存后（F05/F06/F07）
+  └── 不主动引用具体事件和人名
+      · pattern-mirror 忽略已封存关系（除非只用去名字洞察）
+      · growth-story 脱敏处理
+```
+
+#### 6.2 diary/*.md 生命周期
+
+```
+创建（F05/F06）
+  ├── F05 diary skill → write 创建 diary/YYYY/MM/YYYY-MM-DD.md
+  │   内容：六元组（日期/事件/触发/情绪/发现/行动）
+  │
+  ├── F06 diary skill → write 创建（Cron 提醒或闲聊中自然过渡）
+  │   内容：同上
+  │
+  └── F08 告别信 → write 记录到 diary/，标记为"告别信"
+
+聚合读取（F06）
+  └── weekly_review.py 扫描 diary/本周/*.md
+      · 情绪词频统计
+      · 人物出现计数
+      · 触发因素重复检测
+      · 成长信号发现
+
+模式分析数据源（F07）
+  └── growth_tracker.py 扫描 diary/ 纵向数据
+      · IM（Innovative Moment）检测
+      · 原话对比对生成
+
+封存 / 清理（F08）
+  ├── archive → 标记封存 section，保留情绪标签
+  └── delete → 移除包含该人的整个 section
+```
+
+#### 6.3 USER.md 生命周期
+
+```
+创建（F04）
+  └── onboarding 对话结束时 → write 创建
+      内容：称呼 / 核心困扰 / 反复模式（空）/ 有效方法（空）/
+            情绪触发点 / 模式级洞察（空）/ 可可和你的关系
+
+偏好区块添加（F06）
+  └── 用户明确表达偏好时 → edit 添加/更新偏好字段
+      · check_in_preference / diary_reminder_time / diary_reminder_status
+      · heartbeat_preference / weekly_review_preference / growth_feedback_preference
+
+持续更新（F05/F06/F07）
+  ├── F05 → edit 更新情绪触发点 + 有效方法
+  ├── F06 → edit 更新核心困扰变化 + 新兴趣习惯
+  └── F07 → edit 更新反复出现的模式 + 成长节点
+
+洞察写入（F08）
+  └── farewell archive 完成后 → edit 追加模式级洞察段
+      · 去名字的模式洞察（来自 archive_manager.py insights）
+      · 新信念记录（来自"烧掉信念"仪式）
+
+USER.md 不会被删除
+  └── 即使用户和可可本身告别（F08 §5.4），也需要用户明确要求才清空
+```
+
+#### 6.4 数据完整性约束总览
+
+| 约束 | 执行方 | 验证方式 |
+|------|--------|---------|
+| 对话结束必写入（USER.md + people/*.md） | AGENTS.md | 告别语检测 → write/edit |
+| 头部字段覆盖更新，正文只增不改 | F01 §2.1 冲突检测规则 | edit 前读取 → 冲突判断 → 按规则处理 |
+| 用户原话用引号保留 | F01 §2.1 写入原则 | people/*.md 感受段格式 |
+| 不脑补：AI 推测标注"我观察到" | F01 §2.1 写入原则 | diary SKILL.md |
+| 封存操作原子性 | archive_manager.py | 备份→提取→修改→失败回滚 |
+| exec 脚本只读不写记忆（archive_manager.py 例外） | F02 §7.3 | 脚本设计约束 |
+| 偏好字段仅在用户明确表达时修改 | F06 §7.3 | USER.md 偏好区块写入规则 |
+
+---
+
+### 7. 全局依赖关系图
+
+```
+F01 记忆体系 ──────────────────────────────────────────────────────┐
+│  提供：USER.md / people/ / diary/ / memory/ / MEMORY.md          │
+│  提供：memory_get / memory_search / write / edit 工具             │
+│                                                                  │
+F02 交互系统 ──────────────────────────────────────────────────────┤
+│  提供：Canvas 5 种卡片 / Poll 3 种场景 / 图片 3 种场景 /          │
+│        exec 7 个脚本 / Streaming / Heartbeat                     │
+│  规则：决策树 / 渐进式解锁 / 降级方案                              │
+│                                                                  │
+F03 Skill 体系 ────────────────────────────────────────────────────┤
+│  提供：10 个 Skill + 路由树 + 互斥规则                             │
+│  规则：P0-P5 优先级 / Fallback 行为                               │
+├──────────────────────────────────────────────────────────────────┘
+│
+├── F04 首次相遇
+│   · 消费：路由树节点 1-2 / onboarding / breathing-ground（危机）
+│   · 产出：USER.md + people/*.md → 喂养 F05-F08
+│
+├── F05 单次情绪事件
+│   · 消费：memory_search / people/*.md / pattern_engine / growth_tracker
+│   · 产出：diary/*.md + people/*.md 六维度更新 + pending_followup.md
+│   · 喂养：F06（diary 数据）/ F07（退出信号 + 模式积累）/ F08（背景）
+│
+├── F06 日常陪伴
+│   · 消费：Heartbeat + Cron / check-in / diary / weekly_review.py / Canvas
+│   · 产出：memory/ check-in 记录 + diary 持续积累 + USER.md 偏好
+│   · 喂养：F07（纵向数据）/ F08（关系深度）
+│
+├── F07 模式觉察
+│   · 消费：所有 people/*.md + diary/ + pattern_engine + growth_tracker + Canvas
+│   · 产出：people/*.md 跨关系匹配 + USER.md 模式更新 + pattern_log.md
+│   · 喂养：F08（模式洞察 → 告别上下文）
+│
+└── F08 关系告别
+    · 消费：farewell / archive_manager / ritual_image / Poll / Canvas / 图片
+    · 产出：USER.md 模式级洞察 + time_capsules.md + 封存/删除操作
+    · 终结：people/*.md / diary/*.md 中相关数据的生命周期终止
+```
+
+---
+
+### 8. 验证结论
+
+#### 8.1 无缺口确认
+
+经逐条交叉验证，F01-F03 三层基础设施在 F04-F08 五条旅程中的绑定**完整无缺口**：
+
+- **记忆体系**：每条旅程的读写操作都能追溯到 F01 定义的工具和文件格式。不存在"旅程读取了一个从未被写入的文件"或"旅程写入了一个从未被读取的文件"的情况。
+- **交互系统**：每条旅程的交互形态选择都符合 F02 决策树规则。Canvas/Poll/图片/exec 的使用都有明确的触发条件和降级方案。渐进式解锁被严格遵守。
+- **Skill 体系**：每条旅程的 Skill 触发都符合 F03 路由树优先级。互斥规则在所有旅程中一致。10 个 Skill 中无孤立 Skill（每个至少服务 1 条旅程）。
+
+#### 8.2 已发现并解决的不一致（共 7 条）
+
+| # | 不一致 | 涉及 Feature | 统一决议 | 详见 |
+|---|--------|-------------|---------|------|
+| 1 | ritual_image.py `--type` 枚举值 | F02 vs F03 vs F08 | 采用 `burn\|capsule\|letter` | §4 勘误 #1 |
+| 2 | archive_manager.py 返回字段名 | F01 vs F02 vs F08 | 采用 `insights` | §4 勘误 #2 |
+| 3 | pending_followup.md 条目格式 | F05 vs F08 | 采用 F05 的 `## [status]` 格式 | §4 勘误 #3 |
+| 4 | F03 §4.1 总表交互形态缺失 | F03 内部 | §6.2 为准，总表补齐 | §4 勘误 #4 |
+| 5 | weekly_review.py 缺 memory/ 参数 | F01 vs F06 | 新增 `--memory-dir` 参数 | §4 勘误 #5 |
+| 6 | relationship-guide references 计数 | F03 内部 | 修正为 9 个文件 | §4 勘误 #6 |
+| 7 | delete 函数跳过 pending/time_capsules | F08 内部 | 增强为逐条目扫描 | §4 勘误 #7 |
+
+#### 8.3 实现优先级建议
+
+基于依赖关系分析，建议实现顺序：
+
+1. **F01 记忆文件格式** → 所有旅程的数据基础
+2. **F03 Skill 合并迁移**（8 步计划）→ 路由树 + Skill 目录就绪
+3. **F04 首次相遇** → 用户数据冷启动
+4. **F05 情绪事件** → 核心旅程 + 数据积累开始
+5. **F06 日常陪伴** → Heartbeat + Cron + 习惯形成
+6. **F07 模式觉察** → 依赖 F05/F06 积累的数据
+7. **F08 关系告别** → 依赖 F07 的模式洞察
+8. **F02 Canvas/图片** → 可与对应旅程并行实现，降级方案确保不阻塞
 
 ---
 
