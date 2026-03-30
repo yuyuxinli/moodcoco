@@ -126,16 +126,41 @@ python3 ai-companion/skills/diary/scripts/growth_tracker.py diary/
 | 情绪触发（"以前的我还好一点，现在越来越差了"） | 立刻停止成长叙事 → "你觉得自己在变差？我们聊聊这个。" → 回到情绪接住 |
 | 抗拒（"别说我变了""我没那么好"） | 在 USER.md 标记 `成长反馈偏好: 敏感`，降低频率到每月 1 次 |
 
-## Canvas 成长轨迹卡（macOS 桌面端可选，Step 7 增强）
+## Canvas 成长轨迹卡（卡片 D）
 
 触发条件：growth_tracker.py 返回 ≥2 个 IM + 用户在 macOS 桌面端 + 用户对成长叙事有积极反应
 
+**数据流**：`exec python3 scripts/growth_tracker.py diary/` → 获取 IM 列表（时间点 + 原话 + IM 类型） → agent 生成 HTML → `openclaw nodes canvas present`
+
+HTML 模板参考（遵循 `canvas/design-guide.md` 规范）：
+```html
+<div class="canvas-card" style="background:#FFF8F0; border-radius:16px; padding:32px; max-width:600px; font-family:system-ui,-apple-system,sans-serif;">
+  <h2 style="color:#8B7E74; font-size:18px;">你走过的路</h2>
+  <div class="growth-timeline" style="position:relative; margin:24px 0; padding-left:24px;">
+    <!-- 向上的成长曲线用左侧渐变色带表示 -->
+    <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(to top,#FFD4A2,#A8E6CF);border-radius:2px;"></div>
+    <!-- 每个 Innovative Moment 节点 -->
+    <div class="im-node" style="margin-bottom:24px; position:relative;">
+      <div class="dot" style="width:10px;height:10px;border-radius:50%;background:#A8E6CF;position:absolute;left:-27px;top:6px;"></div>
+      <div class="date" style="color:#8B7E74;font-size:12px;">{日期}</div>
+      <div class="quote-card" style="background:white;border-radius:12px;padding:16px;margin-top:8px;box-shadow:0 2px 8px rgba(255,180,150,0.15);">
+        <p style="color:#8B7E74;font-size:15px;margin:0;">"{用户原话}"</p>
+        <span style="color:#C5A3FF;font-size:12px;">{IM 类型：Reflection / Action / Protest / ...}</span>
+      </div>
+    </div>
+    <!-- 更多节点... -->
+  </div>
+  <a class="cta-btn" href="openclaw://agent?message=我想继续写这个故事" style="display:inline-block;padding:12px 24px;background:#FF7F7F;color:white;border-radius:24px;text-decoration:none;font-size:15px;min-height:44px;">继续写这个故事 →</a>
+</div>
+```
+
 卡片规则：
 - 只引用用户原话，不加可可的解读
-- 时间线从旧到新，让用户自己看到方向
+- 时间线从旧到新（底部到顶部），让用户自己看到方向
+- 每个节点旁边是用户说过的原话 + 对应的 IM 类型
 - 不是替代对话，是对话之后的辅助展示
 
-非 macOS 端降级：不展示 Canvas，纯对话呈现已经足够。
+非 macOS 端降级：不展示 Canvas，纯对话呈现已经足够（直接引用用户原话做前后对比）。
 
 ## 频率控制
 

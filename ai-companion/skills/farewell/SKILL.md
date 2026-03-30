@@ -102,9 +102,64 @@ python3 skills/farewell/scripts/archive_manager.py archive people/ diary/ memory
 - **用户主动提起时**："你之前跟我说过你处理了那段关系。你现在想重新聊聊吗？"
 - **绝不挽留**（"你确定吗？真的要删吗？"= 情感操控，参考 Banks 2024）
 
+## 仪式图片（ritual_image.py）
+
+告别仪式中用图片增强仪式感。通过 `exec` 运行本地 Python 脚本生成（PIL/Pillow），不依赖外部 AI API。
+
+**调用方式**：
+```bash
+# 烧掉日记/信念 → 火焰图
+exec python3 skills/farewell/scripts/ritual_image.py --type burn
+
+# 时间胶囊 → 封印图
+exec python3 skills/farewell/scripts/ritual_image.py --type capsule --open-date 2026-09-30
+
+# 未寄出的信 → 信封图
+exec python3 skills/farewell/scripts/ritual_image.py --type letter
+```
+
+**发送**：
+```
+openclaw message send --media <output_path> --message <caption>
+```
+
+**降级**：
+- PIL 不可用 → 不发送图片，用文字描述替代，仪式对话正常继续
+- 图片生成/发送失败 → agent 说"图片没有发出来，不过没关系"，流程继续
+
+## Canvas 告别纪念卡（卡片 E）
+
+告别仪式完成后，生成一张纪念卡，让仪式感有"物理化"的载体。
+
+**触发**：farewell 流程 Phase 4 数据处理完成后
+**数据**：`exec archive_manager.py` → 返回 `pattern_insights`（去名字的模式洞察）
+**展示**：agent 根据 pattern_insights 生成 HTML → `openclaw nodes canvas present`
+
+HTML 模板参考（遵循 `canvas/design-guide.md` 规范）：
+```html
+<div class="canvas-card" style="background:#FFF8F0; border-radius:16px; padding:32px; max-width:500px; font-family:system-ui,-apple-system,sans-serif; text-align:center;">
+  <h2 style="color:#8B7E74; font-size:18px; margin-bottom:24px;">你从这段关系里学到的</h2>
+  <div class="insights" style="text-align:left; margin:24px 0;">
+    <!-- 2-3 条去名字的模式洞察 -->
+    <div class="insight" style="background:white;border-radius:12px;padding:16px;margin-bottom:12px;border-left:3px solid #C5A3FF;box-shadow:0 2px 8px rgba(255,180,150,0.15);">
+      <p style="color:#8B7E74;font-size:15px;margin:0;">{洞察内容，已去除名字}</p>
+    </div>
+    <!-- 更多洞察... -->
+  </div>
+  <p style="color:#8B7E74; font-size:13px; margin-top:24px;">{封存日期}</p>
+  <p style="color:#C5A3FF; font-size:12px;">这段关系被认真地送走了。</p>
+</div>
+```
+
+**规则**：
+- 内容只有 2-3 条去名字的洞察 + 日期，不泄露具体人物
+- 用户感到"这段关系被认真地送走了"，像一张"毕业证"
+- 非 macOS 端降级为纯文字纪念：列出 2-3 条模式洞察 + 日期，格式化为"信件"风格
+
 ## 与其他 skill 的关系
 
 - 数据处理依赖：`scripts/archive_manager.py`
+- 仪式图片生成：`scripts/ritual_image.py`
 - 时间胶囊由 HEARTBEAT.md 的时间胶囊检查触发打开
 - 封存后 pattern-mirror skill 在呈现历史模式时不引用已封存的具体事件
 
