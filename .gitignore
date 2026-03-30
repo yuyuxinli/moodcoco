@@ -14,3 +14,4 @@ node_modules/
 
 # Editor
 .obsidian/
+.evolve/
