@@ -6,7 +6,7 @@ archive_manager.py — 数据封存与删除管理器
 - 删除：彻底删除所有相关数据
 - 时间胶囊：封存用户留言，到期后打开
 
-设计参考：docs/technical-design.md §8
+设计参考：docs/technical/technical-design.md §8
 只用 Python 标准库。
 
 用法（由 AI agent 通过 exec 调用）：

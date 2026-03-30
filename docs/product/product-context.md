@@ -2,7 +2,7 @@
 
 *Updated: 2026-03-30*
 
-> 整体产品技术架构见 `docs/product-architecture.md`
+> 整体产品技术架构见 `../product-architecture.md`
 
 ## 产品概述
 

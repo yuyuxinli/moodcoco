@@ -4,7 +4,7 @@ pattern_engine.py — 跨关系模式匹配引擎
 读取所有 people/*.md，提取退出信号和关系阶段，
 跨文件匹配相似模式。
 
-设计参考：docs/technical-design.md §5.2
+设计参考：docs/technical/technical-design.md §5.2
 只用 Python 标准库（re, pathlib, datetime）。
 
 用法（由 AI agent 在对话中通过 exec 调用）：

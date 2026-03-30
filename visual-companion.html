@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文档整理方案</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #FAFAF8; --surface: #FFFFFF; --surface-2: #F5F3EF;
+    --coral: #E05A5A; --apricot: #D4943A; --lavender: #8B6CC1;
+    --mint: #4BA882; --blue: #4A8CC7; --cream: #1a1a1a;
+    --text: #333; --text-dim: #888; --border: rgba(0,0,0,0.08);
+  }
+  body { font-family: 'Noto Sans SC', sans-serif; background: var(--bg); color: var(--text); padding: 32px; line-height: 1.6; max-width: 800px; margin: 0 auto; }
+  h1 { font-size: 18px; font-weight: 400; color: var(--cream); margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: var(--text-dim); margin-bottom: 36px; }
+  .section { margin-bottom: 44px; }
+  .section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 3px; color: var(--text-dim); margin-bottom: 14px; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .compare-col { background: var(--surface); border-radius: 10px; padding: 16px; border: 1px solid var(--border); }
+  .compare-col h3 { font-size: 12px; font-weight: 500; margin-bottom: 10px; color: var(--text-dim); }
+  .compare-col.before { border-top: 3px solid var(--coral); }
+  .compare-col.after { border-top: 3px solid var(--mint); }
+
+  .file-item { font-size: 11px; padding: 4px 0; color: var(--text); display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+  .file-item .path { font-family: 'SF Mono','Menlo',monospace; color: var(--text-dim); font-size: 10px; }
+  .file-item .desc { color: var(--text); }
+  .file-item.dim { opacity: 0.4; }
+  .file-group { margin-bottom: 10px; }
+  .file-group-label { font-size: 10px; font-weight: 600; color: var(--lavender); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Proposed structure */
+  .tree { background: var(--surface); border-radius: 12px; padding: 20px; border: 1px solid var(--border); font-size: 12px; font-family: 'SF Mono','Menlo',monospace; line-height: 1.8; white-space: pre-wrap; }
+  .tree .comment { color: var(--text-dim); font-family: 'Noto Sans SC', sans-serif; }
+  .tree .new { color: var(--mint); font-weight: 500; }
+  .tree .move { color: var(--apricot); }
+  .tree .keep { color: var(--text); }
+  .tree .delete { color: var(--coral); text-decoration: line-through; }
+
+  /* Action table */
+  .action-table { width: 100%; border-collapse: collapse; font-size: 11px; background: var(--surface); border-radius: 10px; overflow: hidden; border: 1px solid var(--border); }
+  .action-table th { padding: 8px; text-align: left; font-weight: 500; color: var(--text-dim); border-bottom: 2px solid var(--border); font-size: 10px; }
+  .action-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .action-table td:first-child { font-family: 'SF Mono','Menlo',monospace; font-size: 10px; white-space: nowrap; }
+  .badge { font-size: 9px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .badge-keep { background: rgba(75,168,130,0.1); color: var(--mint); }
+  .badge-move { background: rgba(212,148,58,0.1); color: var(--apricot); }
+  .badge-merge { background: rgba(139,108,193,0.1); color: var(--lavender); }
+  .badge-delete { background: rgba(224,90,90,0.1); color: var(--coral); }
+  .badge-new { background: rgba(74,140,199,0.1); color: var(--blue); }
+
+  .discussion-box { padding: 20px; background: linear-gradient(135deg, rgba(139,108,193,0.05), rgba(74,140,199,0.05)); border-radius: 12px; border: 1px solid rgba(139,108,193,0.12); }
+  .discussion-box .label { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--lavender); margin-bottom: 8px; }
+  .discussion-box .q { font-size: 14px; font-weight: 500; color: var(--cream); line-height: 1.5; }
+  .discussion-box .detail { font-size: 12px; color: var(--text-dim); margin-top: 8px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<h1>文档整理方案</h1>
+<p class="subtitle">问题：20+ 个文档散在 4 个目录，逻辑关系不清晰</p>
+
+<!-- Before vs After -->
+<div class="section">
+  <div class="section-label">现状 vs 整理后</div>
+  <div class="compare">
+    <div class="compare-col before">
+      <h3>现在（散乱）</h3>
+      <div class="file-group">
+        <div class="file-group-label">docs/（8 个平铺）</div>
+        <div class="file-item"><span class="path">product-architecture.md</span></div>
+        <div class="file-item"><span class="path">product-experience-design.md</span></div>
+        <div class="file-item"><span class="path">prd.md</span></div>
+        <div class="file-item"><span class="path">product-context.md</span></div>
+        <div class="file-item"><span class="path">technical-design.md</span></div>
+        <div class="file-item"><span class="path">openclaw-capabilities.md</span></div>
+        <div class="file-item"><span class="path">tech-capabilities.md</span></div>
+        <div class="file-item"><span class="path">团队成员.md</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">docs/配置/（5 个）</div>
+        <div class="file-item"><span class="path">model-config.md</span></div>
+        <div class="file-item"><span class="path">session-isolation.md</span></div>
+        <div class="file-item"><span class="path">compaction-config.md</span></div>
+        <div class="file-item"><span class="path">daily-diary-cron.md</span></div>
+        <div class="file-item"><span class="path">group-setup.md</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">docs/理论/（7 个）</div>
+        <div class="file-item"><span class="path">competitor-research-2026.md</span></div>
+        <div class="file-item"><span class="path">训练营课程设计...md</span></div>
+        <div class="file-item dim"><span class="path">5 本书的参考资料/</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">ai-companion/（6 个）</div>
+        <div class="file-item"><span class="path">SOUL.md / AGENTS.md / HEARTBEAT.md</span></div>
+        <div class="file-item"><span class="path">IDENTITY.md / TOOLS.md / USER.md</span></div>
+      </div>
+    </div>
+    <div class="compare-col after">
+      <h3>整理后（分层 + 索引）</h3>
+      <div class="file-group">
+        <div class="file-group-label">入口（1 个索引 + 1 个架构）</div>
+        <div class="file-item"><span class="desc">docs/README.md — 文档索引（一页纸导航）</span></div>
+        <div class="file-item"><span class="desc">docs/product-architecture.md — 顶层架构</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">产品文档（按层级）</div>
+        <div class="file-item"><span class="desc">docs/product/ — prd + context + experience-design</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">技术文档（按层级）</div>
+        <div class="file-item"><span class="desc">docs/technical/ — design + openclaw 参考 + 配置</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">参考资料（不影响主线）</div>
+        <div class="file-item"><span class="desc">docs/references/ — 竞品调研 + 心理学理论 + 团队</span></div>
+      </div>
+      <div class="file-group">
+        <div class="file-group-label">运行时（不动）</div>
+        <div class="file-item"><span class="desc">ai-companion/ — SOUL/AGENTS/HEARTBEAT…</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Proposed tree -->
+<div class="section">
+  <div class="section-label">整理后的目录结构</div>
+  <div class="tree">docs/
+├── <span class="new">README.md</span>                          <span class="comment">← 新建：一页纸文档索引</span>
+├── <span class="keep">product-architecture.md</span>            <span class="comment">← 保留：顶层入口</span>
+│
+├── <span class="new">product/</span>                           <span class="comment">← 新建目录</span>
+│   ├── <span class="move">prd.md</span>                         <span class="comment">← 从 docs/ 移入</span>
+│   ├── <span class="move">product-context.md</span>             <span class="comment">← 从 docs/ 移入</span>
+│   └── <span class="move">product-experience-design.md</span>   <span class="comment">← 从 docs/ 移入</span>
+│
+├── <span class="new">technical/</span>                         <span class="comment">← 新建目录</span>
+│   ├── <span class="move">technical-design.md</span>            <span class="comment">← 从 docs/ 移入</span>
+│   ├── <span class="move">openclaw-capabilities.md</span>       <span class="comment">← 合并 tech-capabilities.md 后移入</span>
+│   └── <span class="move">配置/</span>                          <span class="comment">← 整个目录移入</span>
+│       ├── model-config.md
+│       ├── session-isolation.md
+│       ├── compaction-config.md
+│       ├── daily-diary-cron.md
+│       └── group-setup.md
+│
+└── <span class="new">references/</span>                        <span class="comment">← 新建目录</span>
+    ├── <span class="move">competitor-research-2026.md</span>    <span class="comment">← 从 docs/理论/ 移入</span>
+    ├── <span class="move">团队成员.md</span>                     <span class="comment">← 从 docs/ 移入</span>
+    └── <span class="move">理论/</span>                          <span class="comment">← 从 docs/理论/ 移入（心理学参考资料）</span>
+
+ai-companion/                              <span class="comment">← 不动：运行时文件</span>
+├── SOUL.md / AGENTS.md / HEARTBEAT.md
+├── IDENTITY.md / TOOLS.md / USER.md
+├── skills/ / people/ / diary/ / memory/</div>
+</div>
+
+<!-- Action table -->
+<div class="section">
+  <div class="section-label">每个文件的操作</div>
+  <table class="action-table">
+    <thead>
+      <tr><th>文件</th><th>操作</th><th>说明</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>docs/README.md</td><td><span class="badge badge-new">新建</span></td><td>一页纸文档索引，所有文档的入口导航</td></tr>
+      <tr><td>docs/product-architecture.md</td><td><span class="badge badge-keep">保留</span></td><td>顶层架构，位置不变</td></tr>
+      <tr><td>docs/prd.md</td><td><span class="badge badge-move">移动</span></td><td>→ docs/product/prd.md</td></tr>
+      <tr><td>docs/product-context.md</td><td><span class="badge badge-move">移动</span></td><td>→ docs/product/product-context.md</td></tr>
+      <tr><td>docs/product-experience-design.md</td><td><span class="badge badge-move">移动</span></td><td>→ docs/product/product-experience-design.md</td></tr>
+      <tr><td>docs/technical-design.md</td><td><span class="badge badge-move">移动</span></td><td>→ docs/technical/technical-design.md</td></tr>
+      <tr><td>docs/openclaw-capabilities.md</td><td><span class="badge badge-merge">合并</span></td><td>吸收 tech-capabilities.md → docs/technical/openclaw-capabilities.md</td></tr>
+      <tr><td>docs/tech-capabilities.md</td><td><span class="badge badge-delete">删除</span></td><td>内容合并到 openclaw-capabilities.md</td></tr>
+      <tr><td>docs/配置/*</td><td><span class="badge badge-move">移动</span></td><td>→ docs/technical/配置/</td></tr>
+      <tr><td>docs/团队成员.md</td><td><span class="badge badge-move">移动</span></td><td>→ docs/references/团队成员.md</td></tr>
+      <tr><td>docs/理论/*</td><td><span class="badge badge-move">移动</span></td><td>→ docs/references/理论/</td></tr>
+      <tr><td>ai-companion/*</td><td><span class="badge badge-keep">不动</span></td><td>运行时文件，不属于文档整理范围</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Discussion -->
+<div class="section">
+  <div class="discussion-box">
+    <div class="label">确认</div>
+    <div class="q">这个整理方案行吗？</div>
+    <div class="detail">
+      核心思路：<br>
+      1. 新建 <strong>README.md</strong> 作为一页纸索引——任何人打开 docs/ 第一眼看到的就是导航<br>
+      2. 按 <strong>product / technical / references</strong> 三个目录分类，逻辑清晰<br>
+      3. <strong>product-architecture.md</strong> 留在 docs/ 根目录——它是顶层入口，不属于任何子类<br>
+      4. 合并两个 OpenClaw 参考文档（openclaw-capabilities + tech-capabilities），消除重复<br>
+      5. ai-companion/ 不动——它是运行时文件，不是文档<br><br>
+      需要注意：移动文件后，所有文档内的交叉引用路径要同步更新。
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

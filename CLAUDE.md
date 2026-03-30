@@ -32,4 +32,4 @@
 
 ## 必读文件
 
-docs/product-context.md
+docs/product/product-context.md

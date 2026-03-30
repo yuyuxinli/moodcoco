@@ -4,7 +4,7 @@
 
 本文档是心情可可的**顶层架构入口**。读完本文档就能理解可可"作为一个整体"怎么工作——从 OpenClaw 平台能力到产品体验的完整映射。
 
-具体的逐节点体验设计见 `product-experience-design.md`（F01-F11）。
+具体的逐节点体验设计见 `product/product-experience-design.md`（F01-F11）。
 运行时配置见 `ai-companion/` 目录下的 SOUL.md、AGENTS.md、HEARTBEAT.md。
 
 ---
@@ -85,11 +85,11 @@ Streaming 输出（humanDelay: natural，句子级分块）
 
 | 想了解什么 | 看哪里 |
 |-----------|--------|
-| 产品为什么做、给谁做 | `prd.md` + `product-context.md` |
+| 产品为什么做、给谁做 | `product/prd.md` + `product/product-context.md` |
 | 可可整体怎么工作（本文档） | **`product-architecture.md`** |
-| 每个 Feature 的逐节点设计 | `product-experience-design.md`（F01-F11） |
+| 每个 Feature 的逐节点设计 | `product/product-experience-design.md`（F01-F11） |
 | 可可的人格 / 对话规则 / 主动关怀 | `ai-companion/SOUL.md` / `AGENTS.md` / `HEARTBEAT.md` |
-| OpenClaw 平台能力参考 | `openclaw-capabilities.md` + `tech-capabilities.md` |
+| OpenClaw 平台能力参考 | `technical/openclaw-capabilities.md` |
 | OpenClaw 完整官方文档 | `/Users/jianghongwei/Documents/GitHub/openclaw/docs/` |
 
 ---
@@ -496,7 +496,7 @@ paused → 到期恢复为 active
 
 用户在五条旅程之间自然流动。旅程是可可内部的路由概念，**用户只看到"跟可可聊天"**。
 
-**10 条转场**（详见 product-experience-design.md F10）：
+**10 条转场**（详见 product/product-experience-design.md F10）：
 
 | 转场 | 类型 | 触发条件 |
 |------|------|---------|
@@ -568,17 +568,17 @@ paused → 到期恢复为 active
 
 | 架构概念 | 运行时文件 | 详细设计文档 |
 |---------|-----------|------------|
-| 人格规则 | `ai-companion/SOUL.md` | product-experience-design.md F11 §5 |
-| 四步框架 + 路由树 | `ai-companion/AGENTS.md` | product-experience-design.md F03 §5 |
-| 主动关怀 | `ai-companion/HEARTBEAT.md` | product-experience-design.md F06 §4-5 |
-| 10 个 Skill | `ai-companion/skills/*/SKILL.md` | product-experience-design.md F03 §2-4 |
+| 人格规则 | `ai-companion/SOUL.md` | product/product-experience-design.md F11 §5 |
+| 四步框架 + 路由树 | `ai-companion/AGENTS.md` | product/product-experience-design.md F03 §5 |
+| 主动关怀 | `ai-companion/HEARTBEAT.md` | product/product-experience-design.md F06 §4-5 |
+| 10 个 Skill | `ai-companion/skills/*/SKILL.md` | product/product-experience-design.md F03 §2-4 |
 | 平台配置 | `.claude/openclaw.json` | 本文档 §2 |
 
 ### 8.2 关系阶段 → Feature 节点
 
 | 阶段 | 主要旅程 | 详细设计位置 |
 |------|---------|------------|
-| 陌生人（1-2次） | F04 首次相遇 | product-experience-design.md F04 |
+| 陌生人（1-2次） | F04 首次相遇 | product/product-experience-design.md F04 |
 | 有印象（3-5次） | F05 + F06 | F05 §3 前置流程, F06 §8.4 |
 | 熟悉（6-15次） | F05 + F06 + F07 入口 | F05 §4.D, F06 §4.E, F07 §1.1 |
 | 亲密（16-30次） | F07 模式觉察 | F07 全部 |
