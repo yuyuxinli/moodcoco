@@ -192,14 +192,22 @@ def find_cross_patterns(people_data: list) -> list:
                 timing_groups[bucket].append((person["name"], signal))
 
     for month, entries in timing_groups.items():
-        if len(entries) >= 2:
-            names = [e[0] for e in entries]
+        # 按去重后的关系数计，避免同一人多条信号被算成"跨关系"
+        unique_people = list(set(e[0] for e in entries))
+        if len(unique_people) >= 2:
+            # 每个人只取最近一条信号
+            seen = set()
+            deduped = []
+            for name, sig in entries:
+                if name not in seen:
+                    seen.add(name)
+                    deduped.append((name, sig))
             patterns.append({
                 "dimension": "timing",
                 "description": f"第 {month} 个月出现退出信号",
-                "people": names,
+                "people": unique_people,
                 "details": [
-                    f"{name}: \"{sig['reaction']}\"" for name, sig in entries
+                    f"{name}: \"{sig['reaction']}\"" for name, sig in deduped
                 ],
             })
 
@@ -300,11 +308,29 @@ def _months_between(start_date: str, end_date: str) -> int | None:
 
 
 # Chinese relationship-related keywords for matching
+# 对齐 diary SKILL.md 的退出信号检测关键词 + 扩展覆盖
 _KEYWORD_PATTERNS = [
-    "分手", "不想继续", "想跑", "退缩", "不舒服", "不满足", "差一点",
-    "冷淡", "不在乎", "没那么喜欢", "热情", "未来", "承诺", "结婚",
-    "安全感", "不安", "焦虑", "害怕", "逃避", "冷战", "吵架",
-    "已读不回", "不回消息", "忽视", "控制", "自由", "空间",
+    # 分手意图（diary SKILL.md 定义）
+    "分手", "不想继续", "结束", "我们结束吧",
+    # 退缩冲动（diary SKILL.md 定义）
+    "想跑", "退缩", "不对", "不是对的人", "退后一步",
+    # 持续不满（diary SKILL.md 定义）
+    "差一点", "不满足", "缺了什么", "觉得差",
+    # 热情衰减感知（diary SKILL.md 定义）
+    "没那么喜欢", "热情", "追我", "不行了", "变了", "冷淡",
+    # 关系事件触发
+    "未来", "承诺", "结婚", "搬家", "见家长", "同居",
+    # 情绪状态
+    "不舒服", "不安", "焦虑", "害怕", "安全感", "恐惧",
+    "逃避", "窒息", "压力", "透不过气",
+    # 沟通问题
+    "冷战", "吵架", "已读不回", "不回消息", "忽视",
+    "不在乎", "不理我", "敷衍",
+    # 关系动态
+    "控制", "自由", "空间", "依赖", "粘人", "独立",
+    "付出", "不对等", "单方面",
+    # 自我怀疑
+    "我的问题", "太敏感", "太作", "不够好", "配不上",
 ]
 
 
