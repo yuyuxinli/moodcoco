@@ -165,6 +165,31 @@ python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --
 | 用户看到重复主题后情绪变很重 | 周回顾变成情绪事件——无缝切换到 AGENTS.md 四步框架，不说"我们继续看回顾吧" |
 | 用户对周回顾反感（"别搞这种总结"） | "好，不总结了。" → USER.md 标记 `周回顾偏好: 不喜欢`，后续周日降级为常规关怀 |
 
+## 连续拒绝降频规则
+
+当用户连续 3 次拒绝周回顾的"想聊聊" Poll（选择"看看就好"或"下周再说"或不回复），自动降为隔周触发。
+
+**执行流程**：
+1. 用户第 1 次拒绝 → USER.md `weekly_review_refusal_count: 1`
+2. 用户第 2 次拒绝 → USER.md `weekly_review_refusal_count: 2`
+3. 用户第 3 次拒绝 →
+   - USER.md `weekly_review_refusal_count: 3`
+   - USER.md `weekly_review_downgrade_active: true`
+   - 可可说："我看你最近几周都不太想聊周回顾。那咱们改成隔周一次，给你点空间。"
+
+**降频后的行为**：
+- Heartbeat 周回顾触发频率从每周 → 隔周（`last_weekly_reflection` < 14 天前则不触发）
+- 用户可随时主动请求周回顾（不受降频限制）
+
+**复苏条件**（回到每周）：
+- 用户在周回顾中主动选择"想聊聊"或主动说"想好好聊聊这周" → 重置 `weekly_review_refusal_count: 0`，`weekly_review_downgrade_active: false`
+- 连续 2 个月无拒绝 → 自动复苏
+
+**计数规则**：
+- "想聊聊" → 重置计数为 0
+- "看看就好" / "下周再说" / 不回复 → 计数 +1
+- 用户主动请求周回顾（非 Heartbeat 触发）→ 不影响计数（既不重置也不增加）
+
 ## 硬规则
 
 1. **无发现不发**：没有重复主题也没有成长信号 → 不发周回顾，不为回顾而回顾

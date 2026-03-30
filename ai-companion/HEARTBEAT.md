@@ -104,11 +104,17 @@
 
 - **触发时机**：每周日 20:00
 - **检查动作**：扫描本周 `diary/` 文件（当周周一到周日）
-- **执行条件**：本周 diary 条目 ≥ 3 条 + USER.md 未标记 `周回顾偏好: 不喜欢` + 当日规则 1、2 均无命中
+- **执行条件**：本周 diary 条目 ≥ 3 条 + USER.md 未标记 `周回顾偏好: 不喜欢` + 当日规则 1、2 均无命中 + 降频检查通过（见下方）
 - **执行动作**：触发 `weekly-reflection` Skill。调用 `growth_tracker.py` 检测重复主题和成长信号。发现重复 → 对话方式呈现；发现成长 → 纵向对比；无发现 → 不发
 - **互斥**：周日只发周回顾，不发规则 4 日记提醒
 - **依赖 Skill**：`weekly-reflection`
 - **跨旅程入口**：若 `cross_week_pattern.detected == true` 且用户选择"想聊聊" + J4 前置条件全满足 → 可从 J3 转入 J4 模式觉察
+
+**降频模式**（weekly_review_downgrade_active = true 时）：
+- 正常模式：每周日触发（`last_weekly_reflection` < 7 天前 则不重复）
+- 降频模式：隔周触发（`last_weekly_reflection` < 14 天前 则不触发）
+- 降频由 weekly-reflection Skill 连续 3 次拒绝触发，详见 `skills/weekly-reflection/SKILL.md`
+- 恢复正常：用户重新选择"想聊聊"或主动请求周回顾 → `weekly_review_downgrade_active = false`
 
 ### 规则 4：日记提醒（每日 21:30）
 

@@ -141,7 +141,7 @@ description: 一句话说清什么时候触发
 
 ```markdown
 **Skill 调用规则（强制）：**
-- **激动/恐慌** → `read("skills/sigh/SKILL.md")`
+- **激动/恐慌** → `read("skills/breathing-ground/SKILL.md")`
 ```
 
 写"强制"。不然 AI 可能觉得"这次不需要"就跳过了。
@@ -186,12 +186,12 @@ ai-companion/
 ├── AGENTS.md           ← AI 行为规则 + Skill 触发配置
 ├── IDENTITY.md         ← AI 人格
 ├── skills/
-│   ├── sigh/           ← 脚本驱动型
+│   ├── breathing-ground/  ← 脚本驱动型 + 指导型
 │   │   ├── SKILL.md
 │   │   └── scripts/
 │   │       ├── breathe-fast.py
 │   │       └── breathe.sh
-│   └── calm-down/      ← 指导型
+│   └── diary/             ← 指导型
 │       └── SKILL.md
 └── USER.md             ← 用户记忆
 ```

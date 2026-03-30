@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 危机检测器 - 检测用户输入中的危机信号并触发专业转介
-emotion-journal skill 模块
+diary skill 的危机信号识别模块
 """
 
 from __future__ import annotations

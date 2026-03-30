@@ -38,6 +38,12 @@
 
 如果我说错了，你可以纠正我。我的观察不是诊断。
 
+## 周回顾偏好状态
+
+<!-- 由 weekly-reflection Skill 自动维护，不手动修改 -->
+<!-- weekly_review_refusal_count: 0 -->
+<!-- weekly_review_downgrade_active: false -->
+
 ## 模式级洞察
 
 <!-- 来自已封存关系的去名字洞察 -->
