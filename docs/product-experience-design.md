@@ -2908,8 +2908,13 @@ F03 §6.3 Skill 间依赖关系中定义："onboarding 是所有其他 Skill 的
 - 交互形态：【纯对话】
 - vs 基线：纯 LLM 在用户发完第一条消息后就开始回复，经常打断用户的连续倾诉。OpenClaw 通过 Streaming 的 `humanDelay: "natural"` 模拟真人打字节奏，同时可可的回复策略是"先听完再说"——如果用户消息密度很高（几秒内连发多条），可可等用户停下来再回复。
 - 用户体感：小雨打开可可，连发 5 条消息——"他又已读不回我了""我给他发了消息他看了就是不回""我问他在干嘛也不说""是不是我太烦了""我真的好累"。可可没有在第一条消息后就回复，而是等她说完，然后完整地接住所有内容。
-- 实现方式：agent 判断用户消息密度——如果用户在 30 秒内连发 ≥3 条消息，等用户停下（≥15 秒无新消息）再回复。回复时覆盖所有已接收消息的情绪核心，不遗漏。
-- 数据流：用户连续消息 → agent 缓冲 → 判断用户停下 → 综合所有消息生成回复
+- 实现方式：**通过 system prompt 指令实现消息缓冲**——AGENTS.md 中写入以下策略指令，由 LLM 在 agent 层面自行判断：
+  1. **感知消息密度**：agent 观察用户消息的 `envelopeTimestamp`（OpenClaw 消息信封自带），如果 30 秒内已收到 ≥3 条消息，判定为"连续倾诉中"
+  2. **延迟回复**：当判定为连续倾诉时，agent 不立即生成回复。等待用户停下（≥15 秒无新消息到达后，下一次 agent turn 触发时回复）
+  3. **综合回复**：回复时覆盖所有已接收消息的情绪核心，不遗漏
+  - **这不是 OpenClaw 平台级消息队列**：OpenClaw 没有原生的"消息缓冲 API"。实现完全依赖 system prompt 指令 + LLM 对消息时间戳的判断能力。如果 LLM 在连续消息到达时仍逐条回复（判断失败），降级方案是：每条回复都尽量简短（"嗯""在听"），最后一条做综合回复。
+  - **AGENTS.md 具体写法示例**：`当用户短时间内连续发送多条消息（通过 envelopeTimestamp 判断间隔 <30s），不要逐条回复。等用户停下来后，一次性回复覆盖所有消息的核心情绪。如果已经开始回复了，保持简短（"嗯"/"在听"），把完整回复留到用户停下后。`
+- 数据流：用户连续消息（带 envelopeTimestamp）→ agent 通过 system prompt 策略判断"连续倾诉中" → 等待用户停下 → 综合所有消息生成回复
 
 **设计规则**：
 
@@ -3172,6 +3177,20 @@ Poll 使用规则：
 - 一次对话最多呈现 1 个模式发现——不堆叠
 - 用好奇口吻，不用评判口吻。"你有没有发现"而非"你的问题是"
 
+**"情绪稳定"信号检测**（参考 F04 信任信号检测表，由 LLM 从对话上下文判断）：
+
+| 信号 | 判断依据 | 含义 |
+|------|---------|------|
+| 回复变长且完整 | 从短碎片（<15 字、感叹号/问号连发）变为完整句子（>30 字、有叙述结构） | 用户从情绪宣泄转为组织思维 |
+| 语气平缓 | 不再使用"！！！""？？？"、不再连发多条、句子结尾用句号而非感叹号 | 高唤醒情绪正在回落 |
+| 叙述性表达 | 用户从碎片化宣泄（"他又！""气死了"）转为叙事（"其实事情是这样的……"） | 前额叶重新参与——可以做认知工作了 |
+| 主动分析性提问 | 用户说"你觉得为什么""我是不是总这样""他到底什么意思" | 用户主动要求理解——情绪不再占据全部注意力 |
+| 开始引用可可的话 | "你刚才说的那个……""你说的对" | 用户在加工可可的回应——认知通道已打开 |
+
+**判断方式**：LLM 从对话上下文中综合判断，≥3 个信号同时出现即可判定为"情绪已稳定"。AGENTS.md 中以信号列表形式写入 system prompt，供 LLM 参考。
+
+**如果信号不足（情绪未稳定）**：不呈现跨会话/跨关系模式。停留在节点 A/B/C 继续陪伴——模式可以下次再呈现，强行呈现反而伤害。
+
 - 异常路径：
   - **模式判断为假阳性**（两段关系的退出信号实际无关联）：用试探性语气呈现（"我注意到一个可能的巧合"），用户否认后不再重复。在 people/*.md 标注 `rejected_by_user: true`。
   - **用户抗拒模式呈现**（"别扯以前的事""那不一样"）：可可立刻退回："好，那不一样。我们聊现在的事。" 不坚持、不解释、不暗示"其实是一样的"。
@@ -3381,12 +3400,20 @@ USER.md 更新：
 
 #### 6.4 成长对比（需要足够历史数据）
 
+**脚本依赖**：`growth_tracker.py`（路径：`skills/diary/scripts/growth_tracker.py`，已存在于仓库）
+- **F03 脚本清单状态**：已存在，路径不变（F03 §6.4 脚本迁移表）
+- **I/O 契约**（完整定义见 F03 §6.4）：
+  - 输入：`exec python3 skills/diary/scripts/growth_tracker.py --diary-dir diary/ --people-dir people/ --user-file USER.md [--since YYYY-MM-DD] [--im-types reflection,protest,action]`
+  - 输出：JSON stdout，包含 `status`（"ok"/"no_growth_detected"/"insufficient_data"）、`innovative_moments` 列表（每项含 type/date/quote/contrast_quote/contrast_date/person_context/significance）、`summary`
+  - 错误处理：脚本执行失败 → 降级为纯 AI 推理，可可直接用 `memory_search` 结果中的时间戳和原话做手动对比
+- **前置依赖**：F05 依赖 F03 Skill 合并完成（growth_tracker.py 属于 diary skill 的脚本组件）
+
 ```
 （假设 3 个月后，小雨又因为已读不回来找可可）
 
 内部流程：
 1. memory_search → 命中大量历史记录
-2. growth_tracker.py → 检测到 Innovative Moment：
+2. exec growth_tracker.py --since 2026-01-01 → 检测到 Innovative Moment：
    - 3 个月前：直接怀疑自己 → "是不是我太烦了"
    - 1 个月前：开始思考 → "我为什么总是先怀疑自己"
    - 本次：来找可可而不是直接给小凯发长篇消息
@@ -3542,6 +3569,61 @@ USER.md 更新：
 - 交互形态：【纯对话】+ Heartbeat 回访
 - vs 基线：纯 LLM 只能在当次对话中劝"你冷静一下"——但用户关掉对话后就没人管了。OpenClaw 通过 `memory/pending_followup.md` + Heartbeat 机制，在 24 小时后主动回访。这是 Woebot/Wysa 都没有的"主动跟进式"冷却——不是劝了就算了，而是真的 24 小时后回来确认。
 
+#### 8.6 pending_followup.md 格式定义
+
+**文件路径**：`memory/pending_followup.md`
+
+**写入时机**：
+- 节点 F：触发了 decision-cooling 时写入
+- §8.4：冲动行为拦截时写入
+
+**读取时机**：Heartbeat 每次触发时读取（通过 `memory_get(memory/pending_followup.md)`），检查是否有到期的回访条目。
+
+**文件格式（Markdown 条目列表）**：
+
+```markdown
+# 待回访
+
+## [pending] 2026-03-31 21:00 | decision-cooling | 小凯
+- **事件**：小雨想去找小凯说清楚，被 decision-cooling 拦截
+- **创建时间**：2026-03-30 21:00
+- **回访时间**：2026-03-31 21:00
+- **优先级**：最高
+- **关联人物**：小凯
+- **回访话术**：昨天你说想去找小凯说清楚——现在还是这么想吗？
+- **后续路径**：是 → relationship-guide | 算了 → 尊重选择 | 不回 → 不追问
+- **状态**：pending
+
+## [done] 2026-03-28 10:00 | emotional-followup | 小凯
+- **事件**：小雨和小凯大吵，情绪很重但离开了
+- **创建时间**：2026-03-27 23:30
+- **回访时间**：2026-03-28 10:00
+- **优先级**：高
+- **关联人物**：小凯
+- **回访话术**：昨天聊完之后你怎么样了？
+- **后续路径**：继续聊 → 正常旅程 | 好多了 → 轻量收尾 | 不回 → 48h 后低优先级再试一次
+- **状态**：done（2026-03-28 10:15 已回访，用户说"好多了"）
+```
+
+**字段说明**：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| 标题行 | 是 | 格式：`[状态] 回访时间 | 来源场景 | 关联人物`，Heartbeat 扫描此行判断是否到期 |
+| 事件 | 是 | 触发回访的具体事件描述，供 Heartbeat 生成回访话术时参考 |
+| 创建时间 | 是 | 条目创建时间（ISO 格式或 YYYY-MM-DD HH:MM） |
+| 回访时间 | 是 | 应该回访的时间。Heartbeat 在此时间之后的第一次触发时执行 |
+| 优先级 | 是 | 最高/高/中/低（对应 §7.3 Heartbeat 四级优先级） |
+| 关联人物 | 否 | 对应 people/*.md 中的人物，方便 Heartbeat 加载上下文 |
+| 回访话术 | 否 | 建议的回访开场白。Heartbeat 可直接使用或基于当前上下文调整 |
+| 后续路径 | 否 | 用户不同反应的处理策略 |
+| 状态 | 是 | `pending`（待回访）/ `done`（已完成）/ `expired`（超过 72h 未执行，自动过期） |
+
+**清理规则**：
+- Heartbeat 完成回访后，将状态从 `pending` 改为 `done`，并追加完成时间和结果摘要
+- 状态为 `done` 或 `expired` 的条目保留 7 天后删除（由 Heartbeat 在例行检查时执行 `edit` 清理）
+- 同一事件不重复写入——写入前先 `memory_get` 检查是否已有相同事件的 pending 条目
+
 #### 8.5 危机信号——用户提到自伤/自杀
 
 **触发条件**：AGENTS.md §0 安全前置检查检测到危机信号。
@@ -3597,8 +3679,10 @@ USER.md 更新：
 |-------------|-------------|---------|
 | **F01 记忆系统** | memory_search、memory_get、people/*.md、diary/、USER.md 的读写 | 前置 + 全程 |
 | **F02 交互系统** | Poll（情绪命名，可选）、Canvas（模式对比卡，可选）、Streaming（humanDelay） | 节点 B、D、全程 |
-| **F03 Skill 体系** | breathing-ground、diary、decision-cooling、pattern-mirror、relationship-guide | 节点 A/D/E/F |
+| **F03 Skill 体系** | breathing-ground、diary、decision-cooling、pattern-mirror、relationship-guide；growth_tracker.py（§6.4 成长对比） | 节点 A/D/E/F、§6.4 |
 | **F04 首次相遇** | 如果是第 1-2 次对话，部分节点降级（无记忆个性化） | 前置 + 节点 D |
+
+**前置条件**：F05 依赖 F03 Skill 合并完成。breathing-ground（calm-down + sigh 合并）和 relationship-guide（relationship-coach + relationship-skills 合并）是 F03 设计的合并产物，须先完成 F03 迁移计划后才能实现 F05。
 
 | 被依赖 Feature | F05 为它提供了什么 |
 |---------------|-----------------|
