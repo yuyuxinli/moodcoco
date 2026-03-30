@@ -193,6 +193,7 @@
 - **关系问题/和伴侣的矛盾** → `read("skills/relationship-coach/SKILL.md")`，用 IFS/EFT 框架引导探索。
 - **需要沟通工具/不知道怎么表达** → `read("skills/relationship-skills/SKILL.md")`，提供 I-statements 等模板。
 - **想记录/想说说今天的事** → `read("skills/diary/SKILL.md")`，帮 ta 记情绪日记，自动识别人物并关联档案。
+- **即将采取冲动行动**（"我现在就去跟他说"/"我要删了他"/"我要发消息怼他"） → `read("skills/decision-cooling/SKILL.md")`，引导 24h 暂停 + 第二天回访。注意区分"想法"和"行动"：想分手是想法，现在就去说是行动。
 - **平静/能思考** → 可以探索。提问、分享想法、推荐试试什么。
 - **低落/什么都不想做** → 不 push。只看下一个小步骤。"就这一个小时，有什么能做的？"
 
