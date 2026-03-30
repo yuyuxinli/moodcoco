@@ -262,12 +262,44 @@ def find_contrast_pairs(growth_nodes: list, diary_dir: str) -> list:
                     "quote": action["quote"],
                 },
                 "narrative": (
-                    f"你注意到了吗？{action['evidence']}。"
+                    f"你注意到了吗？{action['evidence']}\n"
                     f"这本身就已经不一样了。"
                 ),
             })
 
     return pairs
+
+
+# ---------------------------------------------------------------------------
+# Conversation Formatting
+# ---------------------------------------------------------------------------
+
+def format_for_conversation(contrast_pair: dict) -> str:
+    """将一个对比对格式化为可可可以在对话中直接使用的成长叙事文本。
+
+    根据对比类型生成不同风格的叙事：
+    - reflection_growth: 用两段原话展示从回避到反思的变化
+    - action_growth: 强调用户做了不同于以往的行为
+    """
+    pair_type = contrast_pair.get("type", "")
+
+    if pair_type == "reflection_growth":
+        before = contrast_pair.get("before", {})
+        after = contrast_pair.get("after", {})
+        before_text = before.get("quote") or before.get("text", "")
+        after_text = after.get("quote") or after.get("text", "")
+        return (
+            f"{before['date']} 你说\u201c{before_text}\u201d。\n"
+            f"{after['date']} 你说\u201c{after_text}\u201d。\n"
+            f"你觉得这两个你，有什么不同？"
+        )
+    elif pair_type == "action_growth":
+        after = contrast_pair.get("after", {})
+        evidence = after.get("text", "")
+        return f"你注意到了吗？{evidence}\n这本身就已经不一样了。"
+    else:
+        # Fallback: use the pre-built narrative if available
+        return contrast_pair.get("narrative", "")
 
 
 # ---------------------------------------------------------------------------

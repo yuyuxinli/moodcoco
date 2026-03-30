@@ -153,6 +153,76 @@ def _parse_exit_signal(entry: str) -> dict:
 MATCH_DIMENSIONS = ["timing", "trigger", "reaction"]
 
 
+def parse_people_files(people_dir: str) -> list:
+    """解析 people/ 目录下所有 .md 文件，返回结构化数据列表。
+
+    这是 parse_people_file() 的批量包装，供外部调用使用。
+    """
+    result = []
+    path = Path(people_dir)
+    if not path.exists():
+        return result
+    for f in sorted(path.glob("*.md")):
+        data = parse_people_file(str(f))
+        if data:
+            result.append(data)
+    return result
+
+
+def update_cross_patterns(people_dir: str, patterns: list) -> None:
+    """将发现的跨关系模式写回 people/*.md 的"跨关系匹配"段。
+
+    对每个涉及的 people file，更新其 ## 跨关系匹配 段落。
+    """
+    path = Path(people_dir)
+    if not path.exists():
+        return
+
+    # Group patterns by person
+    person_patterns: dict[str, list] = {}
+    for p in patterns:
+        for name in p.get("people", []):
+            if name not in person_patterns:
+                person_patterns[name] = []
+            person_patterns[name].append(p)
+
+    for name, pats in person_patterns.items():
+        filepath = path / f"{name}.md"
+        if not filepath.exists():
+            continue
+
+        text = filepath.read_text(encoding="utf-8")
+        lines = text.split("\n")
+        new_lines = []
+        in_cross_section = False
+        cross_written = False
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith("## 跨关系匹配"):
+                in_cross_section = True
+                new_lines.append(line)
+                new_lines.append("<!-- 由 pattern_engine.py 自动写入，diary skill 不手动编辑此段 -->")
+                for pat in pats:
+                    other_people = [n for n in pat["people"] if n != name]
+                    others = "、".join(other_people)
+                    new_lines.append(f"- 与 {others} 的相似模式：{pat['description']}")
+                cross_written = True
+                continue
+            elif in_cross_section:
+                if stripped.startswith("## "):
+                    # New section starts — end of cross section
+                    in_cross_section = False
+                    new_lines.append("")
+                    new_lines.append(line)
+                # Skip old cross-match content (list items, comments, empty lines)
+                continue
+            else:
+                new_lines.append(line)
+
+        filepath.write_text("\n".join(new_lines), encoding="utf-8")
+
+
 def find_cross_patterns(people_data: list) -> list:
     """跨文件匹配相似模式。
 
@@ -356,12 +426,7 @@ def main():
     current_event = sys.argv[2] if len(sys.argv) > 2 else None
 
     # Parse all people files
-    people_data = []
-    if people_dir.exists():
-        for f in sorted(people_dir.glob("*.md")):
-            data = parse_people_file(str(f))
-            if data:
-                people_data.append(data)
+    people_data = parse_people_files(str(people_dir))
 
     if current_event:
         # Match current event to history
