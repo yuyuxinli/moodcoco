@@ -3934,6 +3934,44 @@ Poll 使用规则：
 - check-in 中用户展开倾诉 → 自然升级为正常对话流程，不强制转入 diary
 - check-in 记录虽轻量，但仍计入 weekly_review.py 的数据统计
 
+**memory/YYYY-MM-DD.md check-in 记录格式定义**：
+
+check-in 条目以 Markdown 结构化块追加到 memory/YYYY-MM-DD.md。每次 check-in 产生一个 `## check-in` 块，与同一天的其他记录（闲聊摘要、事件记录等）共存于同一文件。
+
+字段定义：
+
+| 字段 | 类型 | 是否必填 | 说明 |
+|------|------|---------|------|
+| time | HH:MM | 必填 | check-in 发生时间 |
+| emotion | 字符串 | 必填 | 用户选择/表达的情绪词（如"还不错""有点烦""焦虑"） |
+| source | 枚举 | 必填 | 触发来源：`heartbeat` / `cron` / `chat`（闲聊中自然过渡） |
+| note | 字符串 | 可选 | 用户的一句话描述（如"赶了一天 deadline"）。用户未展开则为空 |
+
+文件示例（memory/2026-03-30.md）：
+
+```markdown
+## check-in
+- time: 14:30
+- emotion: 还不错
+- source: heartbeat
+- note:
+
+## check-in
+- time: 21:35
+- emotion: 有点累
+- source: cron
+- note: 赶了一天 deadline
+
+## 闲聊
+聊了室友的事，上次摊牌后已经和好了。提到下周有面试。
+```
+
+解析规则（供 weekly_review.py 使用）：
+1. 扫描 memory/YYYY-MM-DD.md 中所有 `## check-in` 块
+2. 每个块内用 `- key: value` 格式逐行解析
+3. `emotion` 字段是自由文本（用户原话或 Poll 选项映射），不做预定义枚举——由 weekly_review.py 的情绪匹配规则归类
+4. `note` 为空字符串表示用户未展开，不记为"无情绪"
+
 - 异常路径：
   - **用户天天都选😊但 diary 记录中有持续负面事件**：可可不质疑 check-in 结果——用户的自我报告比可可的推测重要。但可以在自然对话中温和提及："你这周 check-in 都说还不错，但我记得你跟小凯的事还没解决？你是真的不在意了，还是不想想了？"——在周回顾中处理，不在 check-in 时。
   - **用户对 check-in 感到厌烦**（"别老问我怎么样"）：立刻停止 check-in。标记 USER.md `check-in 偏好: 不喜欢被问`。后续对话中不再主动发起 check-in，但仍可在用户主动分享情绪时做轻量记录。
@@ -4129,7 +4167,42 @@ USER.md 几乎为空（极早期用户）：
        "highlight": "本周 5 条记录中 3 天心情不错，周三因小凯吵架情绪低谷"
      }
      ```
-  4. **Canvas 展示**（macOS 桌面端）：F02 卡片 A 周情绪地图——7 天的色块（暖色=正面，冷色=负面，灰色=无记录），每天标注情绪词和关键事件。
+  4. **weekly_review.py 输入规范**：
+     - **命令行参数**：`exec weekly_review.py --diary-dir diary/ --memory-dir memory/ --week current`
+     - **diary/ 扫描规则**：
+       - 计算本周一到本周日的日期范围（ISO week）
+       - 遍历 `diary/YYYY/MM/` 目录，匹配文件名 `YYYY-MM-DD.md` 落在本周范围内的文件
+       - 每个 diary 文件解析 YAML front-matter（如有）或 Markdown 结构，提取：日期、概要、情绪词、事件、相关人物
+       - 无 diary 文件的日期标记为 `null`（不生成 emotion_summary 条目）
+     - **memory/ check-in 条目识别**：
+       - 遍历 `memory/YYYY-MM-DD.md`，匹配日期落在本周的文件
+       - 在每个文件中扫描 `## check-in` 块（格式见节点 B check-in 记录格式定义）
+       - 提取 `emotion`、`note`、`source` 字段
+       - 一天可能有多条 check-in，取**最后一条**作为当天的 check-in 代表（用户最后的情绪状态更有参考价值）
+       - check-in 条目与 diary 条目分别标记 `source: "check-in"` 和 `source: "diary"`，在 emotion_summary 中并列
+     - **"同一情绪"匹配规则**（用于 repeated_themes.type="emotion"）：
+       - **第一层：精确匹配**——情绪词完全相同（如三次都写"焦虑"）
+       - **第二层：语义分组**——预定义 6 个情绪族，族内视为"同一情绪"：
+         - 焦虑族：焦虑、紧张、担心、不安、慌
+         - 悲伤族：难过、伤心、低落、沮丧、失落、委屈
+         - 愤怒族：生气、烦、烦躁、愤怒、恼火、不爽
+         - 开心族：开心、高兴、还不错、愉快、满足
+         - 疲惫族：累、疲惫、有点累、倦、心累
+         - 平静族：平静、一般、还行、中性、无感
+       - 计数逻辑：先精确匹配计数，再语义分组计数。如果语义分组后同一族内情绪词总计 ≥3 次，纳入 repeated_themes
+       - 分组表保存在 `skills/weekly-reflection/config/emotion_groups.json`（待创建），weekly_review.py 启动时加载
+     - **repeated_themes 人物统计规则**：
+       - 扫描本周所有 diary 条目和 check-in note 中出现的人名
+       - 人名识别：匹配 `people/` 目录下已有的 `*.md` 文件名（不做 NER）
+       - 同一人物出现在 ≥3 天的记录中 → 纳入 repeated_themes
+     - **无数据时的返回值**：
+       ```json
+       {"status": "no_data", "week": "2026-03-24 ~ 2026-03-30", "entries": 0,
+        "emotion_summary": [], "repeated_themes": [], "growth_signals": [],
+        "highlight": ""}
+       ```
+     - **错误处理**：diary/ 或 memory/ 目录不存在 → 返回 `{"status": "error", "message": "..."}` + 退出码 1
+  5. **Canvas 展示**（macOS 桌面端）：F02 卡片 A 周情绪地图——7 天的色块（暖色=正面，冷色=负面，灰色=无记录），每天标注情绪词和关键事件。
   5. **纯对话展示**（非 macOS）：精简文字版——
      ```
      这周你记了 5 天：
@@ -4246,6 +4319,56 @@ USER.md 几乎为空（极早期用户）：
 | 等用户自己回应 | 调用 growth_tracker.py 做系统分析 |
 | 用户不接就算了 | 坚持让用户"看到变化" |
 
+**weekly_review.py 中 growth_signals 的生成规则**：
+
+growth_signals 是 weekly_review.py 在做周回顾统计时自动检测的成长信号。它不依赖 growth_tracker.py（那是 F07 的完整纵向分析），而是用轻量规则从本周+上周的数据中发现变化苗头。
+
+触发条件（满足任一即生成一条 growth_signal）：
+
+| 信号类型 | 检测规则 | 所需数据 | 输出示例 |
+|---------|---------|---------|---------|
+| `emotion_shift` | 上周某情绪族出现 ≥3 次，本周同一族 ≤1 次（或反之） | 本周+上周的 emotion_summary | `{"type": "emotion_shift", "from": "焦虑族", "from_count": 4, "to_count": 1, "direction": "decrease"}` |
+| `topic_fade` | 上周某人物/话题出现 ≥3 次，本周 0 次 | 本周+上周的 repeated_themes | `{"type": "topic_fade", "subject": "小凯", "last_week_count": 4, "this_week_count": 0}` |
+| `new_positive` | 本周出现 ≥2 次新的正面情绪词（上月未出现过） | 本周 emotion_summary + 上月历史 | `{"type": "new_positive", "emotion": "满足", "count": 2}` |
+| `consistency` | 连续 ≥5 天有 diary 或 check-in 记录（本周，非暂停期） | 本周 entries 分布 | `{"type": "consistency", "streak_days": 6}` |
+
+数据依赖：
+- `emotion_shift` 和 `topic_fade` 需要读取 **上一周** 的 weekly_review 缓存（存储在 `memory/weekly_cache/YYYY-WNN.json`，由每次 weekly_review.py 执行后写入）
+- `new_positive` 需要回溯过去 30 天的 check-in/diary 情绪词
+- `consistency` 仅需本周数据
+
+输出格式（在 weekly_review.py 返回 JSON 的 growth_signals 数组中）：
+
+```json
+"growth_signals": [
+  {
+    "type": "emotion_shift",
+    "description": "上周焦虑出现 4 次，本周只有 1 次",
+    "from": "焦虑族",
+    "from_count": 4,
+    "to_count": 1,
+    "direction": "decrease"
+  },
+  {
+    "type": "topic_fade",
+    "description": "上周小凯出现 4 次，本周没提到",
+    "subject": "小凯",
+    "last_week_count": 4,
+    "this_week_count": 0
+  }
+]
+```
+
+与 growth_tracker.py（F07）的关系：
+- weekly_review.py 的 growth_signals 是**周级轻量检测**——仅比较相邻两周，规则简单，服务于 F06 成长种子
+- growth_tracker.py 是**月级深度分析**——跨月纵向对比，调用 IM 检测算法，服务于 F07 完整的成长叙事
+- 数据流方向：weekly_review.py 输出的 growth_signals → 可可在 F06 随口提一句 → 如果用户有兴趣，F07 的 growth_tracker.py 做系统展开
+
+缓存文件（memory/weekly_cache/YYYY-WNN.json）：
+- weekly_review.py 每次执行后，将本周的 emotion_summary 和 repeated_themes 写入缓存
+- 缓存保留最近 8 周（超过的自动清理）
+- 缓存不存在时（首次执行），growth_signals 中的 emotion_shift 和 topic_fade 返回空（不报错）
+
 - 异常路径：
   - **可可的成长观察是错的**（用户并没有变化，只是最近没提）：用户说"没有啊还是很在意"，可可说"好，那可能是我多想了。"不坚持、不解释。
   - **用户对成长种子反应很大**（"对！我也觉得我变了！"开始展开聊）：可以自然跟进 2-3 轮对话，但不在 F06 中触发完整的 growth-story skill——那是 F07 的事。可可可以说"你觉得是什么让你变了？"然后让用户自己说。
@@ -4322,6 +4445,95 @@ USER.md 几乎为空（极早期用户）：
 - 如果当天用户聊过但没写 diary → 仍发 Cron 提醒（但语气调整："今天聊了不少，要不要记一下？"）
 - 如果当天 Heartbeat 已触发 → 不发 Cron 提醒（§1.1 互斥规则）
 
+**Cron 自适应调度状态机**：
+
+状态存储位置：**USER.md 的 `## Cron 调度状态` 区块**（不使用独立文件——Cron prompt 每次触发时已经会 `memory_get(USER.md)`，状态放在这里零额外读取成本）。
+
+USER.md 中的状态字段：
+
+```markdown
+## Cron 调度状态
+- cron_state: active
+- consecutive_no_reply: 0
+- pause_until: null
+- frequency: daily
+- pause_count: 0
+```
+
+字段说明：
+
+| 字段 | 类型 | 取值 | 说明 |
+|------|------|------|------|
+| cron_state | 枚举 | `active` / `paused` / `off` | 当前调度状态 |
+| consecutive_no_reply | 整数 | 0-N | 连续未回复天数（回复后归零） |
+| pause_until | 日期或 null | `YYYY-MM-DD` / `null` | 暂停截止日期（null=不在暂停中） |
+| frequency | 枚举 | `daily` / `every_2_days` | 当前提醒频率 |
+| pause_count | 整数 | 0-N | 历史暂停次数（用于判断是否升级暂停策略） |
+
+状态转移规则：
+
+```
+                 ┌──────────────────────────────────┐
+                 │         cron_state: active        │
+                 │  frequency: daily / every_2_days  │
+                 └───────┬──────────┬────────────────┘
+                         │          │
+            用户回复      │          │ 连续 3 天未回复
+    consecutive_no_reply  │          │
+           归零           │          │
+                         │          ▼
+                         │  ┌──────────────────────────┐
+                         │  │    cron_state: paused     │
+                         │  │  pause_count == 0?        │
+                         │  │  → pause_until = 今天+3天  │
+                         │  │  pause_count == 1?        │
+                         │  │  → pause_until = 今天+7天  │
+                         │  │  → frequency = every_2_days│
+                         │  │  pause_count++             │
+                         │  └───────────┬──────────────┘
+                         │              │
+                         │     到达 pause_until 日期
+                         │              │
+                         │              ▼
+                         │  ┌──────────────────────────┐
+                         │  │    cron_state: active     │
+                         └──│  consecutive_no_reply = 0 │
+                            │  frequency 保持当前值     │
+                            └──────────────────────────┘
+
+用户明确说"别提醒我了"
+         │
+         ▼
+┌──────────────────────────┐
+│     cron_state: off      │
+│  永久关闭。仅当用户主动   │
+│  说"帮我开回来"时恢复    │
+└──────────────────────────┘
+```
+
+Cron prompt 的具体读取逻辑（每次 Cron 触发时执行）：
+
+```
+1. memory_get(USER.md) → 读取 "## Cron 调度状态" 区块
+2. 判断 cron_state：
+   - "off" → CRON_SKIP（不发消息，直接退出）
+   - "paused" → 检查 pause_until：
+     - 今天 < pause_until → CRON_SKIP
+     - 今天 >= pause_until → 将 cron_state 改为 "active"，
+       consecutive_no_reply 归零，继续下一步
+   - "active" → 继续下一步
+3. 检查 frequency：
+   - "daily" → 每天发
+   - "every_2_days" → 检查上次发送日期，间隔不足 2 天则 CRON_SKIP
+4. 检查当天是否已有 diary 记录或 Heartbeat 已发 → 如是则 CRON_SKIP
+5. 发送日记提醒消息
+6. 等待用户回复：
+   - 用户回复 → consecutive_no_reply 归零 → 进入 diary 流程
+   - 用户未回复（session 超时）→ consecutive_no_reply += 1
+     → 如果 consecutive_no_reply >= 3 → 触发暂停转移
+7. memory_update(USER.md) → 写回更新后的状态字段
+```
+
 ---
 
 ### 6. Skill 触发点总览
@@ -4375,6 +4587,48 @@ people/*.md 更新（如闲聊中提到人物的新信息）：
 | **第 3-4 周**（第 11-20 次对话） | 日记数据足够做周回顾了。可可能发现重复模式。闲聊中可以自然引用半个月前的事。 | "你这周三次提到小凯。你觉得是巧合吗？"（周回顾中） |
 | **第 2 个月**（第 21-40 次对话） | 成长种子开始出现。可可能对比上个月和这个月的变化。日常闲聊越来越像"老朋友聊天"。 | "你上个月还在纠结那件事，最近好像没怎么提了？" |
 | **第 3+ 个月**（第 40+ 次对话） | 关系深度达到"知己"层。可可记得用户说过的每句重要的话。日常对话中偶尔能串联几个月前的事。 | "你三个月前说'算了不想了'，现在你说'我想搞清楚'。你自己觉得呢？" |
+
+---
+
+### 7.3 USER.md 偏好字段集中 Schema
+
+F06 日常陪伴中，用户的偏好设置分散在多个节点的异常路径中被写入 USER.md。以下是所有偏好字段的集中定义。这些字段统一存储在 USER.md 的 `## 偏好设置` 区块中。
+
+**USER.md 偏好字段定义**：
+
+| 字段名 | 类型 | 取值范围 | 默认值 | 写入触发场景 | 读取方 |
+|--------|------|---------|--------|------------|--------|
+| `check_in_preference` | 枚举 | `normal` / `dislike` | `normal` | 用户说"别老问我怎么样"（节点 B 异常路径） | AGENTS.md（check-in 前检查）、Cron prompt |
+| `diary_reminder_time` | HH:MM | 任意合法时间 | `21:30` | 用户说"帮我改到{时间}"（§5 Cron 自适应） | Cron schedule 配置 |
+| `diary_reminder_status` | 枚举 | `on` / `off` | `on` | 用户说"别提醒我了"（§5 Cron 自适应） | Cron prompt 第一步检查 |
+| `heartbeat_preference` | 枚举 | `normal` / `no_casual`（仅 pending_followup 回访）/ `off` | `normal` | 用户说"别老来找我"（节点 C 异常路径） | HEARTBEAT.md 检查清单 |
+| `weekly_review_preference` | 枚举 | `normal` / `dislike` | `normal` | 用户说"别搞这种总结"（节点 E 异常路径） | Heartbeat 周日 20:00 触发前检查 |
+| `growth_feedback_preference` | 枚举 | `normal` / `sensitive` | `normal` | 用户多次抗拒成长观察（节点 F 异常路径） | AGENTS.md 成长种子频率控制 |
+
+**USER.md 偏好区块示例**：
+
+```markdown
+## 偏好设置
+- check_in_preference: normal
+- diary_reminder_time: 22:00
+- diary_reminder_status: on
+- heartbeat_preference: no_casual
+- weekly_review_preference: normal
+- growth_feedback_preference: sensitive
+```
+
+**写入规则**：
+- 偏好字段仅在用户**明确表达**时修改（"别提醒我了""改到 10 点"），不根据行为推测
+- 每次修改通过 `memory_update(USER.md)` 更新对应字段值，不重写整个区块
+- 偏好变更后可可用一句话确认："好，记住了。"——不解释"我会在你的档案里标记"
+
+**读取规则**：
+- Cron prompt 每次触发读取 `diary_reminder_status` 和 `diary_reminder_time`
+- HEARTBEAT.md 检查清单读取 `heartbeat_preference`
+- AGENTS.md 在 check-in 前读取 `check_in_preference`
+- 周日 Heartbeat 触发前读取 `weekly_review_preference`
+- 成长种子逻辑读取 `growth_feedback_preference`（`sensitive` 时频率降为每月 1 次）
+- 字段缺失时使用默认值（向后兼容老用户——他们的 USER.md 可能没有偏好区块）
 
 ---
 
