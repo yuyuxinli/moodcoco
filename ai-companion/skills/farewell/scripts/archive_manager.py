@@ -65,26 +65,92 @@ def extract_pattern_insights(people_file: str) -> list:
         if stripped.startswith("<!--") or stripped == "":
             continue
 
-        if stripped.startswith("- ") and current_section in ("patterns", "exit_signals", "cross_matches"):
-            # Remove the person's name from the insight
-            anonymized = _anonymize(stripped[2:], name)
-            if anonymized.strip():
-                insights.append({
-                    "source": current_section,
-                    "content": anonymized,
-                })
+        if current_section in ("patterns", "exit_signals", "cross_matches"):
+            # Collect both list items (- ...) and plain paragraphs
+            content_line = ""
+            if stripped.startswith("- "):
+                content_line = stripped[2:]
+            elif stripped and not stripped.startswith("#"):
+                content_line = stripped
+
+            if content_line:
+                anonymized = _anonymize(content_line, name)
+                if anonymized.strip():
+                    insights.append({
+                        "source": current_section,
+                        "content": anonymized,
+                    })
 
     return insights
 
 
 def _anonymize(text: str, name: str) -> str:
-    """从文本中移除指定人名，替换为泛化描述。"""
-    # Replace exact name
-    result = text.replace(name, "那段关系中的对方")
-    # Also try common reference patterns
-    for pattern in [f"和{name}", f"跟{name}", f"与{name}"]:
-        result = result.replace(pattern, "在那段关系中")
+    """从文本中移除指定人名及变体，替换为泛化描述。"""
+    result = text
+    # Common name variants: 小明, 明明, 阿明, 明哥, 明姐, etc.
+    variants = [name]
+    if len(name) >= 2:
+        # Add common Chinese nickname patterns
+        last_char = name[-1]
+        variants.extend([
+            f"阿{last_char}", f"{last_char}{last_char}",
+            f"{last_char}哥", f"{last_char}姐",
+        ])
+
+    for variant in variants:
+        result = result.replace(variant, "对方")
+
+    # Common reference patterns
+    for prefix in ["和", "跟", "与", "给", "对", "找"]:
+        for variant in variants:
+            result = result.replace(f"{prefix}{variant}", f"{prefix}对方")
+
     return result
+
+
+def _remove_sections_mentioning(text: str, name: str) -> str:
+    """从 markdown 文件中移除包含指定人名的 ## 段落。
+
+    检查整个 section 内容（不仅限于标题行）。
+    """
+    # Split into sections
+    sections = []
+    current_header = ""
+    current_lines = []
+
+    for line in text.split("\n"):
+        if line.strip().startswith("## "):
+            if current_header or current_lines:
+                sections.append((current_header, current_lines))
+            current_header = line
+            current_lines = []
+        elif line.strip() == "---":
+            sections.append((current_header, current_lines))
+            sections.append(("---", []))
+            current_header = ""
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    if current_header or current_lines:
+        sections.append((current_header, current_lines))
+
+    # Filter out sections containing the name
+    result_lines = []
+    for header, lines in sections:
+        if header == "---":
+            result_lines.append("---")
+            continue
+
+        section_text = header + "\n" + "\n".join(lines)
+        if name in section_text:
+            continue  # Remove entire section
+
+        if header:
+            result_lines.append(header)
+        result_lines.extend(lines)
+
+    return "\n".join(result_lines)
 
 
 # ---------------------------------------------------------------------------
@@ -128,16 +194,20 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
                 md_file.write_text(archived, encoding="utf-8")
                 result["archived_files"].append(str(md_file))
 
-    # 3. Remove memory files mentioning this person
+    # 3. Clean memory files mentioning this person
     memory_path = Path(memory_dir)
     if memory_path.exists():
         for md_file in memory_path.glob("*.md"):
-            if md_file.name == "pending_followup.md":
-                continue  # Don't touch followup markers
-            if md_file.name == "time_capsules.md":
-                continue  # Don't touch time capsules
             text = md_file.read_text(encoding="utf-8")
-            if name in text:
+            if name not in text:
+                continue
+
+            if md_file.name in ("pending_followup.md", "time_capsules.md"):
+                # For these files, remove only sections mentioning the person
+                cleaned = _remove_sections_mentioning(text, name)
+                md_file.write_text(cleaned, encoding="utf-8")
+                result["archived_files"].append(f"cleaned: {md_file}")
+            else:
                 md_file.unlink()
                 result["archived_files"].append(f"deleted: {md_file}")
 
@@ -188,31 +258,52 @@ def _archive_people_file(text: str, name: str) -> str:
 
 
 def _archive_diary_entry(text: str, name: str) -> str:
-    """在 diary 条目中标记含该人的段落为已封存，保留情绪标签。"""
+    """在 diary 条目中标记含该人的段落为已封存，保留情绪标签。
+
+    检查整个 section 的内容（不仅限于标题行），
+    任何 section 中出现人名都会被封存。
+    """
     lines = text.split("\n")
     result_lines = []
-    in_archived_section = False
+    current_section_lines = []
+    current_section_header = ""
+
+    def flush_section():
+        """输出当前 section，检查是否需要封存。"""
+        if not current_section_header:
+            result_lines.extend(current_section_lines)
+            return
+
+        section_text = "\n".join(current_section_lines)
+        if name in current_section_header or name in section_text:
+            # Archive this section: keep header + emotion/intensity only
+            result_lines.append(current_section_header)
+            result_lines.append(f"> *与{name}相关的内容已封存*")
+            for sl in current_section_lines:
+                stripped = sl.strip()
+                if stripped.startswith("**情绪**") or stripped.startswith("**强度**"):
+                    result_lines.append(sl)
+        else:
+            result_lines.append(current_section_header)
+            result_lines.extend(current_section_lines)
 
     for line in lines:
-        # Check if this entry section mentions the person
-        if line.strip().startswith("## ") and name in line:
+        if line.strip().startswith("## "):
+            flush_section()
+            current_section_header = line
+            current_section_lines = []
+            continue
+
+        if line.strip() == "---":
+            flush_section()
+            current_section_header = ""
+            current_section_lines = []
             result_lines.append(line)
-            result_lines.append(f"> *与{name}相关的内容已封存*")
-            in_archived_section = True
             continue
 
-        if in_archived_section:
-            # Keep emotion and intensity lines, archive the rest
-            if line.strip().startswith("**情绪**") or line.strip().startswith("**强度**"):
-                result_lines.append(line)
-            elif line.strip().startswith("## ") or line.strip() == "---":
-                in_archived_section = False
-                result_lines.append(line)
-            # Skip other content in archived section
-            continue
+        current_section_lines.append(line)
 
-        result_lines.append(line)
-
+    flush_section()
     return "\n".join(result_lines)
 
 
