@@ -6,19 +6,23 @@ growth_tracker.py — 成长叙事追踪
 - Reflection: 从行动转向反思
 - Protest: 挑战旧信念
 - Re-conceptualization: 重新定义自己
+- New experience: 用户经历了与旧模式不同的体验
 
 用法（由 AI agent 通过 exec 调用）：
-    python3 ai-companion/skills/diary/scripts/growth_tracker.py <diary_dir>
+    python3 scripts/growth_tracker.py --diary-dir diary/ --people-dir people/ --user-file USER.md
+    python3 scripts/growth_tracker.py --diary-dir diary/ --people-dir people/ --user-file USER.md --since 2026-03-01 --im-types reflection,protest
 
-输出：JSON 格式的成长节点列表和可对比的节点对。
+输出 JSON：{"status": "ok|no_growth_detected|insufficient_data", "innovative_moments": [...], "summary": "...", "error": null}
 只用 Python 标准库。
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TypedDict
 
@@ -436,36 +440,179 @@ def format_for_conversation(contrast_pair: ContrastPair) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Spec-compliant output
+# ---------------------------------------------------------------------------
+
+
+class SpecInnovativeMoment(TypedDict):
+    type: str
+    date: str
+    quote: str
+    contrast_quote: str
+    contrast_date: str
+    person_context: str
+    significance: str
+
+
+def _build_spec_output(
+    nodes: list[GrowthNode],
+    pairs: list[ContrastPair],
+    im_types_filter: list[str] | None,
+) -> dict[str, object]:
+    """Build spec-compliant JSON output per product-experience-design.md §5.5.
+
+    Output schema:
+    {
+      "status": "ok" | "no_growth_detected" | "insufficient_data",
+      "innovative_moments": [...],
+      "summary": "...",
+      "error": null
+    }
+    """
+    if not nodes:
+        return {
+            "status": "insufficient_data" if not nodes else "no_growth_detected",
+            "innovative_moments": [],
+            "summary": "",
+            "error": "No diary entries found" if not nodes else None,
+        }
+
+    # Filter by IM types if specified
+    filtered_nodes = nodes
+    if im_types_filter:
+        filtered_nodes = [n for n in nodes if n["im_type"] in im_types_filter]
+
+    if not filtered_nodes:
+        return {
+            "status": "no_growth_detected",
+            "innovative_moments": [],
+            "summary": "",
+            "error": None,
+        }
+
+    # Build spec-compliant innovative_moments
+    innovative_moments: list[SpecInnovativeMoment] = []
+    for node in filtered_nodes:
+        # Find matching contrast pair for this node
+        contrast_quote = ""
+        contrast_date = ""
+        significance = node.get("im_description", "")
+        for pair in pairs:
+            after = pair.get("after")
+            if after and after.get("date") == node["date"]:
+                before = pair.get("before")
+                if before:
+                    contrast_quote = before.get("quote") or before.get("text", "")
+                    contrast_date = before.get("date", "")
+                significance = pair.get("narrative", significance)
+                break
+
+        # Extract person context from node context
+        person_context = ""
+        context = node.get("context", "")
+        if "(" in context:
+            person_context = context.split("(")[0].strip()
+
+        innovative_moments.append({
+            "type": node["im_type"],
+            "date": node["date"],
+            "quote": node.get("quote", ""),
+            "contrast_quote": contrast_quote,
+            "contrast_date": contrast_date,
+            "person_context": person_context,
+            "significance": significance,
+        })
+
+    by_type: dict[str, int] = {}
+    for im_type in IM_MARKERS:
+        count = sum(1 for n in filtered_nodes if n["im_type"] == im_type)
+        if count > 0:
+            by_type[im_type] = count
+
+    type_summary = "、".join(f"{k} {v}个" for k, v in by_type.items())
+    summary = f"发现{len(innovative_moments)}个成长节点，{type_summary}"
+
+    return {
+        "status": "ok",
+        "innovative_moments": innovative_moments,
+        "summary": summary,
+        "error": None,
+    }
+
+
+# ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("Usage: growth_tracker.py <diary_dir>")
-        sys.exit(1)
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build argparse parser matching spec interface contract."""
+    parser = argparse.ArgumentParser(
+        description="成长节点追踪",
+    )
+    parser.add_argument(
+        "--diary-dir",
+        required=True,
+        help="diary/ 目录路径",
+    )
+    parser.add_argument(
+        "--people-dir",
+        default=None,
+        help="people/ 目录路径",
+    )
+    parser.add_argument(
+        "--user-file",
+        default=None,
+        help="USER.md 路径",
+    )
+    parser.add_argument(
+        "--since",
+        default=None,
+        help="起始日期，格式 YYYY-MM-DD（默认 30 天前）",
+    )
+    parser.add_argument(
+        "--im-types",
+        default=None,
+        help="要检测的 Innovative Moment 类型，逗号分隔",
+    )
+    return parser
 
-    diary_dir: str = sys.argv[1]
+
+def main() -> None:
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    diary_dir: str = args.diary_dir
+
+    if not Path(diary_dir).exists():
+        output = {
+            "status": "insufficient_data",
+            "innovative_moments": [],
+            "summary": "",
+            "error": f"Diary directory not found: {diary_dir}",
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        sys.exit(0)
+
+    # Parse IM types filter
+    im_types_filter: list[str] | None = None
+    if args.im_types:
+        im_types_filter = [t.strip() for t in args.im_types.split(",")]
 
     nodes = extract_growth_nodes(diary_dir)
+
+    # Filter by --since date
+    if args.since:
+        nodes = [n for n in nodes if n["date"] >= args.since]
+    else:
+        # Default: 30 days ago
+        since_default = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+        nodes = [n for n in nodes if n["date"] >= since_default]
+
     pairs = find_contrast_pairs(nodes, diary_dir)
 
-    by_type: dict[str, int] = {}
-    for im_type in IM_MARKERS:
-        count = sum(1 for n in nodes if n["im_type"] == im_type)
-        if count > 0:
-            by_type[im_type] = count
-
-    output: TrackerOutput = {
-        "growth_nodes": nodes,
-        "contrast_pairs": pairs,
-        "summary": {
-            "total_nodes": len(nodes),
-            "by_type": by_type,
-            "total_pairs": len(pairs),
-        },
-    }
-
+    # Build spec-compliant output
+    output = _build_spec_output(nodes, pairs, im_types_filter)
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 

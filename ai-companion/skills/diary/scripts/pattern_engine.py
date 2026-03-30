@@ -4,18 +4,19 @@ pattern_engine.py — 跨关系模式匹配引擎
 读取所有 people/*.md，提取退出信号和关系阶段，
 跨文件匹配相似模式。
 
-设计参考：docs/technical/technical-design.md §5.2
-只用 Python 标准库（re, pathlib, datetime）。
+设计参考：docs/product/product-experience-design.md §5.5
+只用 Python 标准库（re, pathlib, datetime, argparse）。
 
 用法（由 AI agent 在对话中通过 exec 调用）：
-    python3 ai-companion/skills/diary/scripts/pattern_engine.py <people_dir> [current_event]
+    python3 scripts/pattern_engine.py --people-dir people/ --min-relations 2
+    python3 scripts/pattern_engine.py --people-dir people/ --target 小凯
 
-    无参数：输出所有跨关系模式
-    有 current_event：输出当前事件与历史的匹配结果
+输出 JSON：{"status": "ok|no_match|insufficient_data", "matches": [...], "error": null}
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -579,29 +580,141 @@ def _extract_outcome_keywords(text: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Spec-compliant output wrapper
+# ---------------------------------------------------------------------------
+
+
+def _build_spec_output(
+    people_data: list[PersonData],
+    patterns: list[CrossPattern],
+    min_relations: int,
+    target: str | None,
+) -> dict[str, object]:
+    """Build spec-compliant JSON output with status/matches/error wrapper.
+
+    Output schema per product-experience-design.md §5.5:
+    {
+      "status": "ok" | "no_match" | "insufficient_data",
+      "matches": [...],
+      "error": null | "..."
+    }
+    """
+    # Insufficient data check
+    active_people = [p for p in people_data if p.get("current_status") != "封存"]
+    if len(active_people) < min_relations:
+        return {
+            "status": "insufficient_data",
+            "matches": [],
+            "error": f"Need >= {min_relations} relations, found {len(active_people)}",
+        }
+
+    if not patterns:
+        return {"status": "no_match", "matches": [], "error": None}
+
+    # Convert CrossPattern list to spec-compliant match format
+    spec_matches: list[dict[str, object]] = []
+    for pat in patterns:
+        people_list = pat.get("people", [])
+        details = pat.get("details", [])
+
+        # If target specified, only include patterns involving that person
+        if target and target not in people_list:
+            continue
+
+        # Build spec-compliant match entry
+        person_a = people_list[0] if len(people_list) > 0 else ""
+        person_b = people_list[1] if len(people_list) > 1 else ""
+
+        # Map internal dimension names to spec names
+        dim_map: dict[str, str] = {
+            "timing": "time",
+            "trigger": "trigger",
+            "reaction": "reaction",
+            "outcome": "emotion",
+        }
+        dimension = dim_map.get(pat.get("dimension", ""), pat.get("dimension", ""))
+
+        evidence_a: dict[str, str] = {"date": "", "quote": ""}
+        evidence_b: dict[str, str] = {"date": "", "quote": ""}
+
+        # Extract evidence from details
+        for detail in details:
+            if person_a and detail.startswith(f'{person_a}: "'):
+                evidence_a["quote"] = detail.split('"')[1] if '"' in detail else ""
+            elif person_b and detail.startswith(f'{person_b}: "'):
+                evidence_b["quote"] = detail.split('"')[1] if '"' in detail else ""
+
+        spec_matches.append({
+            "dimension": dimension,
+            "person_a": person_a,
+            "person_b": person_b,
+            "description": pat.get("description", ""),
+            "evidence_a": evidence_a,
+            "evidence_b": evidence_b,
+            "confidence": 0.75,
+        })
+
+    if not spec_matches:
+        return {"status": "no_match", "matches": [], "error": None}
+
+    return {"status": "ok", "matches": spec_matches, "error": None}
+
+
+# ---------------------------------------------------------------------------
 # CLI Entry Point
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("Usage: pattern_engine.py <people_dir> [current_event]")
-        sys.exit(1)
+def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build argparse parser matching spec interface contract."""
+    parser = argparse.ArgumentParser(
+        description="跨关系模式匹配引擎",
+    )
+    parser.add_argument(
+        "--people-dir",
+        required=True,
+        help="people/ 目录路径，包含所有人物档案 .md 文件",
+    )
+    parser.add_argument(
+        "--min-relations",
+        type=int,
+        default=2,
+        help="最少需要几段关系才触发匹配（默认 2）",
+    )
+    parser.add_argument(
+        "--target",
+        default=None,
+        help="指定目标人名，只比较该人与其他人的匹配",
+    )
+    return parser
 
-    people_dir = Path(sys.argv[1])
-    current_event: str | None = sys.argv[2] if len(sys.argv) > 2 else None
+
+def main() -> None:
+    parser = _build_arg_parser()
+    args = parser.parse_args()
+
+    people_dir = Path(args.people_dir)
+
+    if not people_dir.exists():
+        output = {
+            "status": "insufficient_data",
+            "matches": [],
+            "error": f"people/ directory not found: {people_dir}",
+        }
+        print(json.dumps(output, ensure_ascii=False, indent=2))
+        sys.exit(0)
 
     # Parse all people files
     people_data = parse_people_files(str(people_dir))
 
-    if current_event:
-        # Match current event to history
-        matches = match_current_to_history(current_event, people_data)
-        print(json.dumps(matches, ensure_ascii=False, indent=2))
-    else:
-        # Find all cross-relationship patterns
-        patterns = find_cross_patterns(people_data)
-        print(json.dumps(patterns, ensure_ascii=False, indent=2))
+    # Find all cross-relationship patterns
+    patterns = find_cross_patterns(people_data)
+
+    # Build spec-compliant output
+    output = _build_spec_output(
+        people_data, patterns, args.min_relations, args.target
+    )
+    print(json.dumps(output, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
