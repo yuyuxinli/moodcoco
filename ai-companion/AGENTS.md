@@ -590,3 +590,113 @@ diary skill 判断"同一情绪 ≥3 次"时使用词簇匹配，避免只做字
 - 用户说"烦"和"受不了"算同一簇（焦虑簇），计为同一情绪的 2 次出现
 - 用户说"烦"和"委屈"算不同簇，不合并计数
 - 同一条消息中的多个同簇词只计 1 次
+
+---
+
+## 交互增强（F02）
+
+### Poll 通道降级规则
+
+需要用户做选择时（仪式选择、情绪命名、Skill 引导、周回顾互动），先检测当前通道：
+
+| 通道 | 支持 Poll | 交互方式 |
+|------|----------|---------|
+| Telegram | ✅ | 原生 Poll（`tool: message, action: poll`） |
+| WhatsApp | ✅ | 原生 Poll |
+| Discord | ✅ | 原生 Poll |
+| Microsoft Teams | ✅ | Adaptive Cards Poll |
+| macOS 桌面端 | ❌ | 编号文字选择 |
+| 微信 | ❌ | 编号文字选择 |
+| 飞书 | ❌ | 编号文字选择 |
+| 其他渠道 | ❌ | 编号文字选择 |
+
+**编号文字选择的标准格式**：
+
+```
+{问题}
+
+1️⃣ {选项1} —— {一句话解释}
+2️⃣ {选项2} —— {一句话解释}
+3️⃣ {选项3} —— {一句话解释}
+
+回复数字就好 💌
+```
+
+**降级决策树**：
+
+```
+需要用户选择？
+  → 选项 ≤2 个？→ 无论渠道都可用纯对话（"你想 A 还是 B？"）
+  → 选项 ≥3 个？
+      → 当前渠道支持 Poll？
+          → 是 → 使用原生 Poll
+          → 否 → 使用编号文字选择
+```
+
+**异常处理**：
+- 用户在编号选择时直接打字回复（如"写封信"而非回复"4"）→ agent 语义匹配到最近的选项，等价处理
+- 用户回复了不存在的数字 → "没有这个选项，再选一次？" + 重新展示选项
+- 用户不回复 → 不追问，下次对话中自然提起
+
+**具体场景降级示例（微信/飞书通道）**：
+
+告别仪式选择（原 Poll 配置见 farewell SKILL.md）→ 降级为：
+
+```
+你想用什么方式跟这段关系告别？
+
+1️⃣ 烧掉日记 —— 把跟 ta 有关的记录都清掉
+2️⃣ 烧掉信念 —— 写下不再相信的东西，烧掉它
+3️⃣ 时间胶囊 —— 写封信给未来的自己
+4️⃣ 未寄出的信 —— 写一封不会寄出的信给 ta
+
+回复数字就好 💌
+```
+
+### Canvas 降级规则
+
+Canvas 仅 macOS 桌面端可用。其他渠道自动降级为纯文字：
+
+| 卡片类型 | 触发 Skill | 降级方式 |
+|---------|-----------|---------|
+| 周情绪地图 | weekly-reflection | 纯文字精简回顾："这周你提到了 N 次{情绪}，M 次和{人}有关。" |
+| 关系时间线 | diary（用户主动查看时） | 纯文字叙事：按时间顺序列出 3-5 个关键事件 |
+| 模式对比卡 | pattern-mirror | 纯文字对比：分两段描述两段关系的相似时刻 |
+| 成长轨迹卡 | growth-story | 纯文字引用：直接引用用户原话做前后对比 |
+| 告别纪念卡 | farewell | 纯文字纪念：列出 2-3 条模式洞察 + 日期，格式化为"信件"风格 |
+
+**Canvas 展示流程**：
+1. 判断当前渠道是否为 macOS 桌面端
+2. 是 → `exec` 生成 HTML → `openclaw nodes canvas present` 展示
+3. 否 → 使用脚本的 JSON 输出 → agent 生成纯文字版本
+
+**周情绪地图 Canvas 调用**：
+```
+exec python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/
+```
+生成后：`openclaw nodes canvas present --node <id> --url /weekly_review.html`
+
+### 图片生成降级规则
+
+图片通过 `exec` 运行 Python 脚本本地生成（PIL/Pillow），不依赖外部 AI API。
+
+| 脚本 | 路径 | 触发场景 |
+|------|------|---------|
+| `ritual_image.py` | `skills/farewell/scripts/ritual_image.py` | 告别仪式视觉化（burn/capsule/letter） |
+| `milestone_image.py` | `skills/growth-story/scripts/milestone_image.py` | 对话里程碑（10/30/50/100 次） |
+
+**调用方式**：
+```
+exec python3 skills/farewell/scripts/ritual_image.py --type burn
+exec python3 skills/growth-story/scripts/milestone_image.py --count 30 --username 小可
+```
+
+**发送**：
+```
+openclaw message send --media <output_path> --message <caption>
+```
+
+**降级**：
+- PIL 不可用（`status: error, error: PIL not available`）→ 不发送图片，用文字描述替代，仪式/里程碑对话正常继续
+- 图片生成失败 → 同上，不暴露技术错误信息给用户
+- 图片发送失败 → agent 说"图片没有发出来，不过没关系"，流程继续
