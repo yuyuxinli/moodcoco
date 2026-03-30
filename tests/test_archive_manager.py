@@ -135,7 +135,7 @@ def test_archive_creates_backup_and_modifies(tmp_path: Path) -> None:
     assert "已封存" in archived_text
 
     # Verify pattern insights were extracted
-    assert len(result["pattern_insights"]) >= 1
+    assert len(result["insights"]) >= 1
 
 
 def test_archive_already_archived(tmp_path: Path) -> None:
@@ -317,6 +317,82 @@ def test_delete_cleans_time_capsules(tmp_path: Path) -> None:
         "Unrelated capsules in time_capsules.md should be preserved"
     )
     assert any("time_capsules" in f for f in result["deleted_files"])
+
+
+# ---------------------------------------------------------------------------
+# Ritual paths: burn-belief + belief-write, time capsule
+# ---------------------------------------------------------------------------
+
+
+def test_archive_with_burn_belief_ritual(tmp_path: Path) -> None:
+    """Archive via 'burn belief' ritual: insights extracted before body cleared."""
+    people_dir, diary_dir, memory_dir = _setup_workspace(tmp_path)
+
+    result = archive_manager.archive_person(
+        str(people_dir), str(diary_dir), str(memory_dir), "小凯",
+        ritual_type="standard",
+    )
+
+    assert result["status"] == "ok"
+    assert result["action"] == "archive"
+
+    # Insights must be non-empty (burn-belief = keep pattern, discard events)
+    assert len(result["insights"]) >= 1
+
+    # Body should be cleared — no event details remain
+    archived_text = (people_dir / "小凯.md").read_text(encoding="utf-8")
+    assert "当前状态：封存" in archived_text
+    # The specific event content ("第一次旅行") should be gone from active file
+    assert "第一次旅行" not in archived_text
+
+
+def test_archive_belief_write_to_user_md(tmp_path: Path) -> None:
+    """After archive, insights can be written to USER.md (belief-write step)."""
+    people_dir, diary_dir, memory_dir = _setup_workspace(tmp_path)
+
+    result = archive_manager.archive_person(
+        str(people_dir), str(diary_dir), str(memory_dir), "小凯",
+    )
+
+    # Simulate the belief-write step: write insights to USER.md
+    insights = result["insights"]
+    assert len(insights) >= 1
+
+    user_md = memory_dir / "USER.md"
+    user_md.write_text(
+        "# 用户画像\n\n## 模式级洞察\n\n"
+        + "\n".join(f"- {i}" for i in insights)
+        + "\n",
+        encoding="utf-8",
+    )
+
+    text = user_md.read_text(encoding="utf-8")
+    assert "模式级洞察" in text
+    # Insights should be anonymized (no original name)
+    assert "小凯" not in text
+
+
+def test_time_capsule_creation(tmp_path: Path) -> None:
+    """Time capsule creation writes sealed entry to time_capsules.md."""
+    memory_dir = tmp_path / "memory"
+    memory_dir.mkdir()
+
+    result = archive_manager.create_time_capsule(
+        str(memory_dir), "希望三个月后我已经释然了"
+    )
+
+    assert "capsule_id" in result
+    assert "sealed_date" in result
+    assert "open_date" in result
+
+    # Capsule file should exist and contain the entry
+    capsule_file = memory_dir / "time_capsules.md"
+    assert capsule_file.exists()
+
+    text = capsule_file.read_text(encoding="utf-8")
+    assert result["capsule_id"] in text
+    assert "状态：sealed" in text
+    assert "希望三个月后我已经释然了" in text
 
 
 def test_delete_basic_functionality(tmp_path: Path) -> None:

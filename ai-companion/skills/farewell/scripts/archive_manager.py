@@ -635,47 +635,9 @@ def _remove_person_from_diary(text: str, name: str) -> str:
     """从 diary 条目中移除包含该人的整个 section。
 
     检查整个 section 内容（标题 + 正文），不仅限于标题行。
+    复用 _remove_sections_mentioning 的 section 级清理逻辑。
     """
-    # Reuse the same section-level approach as _remove_sections_mentioning
-    # but adapted for diary format (## sections separated by ---)
-    sections = []
-    current_header = ""
-    current_lines = []
-
-    for line in text.split("\n"):
-        if line.strip().startswith("## "):
-            if current_header or current_lines:
-                sections.append((current_header, list(current_lines)))
-            current_header = line
-            current_lines = []
-        elif line.strip() == "---":
-            if current_header or current_lines:
-                sections.append((current_header, list(current_lines)))
-            sections.append(("---", []))
-            current_header = ""
-            current_lines = []
-        else:
-            current_lines.append(line)
-
-    if current_header or current_lines:
-        sections.append((current_header, list(current_lines)))
-
-    result_lines = []
-    for header, lines in sections:
-        if header == "---":
-            result_lines.append("---")
-            continue
-
-        # Check entire section content for name variants
-        section_text = header + "\n" + "\n".join(lines)
-        if _text_contains_name(section_text, name):
-            continue  # Remove entire section
-
-        if header:
-            result_lines.append(header)
-        result_lines.extend(lines)
-
-    return "\n".join(result_lines)
+    return _remove_sections_mentioning(text, name)
 
 
 # ---------------------------------------------------------------------------
