@@ -1480,7 +1480,645 @@ agent 的行为：
 
 ## F03 Skill 体系重设计
 
-*（待设计）*
+### 设计哲学
+
+Skill 体系是心情可可的"能力层"——它决定可可在对话之外还能做什么。F01 解决了"可可记得你"，F02 解决了"可可怎么表达"，F03 解决的是"可可能帮你做什么"。
+
+每个 Skill 不是一个独立的"功能按钮"，而是一段完整的体验流程。用户不会感知到"我在使用一个 Skill"，她只会感到"可可知道现在该做什么"。
+
+核心约束：
+- **Skill 上限 15 个**（program.md 约束），多了组合没用
+- **每个 Skill 必须服务于至少一条用户旅程**（F04-F08）
+- **优先用业内方案**（CLAUDE.md 约束），不自己编
+- **Skill 不替代基础对话**——80% 的时间可可是在纯对话中陪伴用户，Skill 是剩余 20% 的精准工具
+
+竞品参照：
+- **Woebot**：大量预编写模块（200+ 分支），过于结构化——用户感觉在做 CBT 课程
+- **Wysa**：工具包式 Skill（呼吸、冥想、感恩日志），轻量但缺乏深度
+- **Ash**：无显式 Skill，全由自训练 LLM 内化——灵活但不可控
+- **可可的定位**：Skill 少而精，每个都有明确的心理学支撑和差异化价值。不做 Woebot 式的"课程"，做的是"在对的时刻给出对的东西"。
+
+---
+
+### 1. 现有 Skill 体系评估
+
+#### 1.1 逐一评审
+
+| # | Skill | 评估 | 理由 | 服务旅程 |
+|---|-------|------|------|---------|
+| 1 | calm-down | **合并** → breathing-ground | 与 sigh 高度重叠：都是呼吸/grounding 工具。calm-down 包含 4-7-8 呼吸、方块呼吸、5-4-3-2-1 感官着陆、身体扫描；sigh 只有循环叹息一个方法。应合并为一个统一的"情绪急救"skill，内含多种工具。 | F05 情绪事件 |
+| 2 | sigh | **合并** → breathing-ground | 见上。sigh 的 exec 脚本引导（breathe-fast.py）是独特能力，合并后保留。 | F05 情绪事件 |
+| 3 | emotion-journal | **合并** → diary | 与 diary 功能严重重叠。emotion-journal 定义了六元组结构化记录流程，diary 已经完全吸收了这个流程（diary SKILL.md 开头明确写"融合自 emotion-journal"）。保留两个 skill 造成路由歧义。 | F05/F06 |
+| 4 | relationship-coach | **合并** → relationship-guide | 与 relationship-skills 定位重叠。coach 用 IFS/EFT 深度框架引导关系探索，skills 提供 I-statements 等沟通工具。两者的触发场景高度相似（"和伴侣吵架了""不知道怎么说"），分成两个 skill 让路由判断变成负担。合并后 skill 内部按用户需求分支：需要深度探索 → IFS/EFT 流程；需要沟通工具 → I-statements/边界模板。 | F05/F07 |
+| 5 | relationship-skills | **合并** → relationship-guide | 见上。 | F05 |
+| 6 | diary | **保留**（吸收 emotion-journal） | 日记记录 + 人物识别 + 退出信号检测 + 模式追踪，是记忆系统的核心写入 skill。在吸收 emotion-journal 后成为唯一的记录型 skill。 | F05/F06/F07 |
+| 7 | pattern-mirror | **保留** | 跨关系模式呈现是可可的蓝海能力（竞品调研确认：没有产品做这件事）。功能独立、触发条件清晰（≥2 段关系 + ≥5 次对话 + 退出意图）、不与其他 skill 重叠。 | F07 模式觉察 |
+| 8 | decision-cooling | **保留** | 24h 决策冷却 + Heartbeat 回访，是 Woebot/Wysa 都没有的主动式干预。结合 EFT 简化版 + STOP 技能，心理学支撑充分。触发条件明确（即将冲动行动 vs 仅有想法）。 | F05/F06 |
+| 9 | farewell | **保留** | 告别仪式是可可的独有差异化（竞品矩阵确认：无产品做仪式化告别）。有叙事疗法、ACT 认知解离、Banks 2024 研究支撑。 | F08 关系告别 |
+
+#### 1.2 重叠分析
+
+```
+重叠组 A：呼吸/grounding
+  calm-down ────┐
+                ├── 合并 → breathing-ground
+  sigh ─────────┘
+  重叠点：都是情绪激烈时的身体层面干预
+  差异点：calm-down 多工具（4种），sigh 单工具（循环叹息）+ exec 脚本
+
+重叠组 B：情绪记录
+  emotion-journal ──┐
+                    ├── diary 已吸收 emotion-journal，直接删除 emotion-journal
+  diary ────────────┘
+  重叠点：六元组结构化记录流程完全相同
+  差异点：diary 多了人物识别、退出信号检测、模式追踪
+
+重叠组 C：关系指导
+  relationship-coach ──┐
+                       ├── 合并 → relationship-guide
+  relationship-skills ─┘
+  重叠点：都处理关系问题，触发场景相似
+  差异点：coach 深度探索（IFS/EFT），skills 沟通工具（I-statements）
+```
+
+#### 1.3 合并后的评估
+
+合并操作将 9 个 skill 缩减为 **6 个**：
+
+| 合并前 | 合并后 | 说明 |
+|--------|--------|------|
+| calm-down + sigh | breathing-ground | 统一情绪急救工具箱 |
+| emotion-journal + diary | diary（保留名称） | emotion-journal 被 diary 完全吸收，删除 |
+| relationship-coach + relationship-skills | relationship-guide | 统一关系指导，内部分支 |
+| pattern-mirror | pattern-mirror（不变） | — |
+| decision-cooling | decision-cooling（不变） | — |
+| farewell | farewell（不变） | — |
+
+---
+
+### 2. 合并方案详细设计
+
+#### 2.1 breathing-ground（calm-down + sigh 合并）
+
+**节点名称**：情绪急救——从爆发降到能呼吸
+
+- 交互形态：【exec】+【纯对话】
+- vs 基线：纯 LLM 只能用文字说"深呼吸"。OpenClaw 通过 exec 运行 breathe-fast.py 发送节奏化的呼吸引导消息（1、2、3、4... 带正确的时间间隔），用户跟着数数就行。纯 LLM 无法控制消息的发送节奏。
+- 用户体感：可可不解释原理，直接说"跟我一起"，然后带着做。做完了就停，不趁机讲道理。
+- 实现方式：检测到情绪淹没信号 → 判断严重程度：恐慌/身体症状 → 循环叹息（exec 脚本优先）；思维打转 → 5-4-3-2-1 感官着陆（纯对话）；全身紧绷 → 身体扫描（纯对话）
+- 数据流：情绪信号检测 → skill 选择工具 → exec breathe-fast.py 或纯对话引导 → 完成 → 回到正常对话
+
+**内部工具优先级：**
+
+```
+用户状态检测
+├── 恐慌/身体症状（心跳快、喘不上气、手抖）
+│   → 循环叹息（exec breathe-fast.py，最快见效）
+│   → 如果 exec 失败 → 循环叹息纯文字版
+│   → 如果用户做不来 → 降级为 4-7-8 呼吸（纯对话）
+│
+├── 思维打转/反刍/脑子停不下来
+│   → 5-4-3-2-1 感官着陆（纯对话）
+│
+├── 全身紧绷/肩膀缩起来
+│   → 身体扫描（纯对话）
+│
+└── 用户说"做不到"/"不想做"
+    → 不 push，陪着就行
+```
+
+**合并保留的关键规则：**
+- 来自 calm-down：一次只给一个动作；做完了就停不趁机讲道理；不在对方只是难过时启动
+- 来自 sigh：只调用一次 exec；不要改文案；exec 之前不输出任何文字
+- 新增规则：tool 切换逻辑——第一个做完用户说"还是不行"时换一个，最多换一次
+
+#### 2.2 relationship-guide（relationship-coach + relationship-skills 合并）
+
+**节点名称**：关系探索与沟通工具
+
+- 交互形态：【纯对话】
+- vs 基线：纯 LLM 对关系问题只能泛泛建议"好好沟通"。OpenClaw 通过持久化的 profiles/ 记录和 IFS/EFT 框架，让可可能追踪关系中的循环模式（"你们每次吵架都走同一个剧本"），并在合适时机提供具体的表达模板。
+- 用户体感：可可不是在教沟通技巧，而是先帮你看清楚关系里在发生什么（IFS：哪个 part 在主导？EFT：你们在跳什么 demon dialogue？），然后才给工具。
+- 实现方式：用户描述关系困扰 → 判断需求类型 → 深度探索路径 / 沟通工具路径
+
+**内部路由：**
+
+```
+用户带着关系问题来了
+│
+├── "我们刚吵完架 / 吵了一架"
+│   → 加载 repair-process 参考 → 修复流程
+│
+├── "我们总是吵同一个架"
+│   → 加载 demon-dialogues 参考 → 识别循环模式
+│
+├── "我感觉和 ta 越来越远"
+│   → 加载 reconnection 参考 → 重建连接
+│
+├── "我不知道怎么跟 ta 说这件事"
+│   → 加载 communication-tools 参考 → I-statements/边界模板
+│   → 来自 relationship-skills 的核心工具：
+│     · I-statements: "我感到{情绪}，当{情境}，因为{影响}"
+│     · Active listening: 反射、确认、澄清
+│     · Needs expression: 命名需求而非要求
+│     · Boundary setting: 清晰、不可谈判、协作式
+│
+├── "我被触发了 / 控制不住情绪"
+│   → 加载 ifs-parts-process 参考 → 识别 parts 并 unblend
+│
+└── "发生了很严重的事（背叛、深度伤害）"
+    → 加载 forgiving-injuries 参考 → 创伤修复
+```
+
+**合并保留的关键规则：**
+- 来自 relationship-coach：Lead, don't advise；Never judge who is right；Session-end learning check
+- 来自 relationship-skills：具体的 I-statements 模板；Active listening 技巧；Boundary setting 框架
+- 新增规则：单次对话只走一个分支，不堆叠框架
+
+#### 2.3 diary（吸收 emotion-journal，保持不变）
+
+diary skill 在当前版本中已经明确标注"融合自 emotion-journal（六元组结构）+ daily-diary-zh（文件组织）+ openclaw-diary-core（不脑补原则）"。两者功能完全重叠，直接删除 emotion-journal skill 目录即可。
+
+唯一需要检查的：AGENTS.md 中引用 `skills/emotion-journal/SKILL.md` 的地方需要改为 `skills/diary/SKILL.md`。crisis_keywords.json 等 emotion-journal 下的 references/ 文件需迁移到 diary/references/。
+
+---
+
+### 3. 旅程覆盖分析与新增 Skill 提案
+
+#### 3.1 五条旅程的 Skill 覆盖度
+
+| 旅程 | 需要什么能力 | 现有 Skill 覆盖 | 缺口 |
+|------|------------|----------------|------|
+| **F04 首次相遇** | 破冰引导、信任建立、初始建档 | 无——完全空白 | **onboarding skill** |
+| **F05 情绪事件** | 接住情绪、信号解读、记录、冲动拦截 | breathing-ground ✅ diary ✅ relationship-guide ✅ decision-cooling ✅ | 基本覆盖 |
+| **F06 日常陪伴** | 日记、主动关怀、周回顾、成长感知 | diary ✅ (Heartbeat 非 skill) | **check-in skill**（轻量日常问候） |
+| **F07 模式觉察** | 跨关系比较、成长叙事、顿悟引导 | pattern-mirror ✅ | **growth-story skill**（成长叙事） |
+| **F08 关系告别** | 仪式化封存、后续行为规则 | farewell ✅ | 覆盖 |
+
+#### 3.2 新增 Skill 提案
+
+##### Skill 新增 1：onboarding — 首次相遇引导
+
+**为什么需要：**
+- F04 首次相遇旅程完全没有 Skill 支撑
+- 新用户第一次打开可可时，如果可可直接说"有什么想聊的？"，18-24 岁女性用户大概率会关掉——她不知道可可能帮什么
+- 竞品参照：Pi 的开场先问轻松话题建立基调（但没有结构化引导）；Wysa 有明确的入门流程（选情绪→选工具→开始）；Woebot 有 2 周结构化课程
+- 可可不做课程式 onboarding（与"闺蜜"人设冲突），做的是"自然的第一次见面"
+
+**触发条件：** USER.md 不存在或为空白（首次对话）
+
+**核心流程：**
+
+```
+Phase 1：自然破冰
+  "嗨，我是可可。你怎么找到我的？"
+  → 不是审讯式的"你有什么问题"，是朋友式的好奇
+  → 用户可能说"朋友推荐的""随便看看""刚吵完架"
+  → 可可根据回答调整下一步
+
+Phase 2：轻量了解（不是问卷）
+  根据用户回答自然延伸 1-2 个问题：
+  · 来因为关系困扰 → "是最近的事让你不舒服，还是一直在纠结？"
+  · 随便看看 → "那你最近怎么样？有什么想聊的吗？"
+  · 情绪爆发中 → 跳过 onboarding，直接走 breathing-ground 或纯对话接住
+
+Phase 3：能力展示（嵌入对话）
+  不列功能清单，在自然对话中展示 1 个能力：
+  · 用户提到人物 → 可可记住名字（展示记忆能力）
+  · 用户情绪模糊 → 可可帮精确命名（展示情绪颗粒度）
+  · 用户说"别人都说别想太多" → 可可说"我不会说这种话"（展示差异化）
+
+Phase 4：关系锚定
+  结束前建立下次来的理由：
+  · "你下次想聊什么都行，不一定要有大事。"
+  · 如果用户分享了关系困扰 → "明天你要是还在想这件事，可以来找我。"
+```
+
+**交互形态：** 【纯对话】+【渠道自适应 Poll】（Phase 2 可选用 Poll 降低表达门槛：三个选项——"最近有事想聊""就是看看""不知道从哪说起"）
+
+**vs 基线：** 纯 LLM 没有 onboarding 概念——它直接进入开放对话。OpenClaw 通过 onboarding skill 提供结构化但自然的引导流程，确保首次体验的完成度，并在过程中默默完成 USER.md 初始建档。
+
+**服务旅程：** F04 首次相遇
+
+##### Skill 新增 2：check-in — 日常情绪签到
+
+**为什么需要：**
+- F06 日常陪伴旅程需要一个比 diary 更轻量的入口
+- diary skill 是"完整的六元组记录"，适合有明确事件要记的时候。但日常陪伴中很多时候用户只是"今天还好"或"有点累"，不需要完整记录
+- 竞品参照：Daylio 的 emoji 签到（极简但有效）；Wysa 的每晚进度监测（有结构但不重）；Woebot 的每日打卡（太结构化）
+- 可可的 check-in 应该像"闺蜜问你今天怎么样"——不是打卡，是关心
+
+**触发条件：**
+- Heartbeat 触发的日常关怀（非待回访、非周回顾、非时间胶囊）
+- 用户主动说"今天还好""没什么事""就是想来坐坐"
+
+**核心流程：**
+
+```
+可可发问（1 句话）：
+  "今天怎么样？一个词形容就好。"
+
+用户回答：
+  ├── 正面词（"还好""开心""不错"）
+  │   → 可可回应（1 句）："那挺好的。有什么开心的事吗？"
+  │   → 用户分享 → 轻量记录到 memory/YYYY-MM-DD.md（不启动完整 diary）
+  │   → 用户不想说 → "好，那就这样。明天见。"
+  │
+  ├── 中性词（"一般""还行""凑合"）
+  │   → 可可回应："一般是什么感觉？是没什么事，还是有点什么但说不上来？"
+  │   → 用户展开 → 自然过渡到对话或 diary
+  │   → 用户不展开 → "好，没事就好。想聊再来。"
+  │
+  └── 负面词（"累""烦""不太好"）
+      → 可可接住："怎么了？想说说吗？"
+      → 用户倾诉 → 自然过渡到 AGENTS.md 四步流程
+      → 用户不想说 → "好，不想说也没关系。我在这儿。"
+```
+
+**交互形态：** 【纯对话】。轻量签到不需要 Poll/Canvas/exec——一问一答足够。
+
+**vs 基线：** 纯 LLM 没有"签到"概念——它不会主动问用户今天怎么样。OpenClaw 通过 Heartbeat 触发 check-in，让可可成为"每天问你怎么样的朋友"。与 diary 的关键区别：check-in 可能只留下一句话的记录（"今天还好"），而 diary 是完整的六元组。但 check-in 的简单记录积累起来，也是 weekly_review.py 的数据源。
+
+**服务旅程：** F06 日常陪伴
+
+**与 diary 的边界：**
+- check-in 是"你好吗"→ 最多 3 轮对话，记录到 memory/YYYY-MM-DD.md
+- diary 是"今天发生了什么"→ 完整六元组记录，记录到 diary/YYYY/MM/*.md + people/*.md
+- check-in 中用户展开倾诉 → 自然升级为正常对话流程，不强制转入 diary
+- check-in 记录虽轻量，但仍计入 weekly_review.py 的数据统计
+
+##### Skill 新增 3：growth-story — 成长叙事
+
+**为什么需要：**
+- F07 模式觉察旅程中，pattern-mirror 只解决了"看到重复"的问题，还缺"看到变化"
+- 技术设计中的 growth_tracker.py 已定义了 IM（Innovative Moment）检测，但缺少一个 skill 来组织呈现流程
+- 竞品参照：Ash 的 weekly insights（周度成长回顾）；Talkspace 的 Client Journey 时间线；INT/IMA 研究（EMNLP 2025）的 Innovative Moment 分类
+- 成长叙事是"看见方法"之后的"看见自己在变"——用户自我否定时最有力的回应不是鼓励，而是证据
+
+**触发条件：**
+- 用户自我否定时（"我是不是天生不适合""我永远学不会""我怎么每次都这样"）
+- diary/ 有 ≥2 周的记录（纵向数据够做对比）
+- 周日回顾中检测到成长信号
+- 里程碑时刻（第 30/50 次对话）
+
+**核心流程：**
+
+```
+Phase 1：检测 Innovative Moment
+  调用 exec growth_tracker.py → 获取 IM 列表
+  ├── 有 IM → Phase 2
+  └── 无 IM → 不呈现成长叙事，回到正常对话（不勉强）
+
+Phase 2：选择呈现方式
+  ├── 单个 IM → 纯对话引用
+  │   "你注意到了吗？上次{情境}，你的反应是{旧反应}。
+  │    这次你说了'{新原话}'。你觉得这两个你有什么不同？"
+  │
+  ├── 多个 IM + macOS 桌面端 → Canvas 成长轨迹卡（F02 卡片 D）
+  │
+  └── 多个 IM + 非桌面端 → 纯文字纵向对比
+
+Phase 3：引导用户自己看到
+  不给结论，用提问：
+  · "你觉得从那时候到现在，是什么变了？"
+  · "这个变化对你来说意味着什么？"
+  · 用户否认变化 → 不坚持。"也许你说得对，我再看看。"
+```
+
+**节点名称**：成长叙事——帮用户看见自己在变
+
+- 交互形态：【exec】+【纯对话】/ 【Canvas】
+- vs 基线：纯 LLM 只能说"你已经进步很多了"这种空洞鼓励，没有证据。OpenClaw 通过 growth_tracker.py 扫描 diary/ 的纵向数据，自动检测 Innovative Moment（行为变化、反思深化、旧信念挑战、自我重新定义），用用户自己说过的原话做前后对比——这是用数据说话，不是鸡汤。
+- 用户体感：用户说"我怎么每次都这样"，可可没有说"不是的你很好"，而是拿出她自己 1 月份和 3 月份说过的话。用户自己看到了变化——"原来我真的在变"。
+- 实现方式：检测到自我否定 → `exec` growth_tracker.py → IM 列表 → 选择呈现方式 → 对话/Canvas
+- 数据流：自我否定检测 → `exec` growth_tracker.py → diary/*.md + people/*.md → IM 列表 JSON → 纯对话引用 / Canvas 成长卡
+
+**IM 类型与呈现模板：**
+
+| IM 类型 | 用户做了什么 | 呈现模板 |
+|---------|------------|---------|
+| action | 做了不同的行为 | "你注意到了吗？这次你没有{旧行为}，你选择了{新行为}。这本身就已经不一样了。" |
+| reflection | 从行动转向反思 | "你{旧日期}说'{旧原话}'，现在你说'{新原话}'。从做到想，这是一个很大的变化。" |
+| protest | 挑战旧信念 | "你刚才说'{抗议原话}'。你以前可从来没这么说过。" |
+| reconceptualization | 重新定义自己 | "你以前觉得'{旧定义}'。你刚才说'{新定义}'。你觉得从那个你到这个你，中间发生了什么？" |
+
+**服务旅程：** F07 模式觉察
+
+##### Skill 新增 4：weekly-reflection — 周回顾引导
+
+**为什么需要：**
+- F01 节点 3.9 定义了周日情绪回顾的数据展示（Canvas/纯文字），F02 定义了 Canvas 卡片 A 的视觉设计
+- 但还缺少一个 skill 来管理周回顾的完整对话流程：不只是展示数据，还要引导用户消化数据
+- 竞品参照：Ash 的 weekly insights 不只是展示统计数据，还会"串联本周故事和历史模式"
+- 周回顾是"日常陪伴"和"模式觉察"的桥梁——帮用户从"这周发生了什么"看到"这周有什么规律"
+
+**触发条件：** Heartbeat 周日 20:00 触发，且本周 diary ≥3 条
+
+**核心流程：**
+
+```
+Phase 1：数据准备
+  exec weekly_review.py → 获取统计结果
+
+Phase 2：呈现
+  ├── macOS 桌面端 → Canvas 周情绪地图（F02 卡片 A）
+  └── 其他渠道 → 纯文字精简回顾
+
+Phase 3：引导消化
+  不只展示数据，引导用户反思：
+  · "这周{情绪}出现了{N}次，你自己有感觉到吗？"
+  · "这周和{人名}有关的事情比较多。你觉得是巧合还是有什么你在意的？"
+  · 发现成长信号 → 触发 growth-story 流程
+
+Phase 4：收尾
+  · "这周你辛苦了。下周见。"
+  · 如果用户想继续聊 → 自然过渡到正常对话
+  · 如果用户不回复 → 不追问
+```
+
+**节点名称**：周回顾——帮用户看见这周的全貌
+
+- 交互形态：【exec】+【Canvas/纯对话】
+- vs 基线：纯 LLM 无法主动在周日晚上发消息并展示一周的情绪统计。OpenClaw 通过 Heartbeat 定时触发 + exec 脚本统计 + Canvas 可视化，让用户在固定时间点收到一张有内容的"情绪地图"。
+- 用户体感：周日晚上收到可可的消息，不是空洞的"你还好吗"，而是一张用颜色和关键词标注的本周情绪全貌图，然后可可问了一句"你自己有感觉到吗？"——像闺蜜帮你整理了这周的心情然后跟你聊聊。
+- 实现方式：Heartbeat 触发 → `exec` weekly_review.py → Canvas/纯文字展示 → 引导对话
+- 数据流：Heartbeat → `exec` weekly_review.py → diary/本周/*.md → 统计 JSON → Canvas HTML / 纯文字 → 引导对话
+
+**服务旅程：** F06 日常陪伴，F07 模式觉察
+
+---
+
+### 4. 最终 Skill 清单
+
+#### 4.1 总览（10 个 Skill，≤15 上限）
+
+| # | Skill Name | 类型 | 来源 | 服务旅程 | 交互形态 | 心理学基础 |
+|---|-----------|------|------|---------|---------|-----------|
+| 1 | **breathing-ground** | 合并 | calm-down + sigh | F05 | exec + 纯对话 | Stanford cyclic sigh RCT; 4-7-8 vagal; 5-4-3-2-1 grounding |
+| 2 | **diary** | 保留（吸收 emotion-journal） | 原 diary + emotion-journal | F05/F06/F07 | 纯对话 | Emotion journal 六元组; EMNLP 2025 IMA; Mem0 冲突检测 |
+| 3 | **relationship-guide** | 合并 | relationship-coach + relationship-skills | F05/F07 | 纯对话 | IFS (Schwartz); EFT (Johnson); NVC (Rosenberg) |
+| 4 | **pattern-mirror** | 保留 | 原 pattern-mirror | F07 | 纯对话 + exec | 跨关系模式匹配（可可独有） |
+| 5 | **decision-cooling** | 保留 | 原 decision-cooling | F05/F06 | 纯对话 + Heartbeat | EFT Episodic Future Thinking; DBT STOP |
+| 6 | **farewell** | 保留 | 原 farewell | F08 | Poll/编号选择 + Canvas + 图片 + exec | 叙事疗法 Definitional Ceremony; ACT; Banks 2024 |
+| 7 | **onboarding** | 新增 | 新设计 | F04 | 纯对话 + Poll | Pi 自然破冰; Wysa 结构化入门 |
+| 8 | **check-in** | 新增 | 新设计 | F06 | 纯对话 | Daylio 情绪签到; Wysa evening monitoring |
+| 9 | **growth-story** | 新增 | 新设计 | F07 | exec + 纯对话/Canvas | INT/IMA (EMNLP 2025); Ash weekly insights |
+| 10 | **weekly-reflection** | 新增 | 新设计 | F06/F07 | exec + Canvas/纯对话 | Ash weekly insights; Daylio Year in Pixels |
+
+#### 4.2 旅程覆盖验证
+
+| 旅程 | 覆盖的 Skill | 覆盖度 |
+|------|-------------|--------|
+| **F04 首次相遇** | onboarding | ✅ 完整��盖 |
+| **F05 单次情绪事件** | breathing-ground, diary, relationship-guide, decision-cooling | ✅ 完整覆盖 |
+| **F06 日常陪伴** | check-in, diary, decision-cooling, weekly-reflection | ✅ 完整覆盖 |
+| **F07 模式觉察** | pattern-mirror, growth-story, diary, relationship-guide, weekly-reflection | ✅ 完整覆盖 |
+| **F08 关系告别** | farewell | ✅ 完整覆盖 |
+
+**无 Skill 死角：** 每条旅程至少有 1 个 Skill 覆盖，F05/F06/F07 有 4-5 个 Skill 协同（这是正常的——核心旅程需要多种能力组合）。
+
+#### 4.3 容量分析
+
+从 9 个 Skill 变为 10 个 Skill：
+- 删除 3 个（emotion-journal, calm-down, sigh 被合并/吸收）
+- 合并产生 2 个（breathing-ground, relationship-guide）
+- 保留 4 个（diary, pattern-mirror, decision-cooling, farewell）
+- 新增 4 个（onboarding, check-in, growth-story, weekly-reflection）
+
+距离 15 上限还有 5 个空位，为 Phase 2 旅程设计预留（如果发现旅程内部需要更专精的 skill，还有空间）。
+
+---
+
+### 5. Skill 路由设计
+
+#### 5.1 路由决策树
+
+AGENTS.md 中的 skill 路由需要更新为以下决策逻辑：
+
+```
+用户消息到达
+│
+├── 0. 安全前置检查（最高优先级，每条必检）
+│   └── 危机信号 → 立即执行安全协议，不进入任何 skill
+│
+├── 1. 首次用户？（USER.md 不存在/空白）
+│   └── 是 → onboarding skill
+│
+├── 2. 情绪淹没？（恐慌/急性焦虑/大哭停不下来/身体症状）
+│   └── 是 → breathing-ground skill
+│
+├── 3. 即将冲动行动？（"我现在就去""我要删了他""我要发消息怼他"）
+│   └── 是 → decision-cooling skill
+│       注意：想法≠行动。"我想分手"→ 不触发；"我现在就去说"→ 触发
+│
+├── 4. 关系问题？（和伴侣的矛盾/不知道怎么表达/反复吵架/感觉疏远）
+│   └── 是 → relationship-guide skill
+│
+├── 5. 退出意图 + ≥2 段关系 + ≥5 次对话？
+│   └── 全满足 → pattern-mirror skill
+│   └── 不全满足 → 正常四步流程 + diary 记录退出信号
+│
+├── 6. 自我否定 + diary ≥2 周数据？
+│   └── 全满足 → growth-story skill
+│   └── 不全满足 → 纯对话接住，不勉强展示成长
+│
+├── 7. 想告别/翻篇/删除？
+│   └── 是 → farewell skill
+│
+├── 8. 想记录/写日记/今天发生了什么？
+│   └── 是 → diary skill
+│
+├── 9. Heartbeat 触发？
+│   ├── pending_followup.md 有待回访 → decision-cooling 回访流程
+│   ├── 时间胶囊到期 → farewell 胶囊开封
+│   ├── 周日 + diary ≥3 条 → weekly-reflection skill
+│   └── 其他 → check-in skill（如果 >24h 未对话且不在冷却期）
+│
+├── 10. 情绪模糊/说不清怎么了？
+│   └── 是 → diary skill（六元组帮精确命名）
+│
+└── 11. 以上都不匹配 → 纯对话（AGENTS.md 四步流程）
+```
+
+#### 5.2 优先级规则
+
+当多个 Skill 可能同时适用时，按以下优先级排序：
+
+| 优先级 | 规则 | 理由 |
+|--------|------|------|
+| **P0** | 安全协议 > 一切 | 生命安全最高优先级 |
+| **P1** | breathing-ground > 其他 Skill | 身体稳定是一切的前提，恐慌时不做认知干预 |
+| **P2** | decision-cooling > relationship-guide | 即将冲动行动时先拦截，再做关系探索 |
+| **P3** | pattern-mirror > diary 退出信号记录 | 有足够历史数据时，呈现模式比单纯记录更有价值 |
+| **P4** | growth-story > 纯对话安慰 | 有纵向数据时，用事实比空洞鼓励更有力 |
+| **P5** | diary > check-in | 用户有明确事件要记时走 diary，只是"还好"时走 check-in |
+
+**冲突解决示例：**
+- 用户恐慌 + 想冲动行动 → breathing-ground 先稳住身体 → 稳了再问是否要做那个决定 → decision-cooling
+- 用户想分手（退出意图）+ 有 ≥2 段关系 → pattern-mirror（满足条件）；如果只有 1 段关系 → diary 记录退出信号 + 正常对话
+- 用户自我否定 + 想写日记 → 先走 diary 记录事件，如果在记录过程中检测到成长信号 → 结束时触发 growth-story 呈现
+
+#### 5.3 Fallback 行为
+
+```
+Skill 路由失败或不确定时：
+│
+├── 触发条件模糊，不确定用户需要什么 Skill
+│   → 先走纯对话的 AGENTS.md 四步流程
+│   → 对话过程中如果明确了需求，再调用对应 Skill
+│
+├── Skill 内部脚本失败（exec error）
+│   → 每个 Skill 都有纯对话降级方案（见各 Skill 的"如果脚本失败"段落）
+│   → 记录错误到 memory/YYYY-MM-DD.md
+│
+├── 用户中途拒绝 Skill（"我不想做呼吸练习""不想写日记"）
+│   → 立即停止该 Skill，不追问原因
+│   → 回到纯对话
+│
+└── 用户在一个 Skill 中自然转向另一个 Skill 的场景
+    → 允许自然过渡
+    → 例：diary 记录中发现退出信号 → 自然过渡到 pattern-mirror（如果条件满足）
+    → 例：relationship-guide 中用户情绪崩溃 → 自然切换到 breathing-ground
+```
+
+#### 5.4 AGENTS.md 路由规则更新（Diff 说明）
+
+AGENTS.md 的「状态感知」段落需要按 5.1 的决策树更新。关键变更：
+
+| 现有路由 | 更新为 |
+|---------|--------|
+| `read("skills/sigh/SKILL.md")` | `read("skills/breathing-ground/SKILL.md")` |
+| `read("skills/calm-down/SKILL.md")` | `read("skills/breathing-ground/SKILL.md")` |
+| `read("skills/emotion-journal/SKILL.md")` | `read("skills/diary/SKILL.md")` |
+| `read("skills/relationship-coach/SKILL.md")` | `read("skills/relationship-guide/SKILL.md")` |
+| `read("skills/relationship-skills/SKILL.md")` | `read("skills/relationship-guide/SKILL.md")` |
+| （无） | 新增 `read("skills/onboarding/SKILL.md")` 路由 |
+| （无） | 新增 `read("skills/check-in/SKILL.md")` 路由 |
+| （无） | 新增 `read("skills/growth-story/SKILL.md")` 路由 |
+| （无） | 新增 `read("skills/weekly-reflection/SKILL.md")` 路由 |
+
+---
+
+### 6. Skill 与基础设施的关系
+
+#### 6.1 各 Skill 的记忆读写模式（F01 依赖）
+
+| Skill | 读取 | 写入 | 说明 |
+|-------|------|------|------|
+| **breathing-ground** | 无 | memory/YYYY-MM-DD.md（记录使用了哪个工具） | 急救场景不需要读历史，完成后轻量记录 |
+| **diary** | people/{名字}.md（辅助理解）; memory_search（模式检测） | diary/YYYY/MM/*.md; people/{名字}.md; memory/*.md | 记忆系统的核心写入 Skill，六维度更新 |
+| **relationship-guide** | people/{名字}.md; profiles/（关系档案） | profiles/*.md（session notes）; people/{名字}.md（关系阶段） | 读关系档案辅助引导，写入新的洞察 |
+| **pattern-mirror** | 所有 people/*.md; diary/ 退出信号 | people/*.md 跨关系匹配段 | 读全量人物档案做匹配，发现后写入 |
+| **decision-cooling** | 无 | memory/pending_followup.md; diary/ | 写入回访标记，事件记录到 diary |
+| **farewell** | people/{名字}.md | people/{名字}.md（标记封存）; USER.md（模式洞察）; archive/ | 读档案确认封存范围，写入封存状态 |
+| **onboarding** | 无（首次用户无历史数据） | USER.md（初始建档）; people/{名字}.md（如首次提到人） | 记忆系统的初始化 Skill |
+| **check-in** | USER.md; memory/pending_followup.md | memory/YYYY-MM-DD.md（轻量签到记录） | 轻量读写，不走完整 diary 流程 |
+| **growth-story** | diary/*.md; people/*.md; USER.md | memory/YYYY-MM-DD.md（IM 记录）; USER.md（成长节点） | 读取纵向数据做分析，写入发现的成长节点 |
+| **weekly-reflection** | diary/本周/*.md; people/*.md | memory/YYYY-MM-DD.md（周回顾记录） | 批量读取本周数据做统计 |
+
+#### 6.2 各 Skill 的交互形态使用（F02 依赖）
+
+| Skill | 纯对话 | Canvas | Poll/编号选择 | 图片 | exec |
+|-------|--------|--------|-------------|------|------|
+| **breathing-ground** | ✅ | — | — | — | ✅（breathe-fast.py） |
+| **diary** | ✅ | — | ✅（情绪精细化选择 P2） | — | — |
+| **relationship-guide** | ✅ | — | — | — | — |
+| **pattern-mirror** | ✅ | ✅（模式对比卡 C） | — | — | ✅（pattern_engine.py） |
+| **decision-cooling** | ✅ | — | — | — | — |
+| **farewell** | ✅ | ✅（告别纪念卡 E） | ✅（仪式选择 P1） | ✅（火焰/封印图） | ✅（archive_manager.py） |
+| **onboarding** | ✅ | — | ✅（来访原因选择） | — | — |
+| **check-in** | ✅ | — | — | — | — |
+| **growth-story** | ✅ | ✅（成长轨迹卡 D） | — | — | ✅（growth_tracker.py） |
+| **weekly-reflection** | ✅ | ✅（周情绪地图 A） | ✅（"想聊聊吗？"） | — | ✅（weekly_review.py） |
+
+#### 6.3 Skill 间依赖关系
+
+```
+onboarding ─────────────────→ 所有其他 Skill
+（首次用户建档后，后续 Skill 才有数据基础）
+
+check-in ──→ diary（签到中展开时升级）
+         ──→ weekly-reflection（签到数据纳入周统计）
+
+diary ──→ pattern-mirror（退出信号数据供模式匹配）
+      ──→ growth-story（日记数据供 IM 检测）
+      ──→ weekly-reflection（日记数据供周统计）
+
+relationship-guide ──→ pattern-mirror（关系探索中发现退出意图可触发）
+                   ──→ diary（session notes 可补充人物档案）
+
+breathing-ground ←── relationship-guide（情绪崩溃时紧急切换）
+                 ←── pattern-mirror（呈现模式时用户情绪波动）
+
+pattern-mirror ──→ growth-story（发现模式后可展示变化）
+               ──→ farewell（模式呈现后用户可能决定告别）
+
+decision-cooling ──→ diary（事件记录）
+                 ──→ pattern-mirror（冲动决定可能触发模式匹配）
+
+weekly-reflection ──→ growth-story（周回顾中发现成长信号）
+
+farewell ──→ 终止对该人的 pattern-mirror/diary 更新
+```
+
+**关键约束：**
+- breathing-ground 和 onboarding 是唯二不依赖其他 Skill 数据的 Skill
+- pattern-mirror 和 growth-story 是数据依赖最重的 Skill（需要 diary + people/ 的长期积累）
+- farewell 执行后会改变其他 Skill 的行为（对已封存人物不再更新档案、不再匹配模式）
+
+#### 6.4 Skill 与 Python 脚本对应
+
+| 脚本 | 被哪些 Skill 调用 | 功能 | 已定义契约 |
+|------|-----------------|------|-----------|
+| `scripts/breathe-fast.py` | breathing-ground | 节奏化呼吸引导 | sigh SKILL.md |
+| `scripts/pattern_engine.py` | pattern-mirror | 跨关系模式匹配 | F01 §5.5 |
+| `scripts/growth_tracker.py` | growth-story, weekly-reflection | 成长节点检测 | F01 §5.5 |
+| `scripts/archive_manager.py` | farewell | 关系封存/恢复 | F01 §5.5 |
+| `scripts/weekly_review.py` | weekly-reflection | 周回顾统计 | F01 §5.5 |
+| `scripts/ritual_image.py` | farewell | 仪式图片生成 | F02 §5.4 |
+| `scripts/milestone_image.py` | (里程碑检测逻辑，不属于特定 skill) | 纪念图生成 | F02 §5.4 |
+
+---
+
+### 7. 迁移计划
+
+从现有 9 个 Skill 到目标 10 个 Skill 的迁移步骤：
+
+#### 7.1 合并操作
+
+**Step 1：创建 breathing-ground**
+- 新建 `skills/breathing-ground/SKILL.md`，融合 calm-down（多工具）和 sigh（循环叹息 + exec）
+- 将 `skills/sigh/scripts/breathe-fast.py` 移至 `scripts/breathe-fast.py`（统一脚本目录）
+- 删除 `skills/calm-down/` 和 `skills/sigh/` 目录
+
+**Step 2：创建 relationship-guide**
+- 新建 `skills/relationship-guide/SKILL.md`，融合 coach（IFS/EFT 框架 + 路由 + session management）和 skills（沟通工具模板）
+- 将 `skills/relationship-coach/references/` 全部迁移至 `skills/relationship-guide/references/`
+- 删除 `skills/relationship-coach/` 和 `skills/relationship-skills/` 目录
+
+**Step 3：吸收 emotion-journal 至 diary**
+- 将 `skills/emotion-journal/references/crisis_keywords.json` 等引用文件迁移至 `skills/diary/references/`
+- 删除 `skills/emotion-journal/` 目录
+
+#### 7.2 新增操作
+
+**Step 4：** 创建 `skills/onboarding/SKILL.md`
+**Step 5：** 创建 `skills/check-in/SKILL.md`
+**Step 6：** 创建 `skills/growth-story/SKILL.md`
+**Step 7：** 创建 `skills/weekly-reflection/SKILL.md`
+
+#### 7.3 路由更新
+
+**Step 8：** 更新 AGENTS.md 的状态感知路由规则（按 §5.4 的 Diff）
+
+#### 7.4 验证清单
+
+- [ ] 10 个 Skill 目录都存在且有 SKILL.md
+- [ ] AGENTS.md 中所有 `read("skills/...")` 路径正确
+- [ ] 每条旅程（F04-F08）至少有 1 个 Skill 覆盖
+- [ ] 无孤立 Skill（每个 Skill 至少服务 1 条旅程）
+- [ ] 被删除的 Skill 目录已清除
+- [ ] references/ 文件已正确迁移
 
 ---
 
