@@ -3,6 +3,8 @@
 *Version: 3.0 | 2026-03-29*
 *合并 PRD v2.0（原群体）+ 关系模式觉察 PRD v1.0（群体 1）*
 
+整体产品技术架构见 docs/product-architecture.md。
+
 ---
 
 ## 1. 一句话

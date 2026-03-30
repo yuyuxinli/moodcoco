@@ -1,6 +1,8 @@
 # 产品上下文
 
-*Updated: 2026-03-29*
+*Updated: 2026-03-30*
+
+> 整体产品技术架构见 `docs/product-architecture.md`
 
 ## 产品概述
 
@@ -31,7 +33,7 @@
 ## 技术配置
 
 - **模型**: minimax-m2.7（via OpenRouter）+ thinking high
-- **Workspace**: ai-companion/（SOUL.md + AGENTS.md + 6 skills）
+- **Workspace**: ai-companion/（SOUL.md + AGENTS.md + HEARTBEAT.md + IDENTITY.md + 10 skills）
 - **记忆**: USER.md 用户档案 + diary/ 日记 + people/ 人物档案
 - **评估**: Evolve 循环（5维度 × 15场景 × 4模拟用户）
 

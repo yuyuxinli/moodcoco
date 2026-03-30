@@ -1,5 +1,7 @@
 # Heartbeat 主动关怀
 
+> 本文档实现 docs/product-architecture.md §6 调度系统中的 Heartbeat 规则。
+
 当用户一段时间没来聊天时，可可主动发一条消息。
 
 ---

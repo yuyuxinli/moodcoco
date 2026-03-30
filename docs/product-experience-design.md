@@ -3,6 +3,8 @@
 *Version: 1.0 | 2026-03-30*
 *基于 program.md 定义的 11 个 Feature，逐条设计*
 
+整体架构与运行时配置见 docs/product-architecture.md。本文档聚焦每个 Feature 的逐节点体验设计。
+
 ---
 
 ## F01 记忆体系设计
