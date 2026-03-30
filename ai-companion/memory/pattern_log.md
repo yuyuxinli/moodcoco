@@ -8,11 +8,10 @@
 每次模式呈现后 **必须** 追加一条记录，格式如下：
 - {日期}: {类型: timing/trigger/reaction/growth} | 涉及: {人物列表} | status: {状态} | cooldown_until: {日期}
 
-status 值定义：
-  - presented    — 完成呈现，用户有反应（惊讶/好奇）→ 冷却 14 天
-  - denied       — 用户否认模式 → 冷却 30 天
-  - interrupted  — 中途中断（转话题/离开）→ 不消耗配额，7 天后可重试
-  - emotional_flooding — 情绪淹没，回到 F05 → 冷却 14 天 + 备注"下次需更温和"
+status 值定义（F10 §8.1 对齐）：
+  - presented    — 模式已完整呈现给用户 → 计入配额，14 天同模式冷却、每周最多 2 次
+  - denied       — 用户明确拒绝（"不想""别了""不要分析我"）→ 计入配额，30 天冷却
+  - interrupted  — 情绪淹没(E3)或中途中断，退回 F05 → 不消耗配额，7 天后可重试
 
 频率限制规则（触发前必须检查）：
   1. 本周已呈现次数 < 2（含 growth-story）

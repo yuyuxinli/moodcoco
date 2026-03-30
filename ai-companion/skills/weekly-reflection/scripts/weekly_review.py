@@ -535,6 +535,11 @@ def analyze_week(
     top_emotion = cluster_counts.most_common(1)[0] if cluster_counts else None
     top_person = people_counts.most_common(1)[0] if people_counts else None
 
+    # --- 跨周模式检测 (F10 §8.4) ---
+    cross_week_pattern = detect_cross_week_pattern(
+        repeated_themes, people_counts, memory_dir, monday,
+    )
+
     # --- 成长信号检测 ---
     growth_signals = detect_growth_signals(
         emotion_summary, group_counts, repeated_themes,
@@ -578,11 +583,224 @@ def analyze_week(
         else None,
         "trigger_summary": dict(trigger_counts.most_common()),
         "worst_day": worst_day,
-        "cross_week_pattern": {
-            "detected": False,
-            "details": None,
-        },
+        "person_mention_count": dict(people_counts),
+        "cross_week_pattern": cross_week_pattern,
     }
+
+
+# ---------------------------------------------------------------------------
+# Cross-Week Pattern Detection (F10 §8.4)
+# ---------------------------------------------------------------------------
+
+
+def detect_cross_week_pattern(
+    repeated_themes: list[dict[str, Any]],
+    people_counts: Counter,
+    memory_dir: str | None,
+    monday: date,
+) -> dict[str, Any]:
+    """检测跨周重复主题模式。
+
+    比较本周 repeated_themes 与上周缓存的 repeated_themes，
+    按主题文本精确匹配优先，回退到触发词重叠 >= 50%。
+
+    Returns:
+        F10 §8.4 规范的 cross_week_pattern 字段。
+    """
+    no_match: dict[str, Any] = {"detected": False, "themes": []}
+
+    if not repeated_themes:
+        return no_match
+
+    # 读取上周缓存
+    last_monday, _last_sunday = get_last_week_range()
+    previous_week_label = iso_week_label(last_monday)
+    previous_week_cache = _load_weekly_cache(memory_dir, previous_week_label)
+
+    if not previous_week_cache:
+        return no_match
+
+    previous_themes = previous_week_cache.get("repeated_themes", [])
+    if not previous_themes:
+        return no_match
+
+    # 构建上周主题索引：按 type 分类，记录 word/name + count
+    prev_by_key: dict[str, dict[str, Any]] = {}
+    for pt in previous_themes:
+        key = _theme_key(pt)
+        if key:
+            prev_by_key[key] = pt
+
+    # 跨周匹配
+    matched_themes: list[dict[str, Any]] = []
+
+    for current_theme in repeated_themes:
+        current_key = _theme_key(current_theme)
+        if not current_key:
+            continue
+
+        prev_theme = prev_by_key.get(current_key)
+
+        # 精确匹配失败 → 回退到触发词重叠 >= 50%
+        if prev_theme is None:
+            prev_theme = _fuzzy_match_theme(current_theme, previous_themes)
+
+        if prev_theme is not None:
+            theme_desc = _theme_description(current_theme)
+            current_count = current_theme.get("count", 1)
+            prev_count = prev_theme.get("count", 1)
+
+            # 计算连续出现的周数（检查更早的缓存）
+            span_weeks = _count_span_weeks(
+                current_theme, memory_dir, monday, max_lookback=4,
+            )
+
+            # 收集相关人物
+            related_persons = _collect_related_persons(
+                current_theme, people_counts,
+            )
+
+            matched_themes.append({
+                "theme": theme_desc,
+                "current_week_count": current_count,
+                "previous_week_count": prev_count,
+                "span_weeks": span_weeks,
+                "related_persons": related_persons,
+            })
+
+    if not matched_themes:
+        return no_match
+
+    return {
+        "detected": True,
+        "themes": matched_themes,
+    }
+
+
+def _theme_key(theme: dict[str, Any]) -> str | None:
+    """生成主题的匹配键。"""
+    t = theme.get("type", "")
+    if t == "emotion":
+        return f"emotion:{theme.get('word', '')}"
+    elif t == "person":
+        return f"person:{theme.get('name', '')}"
+    elif t == "trigger":
+        return f"trigger:{theme.get('word', '')}"
+    return None
+
+
+def _theme_description(theme: dict[str, Any]) -> str:
+    """生成人类可读的主题描述。"""
+    t = theme.get("type", "")
+    if t == "emotion":
+        return theme.get("word", "未知情绪")
+    elif t == "person":
+        return f"关于{theme.get('name', '某人')}的反复提及"
+    elif t == "trigger":
+        return theme.get("word", "未知触发")
+    return str(theme)
+
+
+def _fuzzy_match_theme(
+    current: dict[str, Any],
+    previous_themes: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """模糊匹配：同类型 + 关键词重叠 >= 50%。"""
+    current_type = current.get("type", "")
+    current_words = set(_tokenize_theme(current))
+
+    if not current_words:
+        return None
+
+    best_match = None
+    best_overlap = 0.0
+
+    for pt in previous_themes:
+        if pt.get("type", "") != current_type:
+            continue
+
+        prev_words = set(_tokenize_theme(pt))
+        if not prev_words:
+            continue
+
+        overlap = len(current_words & prev_words) / max(
+            len(current_words), len(prev_words),
+        )
+        if overlap >= 0.5 and overlap > best_overlap:
+            best_overlap = overlap
+            best_match = pt
+
+    return best_match
+
+
+def _tokenize_theme(theme: dict[str, Any]) -> list[str]:
+    """将主题的关键文本拆分为词集。"""
+    text = theme.get("word", "") or theme.get("name", "") or ""
+    context = theme.get("context", "")
+    combined = f"{text} {context}".strip()
+    # 简单按字符级别拆分（中文无空格分词）
+    tokens = []
+    for part in combined.split():
+        tokens.append(part)
+    if not tokens and combined:
+        # 中文文本：按 2-gram 切分
+        tokens = [combined[i:i+2] for i in range(len(combined) - 1)]
+        tokens.append(combined)
+    return tokens
+
+
+def _count_span_weeks(
+    theme: dict[str, Any],
+    memory_dir: str | None,
+    monday: date,
+    max_lookback: int = 4,
+) -> int:
+    """计算主题连续出现的周数（包含本周）。"""
+    span = 1  # 本周已确认出现
+    current_key = _theme_key(theme)
+    if not current_key:
+        return span
+
+    for weeks_ago in range(1, max_lookback + 1):
+        past_monday = monday - timedelta(weeks=weeks_ago)
+        past_label = iso_week_label(past_monday)
+        cache = _load_weekly_cache(memory_dir, past_label)
+        if not cache:
+            break
+
+        past_themes = cache.get("repeated_themes", [])
+        found = False
+        for pt in past_themes:
+            if _theme_key(pt) == current_key:
+                found = True
+                break
+            # 也尝试模糊匹配
+            if _fuzzy_match_theme(theme, [pt]) is not None:
+                found = True
+                break
+
+        if found:
+            span += 1
+        else:
+            break
+
+    return span
+
+
+def _collect_related_persons(
+    theme: dict[str, Any],
+    people_counts: Counter,
+) -> list[str]:
+    """收集与主题相关的人物列表。"""
+    t = theme.get("type", "")
+    if t == "person":
+        name = theme.get("name", "")
+        return [name] if name else []
+
+    # 对于情绪/触发类型的重复主题，返回本周出现最多的人物
+    if people_counts:
+        return [name for name, _ in people_counts.most_common(3)]
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -743,20 +961,26 @@ def _load_weekly_cache(memory_dir: str | None, week_label: str) -> dict[str, Any
 def write_weekly_cache(
     memory_dir: str | None,
     week_label: str,
-    emotion_summary: list[dict[str, Any]],
-    repeated_themes: list[dict[str, Any]],
+    analysis: dict[str, Any],
 ) -> None:
-    """写入本周缓存，保留最近 8 周，超过的自动清理。"""
+    """写入本周缓存（完整 JSON 输出），保留最近 8 周，超过的自动清理。
+
+    F10 §8.4: 每次执行后将本周完整输出写入 weekly_cache/YYYY-WNN.json 供下周使用。
+    """
     cache_root = _cache_dir(memory_dir)
     if not cache_root:
         return
 
     cache_root.mkdir(parents=True, exist_ok=True)
 
+    # 保存完整分析结果以供下周 cross_week_pattern 比较
     cache_data = {
         "week": week_label,
-        "emotion_summary": emotion_summary,
-        "repeated_themes": repeated_themes,
+        "emotion_summary": analysis.get("emotion_summary", []),
+        "repeated_themes": analysis.get("repeated_themes", []),
+        "person_mention_count": analysis.get("person_mention_count", {}),
+        "emotion_clusters": analysis.get("emotion_clusters", {}),
+        "growth_signals": analysis.get("growth_signals", []),
     }
 
     cache_file = cache_root / f"{week_label}.json"
@@ -1126,14 +1350,9 @@ def main() -> None:
         memory_dir=args.memory_dir,
     )
 
-    # 写入 weekly_cache
+    # 写入 weekly_cache (F10 §8.4: 完整输出供下周 cross_week_pattern 比较)
     this_week_label = iso_week_label(monday)
-    write_weekly_cache(
-        args.memory_dir,
-        this_week_label,
-        analysis.get("emotion_summary", []),
-        analysis.get("repeated_themes", []),
-    )
+    write_weekly_cache(args.memory_dir, this_week_label, analysis)
 
     if args.format == "html":
         output_path = (
