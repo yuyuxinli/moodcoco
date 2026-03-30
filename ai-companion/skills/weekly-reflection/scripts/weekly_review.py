@@ -106,7 +106,9 @@ def get_this_week_range() -> tuple[date, date]:
     return monday, sunday
 
 
-def find_diary_files(diary_dir: str, start_date: date, end_date: date) -> list[tuple[date, Path]]:
+def find_diary_files(
+    diary_dir: str, start_date: date, end_date: date
+) -> list[tuple[date, Path]]:
     """在 diary/ 目录下找到指定日期范围的 md 文件。
 
     支持两种目录结构：
@@ -223,7 +225,9 @@ def cross_check_people(people_mentioned: list[str], people_dir: str) -> list[str
 # ---------------------------------------------------------------------------
 
 
-def analyze_week(diary_files: list, people_dir: str | None = None) -> dict:
+def analyze_week(
+    diary_files: list[tuple[date, Path]], people_dir: str | None = None
+) -> dict[str, Any]:
     """分析本周日记数据。"""
     monday, sunday = get_this_week_range()
 
@@ -232,14 +236,14 @@ def analyze_week(diary_files: list, people_dir: str | None = None) -> dict:
     all_people = []
     all_triggers = []
 
-    for date, filepath in diary_files:
+    for entry_date, filepath in diary_files:
         entry = parse_diary_entry(filepath)
-        weekday_idx = date.weekday()
+        weekday_idx = entry_date.weekday()
         day_key = WEEKDAY_NAMES[weekday_idx]
 
         # 去重同日同簇情绪
-        day_clusters_seen = set()
-        day_emotions = []
+        day_clusters_seen: set[str] = set()
+        day_emotions: list[str] = []
         for emo in entry["emotions"]:
             cluster = WORD_TO_CLUSTER.get(emo, emo)
             if cluster not in day_clusters_seen:
@@ -247,7 +251,7 @@ def analyze_week(diary_files: list, people_dir: str | None = None) -> dict:
                 day_emotions.append(emo)
 
         daily[day_key] = {
-            "date": date.isoformat(),
+            "date": entry_date.isoformat(),
             "emotions": day_emotions,
             "primary_emotion": day_emotions[0] if day_emotions else "无记录",
             "primary_cluster": WORD_TO_CLUSTER.get(day_emotions[0], "平静")
@@ -507,7 +511,7 @@ def _get_bar_color(cluster_name: str) -> str:
     return CLUSTER_COLORS.get(cluster_name, "#E0D8CF")
 
 
-def generate_html(analysis: dict, output_path: str | None = None) -> str:
+def generate_html(analysis: dict[str, Any], output_path: str | None = None) -> str:
     """生成周情绪地图 Canvas HTML。"""
 
     daily = analysis.get("daily", {})
@@ -583,7 +587,7 @@ def generate_html(analysis: dict, output_path: str | None = None) -> str:
 # ---------------------------------------------------------------------------
 
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description="周情绪回顾数据统计 + Canvas HTML 生成"
     )
