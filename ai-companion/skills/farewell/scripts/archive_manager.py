@@ -84,25 +84,39 @@ def extract_pattern_insights(people_file: str) -> list:
     return insights
 
 
-def _anonymize(text: str, name: str) -> str:
-    """从文本中移除指定人名及变体，替换为泛化描述。"""
-    result = text
-    # Common name variants: 小明, 明明, 阿明, 明哥, 明姐, etc.
+def _get_name_variants(name: str) -> list:
+    """生成人名的所有可能变体（昵称、称呼等）。"""
     variants = [name]
     if len(name) >= 2:
-        # Add common Chinese nickname patterns
         last_char = name[-1]
+        first_char = name[0] if len(name) == 2 else name[1]
         variants.extend([
             f"阿{last_char}", f"{last_char}{last_char}",
             f"{last_char}哥", f"{last_char}姐",
+            f"小{last_char}", f"老{last_char}",
         ])
+        if len(name) == 2:
+            variants.append(first_char + first_char)
+    return list(set(variants))
 
-    for variant in variants:
+
+def _text_contains_name(text: str, name: str) -> bool:
+    """检查文本是否包含人名或其任何变体。"""
+    for variant in _get_name_variants(name):
+        if variant in text:
+            return True
+    return False
+
+
+def _anonymize(text: str, name: str) -> str:
+    """从文本中移除指定人名及所有变体，替换为泛化描述。"""
+    result = text
+    for variant in _get_name_variants(name):
         result = result.replace(variant, "对方")
 
     # Common reference patterns
     for prefix in ["和", "跟", "与", "给", "对", "找"]:
-        for variant in variants:
+        for variant in _get_name_variants(name):
             result = result.replace(f"{prefix}{variant}", f"{prefix}对方")
 
     return result
@@ -143,7 +157,7 @@ def _remove_sections_mentioning(text: str, name: str) -> str:
             continue
 
         section_text = header + "\n" + "\n".join(lines)
-        if name in section_text:
+        if _text_contains_name(section_text, name):
             continue  # Remove entire section
 
         if header:
@@ -189,7 +203,7 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
     if diary_path.exists():
         for md_file in diary_path.rglob("*.md"):
             text = md_file.read_text(encoding="utf-8")
-            if name in text:
+            if _text_contains_name(text, name):
                 archived = _archive_diary_entry(text, name)
                 md_file.write_text(archived, encoding="utf-8")
                 result["archived_files"].append(str(md_file))
@@ -199,7 +213,7 @@ def archive_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) 
     if memory_path.exists():
         for md_file in memory_path.glob("*.md"):
             text = md_file.read_text(encoding="utf-8")
-            if name not in text:
+            if not _text_contains_name(text, name):
                 continue
 
             if md_file.name in ("pending_followup.md", "time_capsules.md"):
@@ -275,7 +289,7 @@ def _archive_diary_entry(text: str, name: str) -> str:
             return
 
         section_text = "\n".join(current_section_lines)
-        if name in current_section_header or name in section_text:
+        if _text_contains_name(current_section_header, name) or _text_contains_name(section_text, name):
             # Archive this section: keep header + emotion/intensity only
             result_lines.append(current_section_header)
             result_lines.append(f"> *与{name}相关的内容已封存*")
@@ -329,7 +343,7 @@ def delete_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -
     if diary_path.exists():
         for md_file in diary_path.rglob("*.md"):
             text = md_file.read_text(encoding="utf-8")
-            if name in text:
+            if _text_contains_name(text, name):
                 cleaned = _remove_person_from_diary(text, name)
                 md_file.write_text(cleaned, encoding="utf-8")
                 result["deleted_files"].append(f"cleaned: {md_file}")
@@ -341,7 +355,7 @@ def delete_person(people_dir: str, diary_dir: str, memory_dir: str, name: str) -
             if md_file.name in ("pending_followup.md", "time_capsules.md"):
                 continue
             text = md_file.read_text(encoding="utf-8")
-            if name in text:
+            if _text_contains_name(text, name):
                 md_file.unlink()
                 result["deleted_files"].append(f"deleted: {md_file}")
 
@@ -356,7 +370,7 @@ def _remove_person_from_diary(text: str, name: str) -> str:
 
     for line in lines:
         if line.strip().startswith("## "):
-            if name in line:
+            if _text_contains_name(line, name):
                 skip_section = True
                 continue
             else:
