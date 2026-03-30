@@ -365,6 +365,11 @@
 
 - **入口条件**：USER.md 不存在或为空（首次用户）
 - **核心 Skill**：`onboarding`
+- **Streaming 配置**：
+  - `humanDelay: "natural"`（800-2500ms 随机延迟）——让回复节奏像真人打字
+  - `sentenceBreak: true`（句子级分块）——先说前半句（接住），停顿，再说后半句（试探）
+  - 全程生效：节点 A/C/D 尤其关键，回复的停顿感是信任建立的一部分
+- **路由优先级**：§0 危机信号 > 情绪淹没（breathing-ground）> 首次用户（onboarding）
 - **内部流转**：
 
 ```
@@ -378,6 +383,7 @@
 
 - **退出**：对话结束后，USER.md 已有内容 → 下次对话不再进入 J1
 - **异常路径**：首句情绪爆发 → `breathing-ground` 先介入 → 稳定后从节点 C 继续
+- **分支路径**：危机（→ breathing-ground）/ 怀疑 AI（坦诚 + 行为证明）/ 沉默（Poll 降低门槛）/ 带任务来（先完成再桥接关系）——详见 `onboarding SKILL.md §4`
 
 ### J2 情绪事件
 
