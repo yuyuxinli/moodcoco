@@ -17,6 +17,16 @@
         "mode": "all",
         "scope": "per-sender",
         "workspaceAccess": "rw"
+      },
+      "heartbeat": {
+        "every": "30m",
+        "target": "last",
+        "lightContext": true,
+        "activeHours": {
+          "start": "08:00",
+          "end": "23:00",
+          "tz": "Asia/Shanghai"
+        }
       }
     }
   },

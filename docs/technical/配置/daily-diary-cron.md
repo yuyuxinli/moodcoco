@@ -28,7 +28,7 @@ announce: wechat           # 完成后通过微信推送结果给用户
 
 ## 日记格式
 
-遵循 `ai-companion/skills/diary/SKILL.md` 定义的六元组结构：
+遵循 `skills/diary/SKILL.md`（相对于 workspace 根目录）定义的六元组结构：
 
 ```markdown
 # YYYY-MM-DD

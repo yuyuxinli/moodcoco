@@ -6,7 +6,7 @@
 
 完整文档：
 - 在线：https://docs.openclaw.ai
-- 本地完整副本：`/Users/jianghongwei/Documents/GitHub/openclaw/docs/`（建议 clone [OpenClaw 仓库](https://github.com/nicroclaw/openclaw) 以便离线查阅）
+- 本地完整副本：`/Users/jianghongwei/Documents/GitHub/openclaw/docs/`（非本机环境，建议 clone [OpenClaw 仓库](https://github.com/nicroclaw/openclaw) 以便离线查阅）
 
 ---
 

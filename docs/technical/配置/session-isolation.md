@@ -44,3 +44,27 @@ agent:coco:openclaw-weixin:group:{groupId}
 群内所有成员共享该群的 session（群聊是公共空间，这是预期行为）。群 session 与私聊 session 完全隔离，群里的对话不会影响任何用户的私聊记忆。
 
 如需群内也按成员隔离（较少见），可将群消息的 peer 设为 `{groupId}:{senderId}` 组合键，但通常群场景不需要这样处理。
+
+## Sandbox 多租户隔离
+
+除了 `dmScope` 隔离对话历史，还需配置 sandbox 实现用户数据文件隔离：
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "all",
+        "scope": "per-sender",
+        "workspaceAccess": "rw"
+      }
+    }
+  }
+}
+```
+
+`per-sender` 的含义：每个发送者获得独立的 sandbox workspace。SOUL.md、AGENTS.md、skills/ 从主 workspace 自动复制，USER.md、people/、diary/、memory/ 在各自 sandbox 中独立积累。
+
+两层隔离共同工作：
+- `dmScope: per-channel-peer` → 对话历史隔离
+- `sandbox.scope: per-sender` → 文件数据隔离（含 memory_search 搜索范围）

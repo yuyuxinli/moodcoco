@@ -30,8 +30,10 @@
 │ · 事件叙事替代标签（S7 硬规则）                         │
 ├─────────────────────────────────────────────────────┤
 │ 技能层：skills/                                      │
-│ · sigh, calm-down, emotion-journal (已有)             │
-│ · relationship-coach, relationship-skills (已有)      │
+│ · sigh, calm-down (已合并为 breathing-ground),        │
+│ ·   emotion-journal (已合并入 diary)                  │
+│ · relationship-coach, relationship-skills             │
+│ ·   (已合并为 relationship-guide)                     │
 │ · diary (已有，需扩展)                                │
 │ · pattern-mirror (新增：模式急救 S1)                   │
 │ · farewell (新增：告别仪式 S10)                        │
