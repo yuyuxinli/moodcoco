@@ -1,0 +1,71 @@
+<!--
+  Canvas 卡片 C：模式对比卡（Pattern Comparison）
+  F07 节点 D 使用，当 pattern_engine.py 返回 >=2 匹配维度 + macOS 桌面端时展示。
+  Agent 根据 pattern_engine.py 的 JSON 输出填充模板变量，生成完整 HTML。
+
+  模板变量说明：
+    {card_title}       — 卡片标题，如"两段关系的相似时刻"或"你的三段故事"
+    {person_A}         — 左列人物名（如"小凯"，封存关系用"一段过去的关系"）
+    {person_A_date}    — 左列关系时间段（如"2026.01"）
+    {person_B}         — 右列人物名
+    {person_B_date}    — 右列关系时间段
+    {events_A}         — 左列事件节点 HTML（重复 .event 块）
+    {events_B}         — 右列事件节点 HTML（重复 .event 块）
+    {match_note}       — 虚线连接说明文字（如"虚线连接的是相似的时刻"）
+    {cta_text}         — CTA 按钮文案（如"想聊聊这个模式"）
+    {cta_message}      — Deep Link 消息（URL 编码后的用户消息）
+
+  遵循 canvas/design-guide.md 设计规范：
+    - 暖白背景 #FFF8F0 / 暖灰文字 #8B7E74 / 杏黄时间线 #FFD4A2 / 薰衣草对比色 #C5A3FF
+    - 圆角 16px / 暖色阴影 / 触摸区域 >=44px
+-->
+<div class="canvas-card" style="background:#FFF8F0; border-radius:16px; padding:32px; max-width:700px; font-family:system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;">
+  <h2 style="color:#8B7E74; font-size:18px; margin:0 0 24px 0; font-weight:500;">{card_title}</h2>
+
+  <div class="comparison" style="display:flex; gap:24px; margin:0 0 20px 0;">
+    <!-- 左列：人物 A -->
+    <div class="left-timeline" style="flex:1; border-left:3px solid #FFD4A2; padding-left:16px;">
+      <h3 style="color:#8B7E74; font-size:14px; margin:0 0 16px 0; font-weight:500;">和{person_A}</h3>
+      <p style="color:#8B7E74; font-size:12px; margin:0 0 12px 0; opacity:0.7;">{person_A_date}</p>
+
+      <!-- 事件节点（agent 根据匹配结果重复生成） -->
+      <!-- 每个事件：
+      <div class="event" style="margin-bottom:16px; position:relative;">
+        <div style="width:10px;height:10px;border-radius:50%;background:#FFD4A2;position:absolute;left:-22px;top:5px;"></div>
+        <div style="color:#8B7E74;font-size:12px;">{阶段/时间}</div>
+        <div style="color:#8B7E74;font-size:14px;margin-top:4px;">{事件描述}</div>
+        <div style="color:#C5A3FF;font-size:13px;font-style:italic;margin-top:4px;">"{用户原话}"</div>
+      </div>
+      -->
+      {events_A}
+    </div>
+
+    <!-- 右列：人物 B -->
+    <div class="right-timeline" style="flex:1; border-left:3px solid #C5A3FF; padding-left:16px;">
+      <h3 style="color:#8B7E74; font-size:14px; margin:0 0 16px 0; font-weight:500;">和{person_B}</h3>
+      <p style="color:#8B7E74; font-size:12px; margin:0 0 12px 0; opacity:0.7;">{person_B_date}</p>
+
+      <!-- 事件节点（同左列格式，用薰衣草色圆点） -->
+      <!-- 每个事件：
+      <div class="event" style="margin-bottom:16px; position:relative;">
+        <div style="width:10px;height:10px;border-radius:50%;background:#C5A3FF;position:absolute;left:-22px;top:5px;"></div>
+        <div style="color:#8B7E74;font-size:12px;">{阶段/时间}</div>
+        <div style="color:#8B7E74;font-size:14px;margin-top:4px;">{事件描述}</div>
+        <div style="color:#C5A3FF;font-size:13px;font-style:italic;margin-top:4px;">"{用户原话}"</div>
+      </div>
+      -->
+      {events_B}
+    </div>
+  </div>
+
+  <!-- 匹配说明 -->
+  <p style="color:#C5A3FF; font-size:13px; text-align:center; margin:16px 0; opacity:0.8;">{match_note}</p>
+
+  <!-- CTA Deep Link 按钮 -->
+  <div style="text-align:center; margin-top:20px;">
+    <a class="cta-btn" href="openclaw://agent?message={cta_message}"
+       style="display:inline-block;padding:12px 24px;background:#FF7F7F;color:white;border-radius:24px;text-decoration:none;font-size:15px;min-height:44px;line-height:20px;">
+      {cta_text} →
+    </a>
+  </div>
+</div>

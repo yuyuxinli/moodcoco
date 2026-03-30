@@ -132,27 +132,22 @@ python3 ai-companion/skills/diary/scripts/growth_tracker.py diary/
 
 **数据流**：`exec python3 scripts/growth_tracker.py diary/` → 获取 IM 列表（时间点 + 原话 + IM 类型） → agent 生成 HTML → `openclaw nodes canvas present`
 
-HTML 模板参考（遵循 `canvas/design-guide.md` 规范）：
-```html
-<div class="canvas-card" style="background:#FFF8F0; border-radius:16px; padding:32px; max-width:600px; font-family:system-ui,-apple-system,sans-serif;">
-  <h2 style="color:#8B7E74; font-size:18px;">你走过的路</h2>
-  <div class="growth-timeline" style="position:relative; margin:24px 0; padding-left:24px;">
-    <!-- 向上的成长曲线用左侧渐变色带表示 -->
-    <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(to top,#FFD4A2,#A8E6CF);border-radius:2px;"></div>
-    <!-- 每个 Innovative Moment 节点 -->
-    <div class="im-node" style="margin-bottom:24px; position:relative;">
-      <div class="dot" style="width:10px;height:10px;border-radius:50%;background:#A8E6CF;position:absolute;left:-27px;top:6px;"></div>
-      <div class="date" style="color:#8B7E74;font-size:12px;">{日期}</div>
-      <div class="quote-card" style="background:white;border-radius:12px;padding:16px;margin-top:8px;box-shadow:0 2px 8px rgba(255,180,150,0.15);">
-        <p style="color:#8B7E74;font-size:15px;margin:0;">"{用户原话}"</p>
-        <span style="color:#C5A3FF;font-size:12px;">{IM 类型：Reflection / Action / Protest / ...}</span>
-      </div>
-    </div>
-    <!-- 更多节点... -->
-  </div>
-  <a class="cta-btn" href="openclaw://agent?message=我想继续写这个故事" style="display:inline-block;padding:12px 24px;background:#FF7F7F;color:white;border-radius:24px;text-decoration:none;font-size:15px;min-height:44px;">继续写这个故事 →</a>
-</div>
-```
+HTML 模板：参见 `canvas/growth-trajectory.html`（遵循 `canvas/design-guide.md` 规范）。
+
+Agent 根据 growth_tracker.py 的 JSON 输出填充模板变量生成完整 HTML：
+- `{card_title}`：卡片标题，如"你走过的路"或"你说过的话"
+- `{im_nodes}`：IM 节点（按时间从旧到新排列，每个节点含日期、用户原话、IM 类型）
+- `{cta_text}`：CTA 按钮文案
+- `{cta_message}`：Deep Link 消息
+
+IM 类型色标：
+| IM 类型 | 色值 | 中文名 |
+|---------|------|--------|
+| Action | #A8E6CF | 行为改变 |
+| Reflection | #C5A3FF | 反思 |
+| Protest | #FFD4A2 | 挑战旧信念 |
+| Re-conceptualization | #FF7F7F | 重新定义 |
+| Performing Change | #A8E6CF | 新模式 |
 
 卡片规则：
 - 只引用用户原话，不加可可的解读
