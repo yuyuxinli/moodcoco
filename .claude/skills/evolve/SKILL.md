@@ -1,218 +1,182 @@
 ---
 name: evolve
-description: 定义目标，AI 自动构建、评估、迭代，直到达标。配合 /loop 1m /evolve 持续运行。
+description: Define a goal. AI builds, evaluates, and iterates until it's met. Use with /loop 1m /evolve for continuous autonomous operation.
 triggers:
   - /evolve
 ---
 
-# Evolve: 定义目标 → 自动构建 → 自动评估 → 迭代达标
+# Evolve V2: Define Goal → Auto Build → Auto Evaluate → Iterate Until Done
 
-## 概述
+## Overview
 
-三阶段自治循环：Init（交互式）→ Build → Eval（自动循环）。
+Three agents, one loop: O (Orchestrator) → B (Builder) → C (Critic) → B → C → ... → Done
 
-- **Init**：本文件。用户参与，引导式配置。
-- **Loop**：`loop.md`。AI 自动运行，用户不参与（通过 `/loop 1m /evolve` 驱动）。
+- **Init**: This file. O guides user through 4 steps.
+- **Loop**: `loop.md`. B and C run automatically via `/loop 1m /evolve`.
 
-硬依赖：Python 3.8+、Git。其他一切由项目 adapter 声明。
+Hard dependencies: Python 3.8+, Git. Everything else is declared by the project adapter.
 
----
-
-## 触发路由
-
-```
-/evolve 触发
-    ↓
-检查 .evolve/ 是否存在？
-    ├─ 存在 → 恢复逻辑（见下表）
-    └─ 不存在 → 首次引导（Step 1 开始）
-```
-
-### 恢复逻辑
-
-| 检测到的状态 | 行为 |
-|-------------|------|
-| `.evolve/` 存在但无 `adapter.py` | 从 Step 3 开始 |
-| `adapter.py` 有，`program.md` 无 | 从 Step 4 开始 |
-| `program.md` 有，`spec.md` 无 | 从 Step 5 校验开始 |
-| `spec.md` 有，`results.tsv` 空或不存在 | 提示直接启动循环 |
-| `results.tsv` 有数据 | 展示进度报告，提示继续 |
+Agent definitions: `agents/orchestrator.md`, `agents/builder.md`, `agents/critic.md`.
 
 ---
 
-## Init 引导流程
-
-### Step 1 — 项目扫描（自动，无交互）
-
-扫描语言、框架、测试框架、目录结构。输出简短总结：
-
-> 「检测到 FastAPI + PostgreSQL 项目，有 pytest，入口在 app/main.py」
-
-### Step 2 — 理解目标（1-2 个问题）
-
-- 「你要构建/改进什么？一句话描述」
-- 如果描述模糊：「核心功能有哪些？逐条说」
-
-### Step 3 — 研究 Eval 标准 + 生成 Adapter（自动）
-
-1. 根据产品类型 + 技术栈，研究业内评估方法
-2. 读 `.claude/skills/evolve/adapters/base.py` 了解接口定义
-3. 读 `.claude/skills/evolve/adapters/web_app.py` 或 `teaching.py` 作为参考实现
-4. 自动生成项目专属 `.evolve/adapter.py` + `.evolve/eval.yml`
-
-展示评估维度给用户确认：
+## Trigger Routing
 
 ```
-建议评估维度：
-1. 功能完整性 — deterministic, npm test, 门槛 7.0
-2. 代码质量 — llm-judged, 门槛 7.0
-3. 数据一致性 — deterministic, 集成测试, 门槛 7.0
-
-要调整吗？
+/evolve triggered
+    │
+Check if .evolve/ exists?
+    ├── not exists → First-time setup (Step 1)
+    └── exists → Check state:
+         ├── no adapter.py → Step 3
+         ├── no program.md → Step 3 (generate program.md)
+         ├── no results.tsv or empty → Step 4 (validation)
+         └── results.tsv has data → Enter loop (loop.md)
 ```
 
-用户确认/调整 → 写入 `.evolve/eval.yml` 和 `.evolve/adapter.py`。
+---
 
-#### eval.yml 格式
+## Init Flow (4 steps)
 
-```yaml
-dimensions:
-  - name: 功能完整性
-    type: deterministic
-    cmd: npm test
-    threshold: 7.0
-  - name: 代码质量
-    type: llm-judged
-    threshold: 7.0
+### Step 1: Project Scan (automatic)
+
+Scan language, framework, test framework, directory structure. Output brief summary:
+
+> "Detected Node.js + Express project, has vitest, entry at app/main.js"
+
+### Step 2: Brainstorming (interactive, core step)
+
+O talks to user following /brainstorming principles:
+- One question at a time
+- Multiple choice preferred
+- Goal: help user clarify three things — what they want, what "good" means, what's off limits
+
+```
+Q1: "What do you want to build? One sentence."
+
+Q2: "Core features? I suggest based on your project:
+     A. JWT authentication
+     B. Chat endpoint
+     C. File upload
+     D. Other: ___"
+
+Q3: "What matters for quality?
+     A. Tests pass (deterministic)
+     B. Code quality (AI review)
+     C. API design (AI review)
+     D. Other: ___"
+
+Q4: "Score threshold per dimension? Default 7/10."
+
+Q5: "Constraints?
+     A. No new dependencies
+     B. Don't touch xxx directory
+     C. No limits
+     D. Other: ___"
 ```
 
-#### adapter.py 接口
+3-5 questions, ~2 minutes. O may suggest skills for user to install based on project type:
 
-```python
-prerequisites = [{"name": "node", "check": "node --version", ...}]
-
-def setup(project_dir: str) -> dict:       # → {"status": "ready"|"crash", ...}
-def run_checks(project_dir, feature) -> dict:  # → {"scores": {...}, "details": "..."}
-def teardown(info: dict) -> None:
+```
+"Detected web app project. Recommend installing:
+  - /qa → systematic testing during evaluation
+  - /browse → live page inspection
+  Optional — works without them, but evaluation quality improves."
 ```
 
-### Step 4 — 引导填写 program.md（逐字段交互）
+### Step 3: Generate program.md (automatic + user review)
 
-基于前面已收集的信息，预填大部分字段。逐字段确认：
+Auto-generate from Step 1 scan + Step 2 conversation:
 
 ```markdown
 # Program
 
-## 产品需求
-<!-- 已从 Step 2 收集 -->
+## Product Requirements
+<from Step 2>
 
-## 技术约束
-- 栈：<!-- 从 Step 1 扫描结果预填 -->
-- 依赖限制：只使用指定技术栈和现有依赖
-- 允许的新依赖：<!-- 用户确认 -->
-- 禁区：<!-- 用户填 -->
+## Feature List
+- [ ] Feature A
+- [ ] Feature B
+- [ ] Feature C
 
-## Agent 规则
-- 不修改 program.md
-- 不修改 .claude/skills/evolve/ 下的文件
-- 不安装新包（除非上方允许）
-- 每个功能一个 git commit
-- 所有进程输出重定向到 .evolve/run.log
-- 永不停止——循环直到所有功能 pass/skip 或人类中断
+## Evaluation Criteria
+dimensions:
+  - name: <dimension name>
+    type: deterministic | llm-judged
+    cmd: <command>  # optional, for deterministic
+    threshold: <float>
+
+## Technical Constraints
+- Stack: <from Step 1 scan>
+- Dependency limits: <from user>
+- No-go zones: <from user>
+
+## Agent Rules
+- Do not modify program.md
+- Do not modify files under .claude/skills/evolve/
+- Git commit after each agent run
+- Build output appended to .evolve/run.log
 ```
 
-生成 `.evolve/program.md`。
+Show to user: "Here's your program.md. Want to adjust?"
 
-### Step 5 — 校验（自动）
+Also generate `.evolve/adapter.py`:
+1. Read `adapters/base.py` for interface definition
+2. Read `adapters/web_app.py` or `adapters/teaching.py` as reference
+3. Auto-generate project-specific adapter
 
-#### Level 1：结构校验（阻断）
+### Step 4: Validation + Branch Creation (automatic)
 
-| 检查项 | 规则 | 失败提示 |
-|--------|------|---------|
-| 产品需求 | 至少 1 条非空 | 「产品需求为空。描述一下你要构建什么？」 |
-| 模板占位符 | 不含 `{{` 或 `[填写...]` | 「program.md 第 N 行还是占位符」 |
-| adapter.py | 存在且可 import | 「adapter.py 加载失败：{错误}」 |
-| eval.yml | 至少 1 个评估维度 | 「没有评估维度。重新运行 /evolve」 |
+#### Validation
 
-#### Level 2：语义校验（警告）
+| Check | Rule | Failure |
+|-------|------|---------|
+| Product requirements | At least 1 non-empty | "Product requirements are empty." |
+| Eval dimensions | At least 1 | "No eval dimensions." |
+| Template placeholders | No `{{` or `[fill...]` | "program.md line N is still a placeholder" |
+| adapter.py | Importable | "adapter.py load failed: {error}" |
+| Python 3.8+ | Available | "Python 3.8+ required" |
+| Git | Available | "Git required" |
+| Uncommitted changes | Warn | "!! Recommend committing first" |
 
-| 检查项 | 规则 | 警告 |
-|--------|------|-----|
-| 需求粒度 | 单条 > 200 字 | 「第 N 条需求过长，建议拆分」 |
-| 评估阈值 | 1-10 范围内 | 「阈值 N 超出 1-10 范围」 |
-
-#### Level 3：环境校验（信息）
+#### Setup
 
 ```python
 import sys
 sys.path.insert(0, '.claude/skills/evolve')
 from prepare import load_adapter, load_eval_config
-
-# 校验 adapter
-adapter = load_adapter(".evolve/adapter.py")
-
-# 校验 eval.yml
-dims = load_eval_config(".evolve/eval.yml")
-
-# 检查 adapter prerequisites
-for prereq in adapter.prerequisites:
-    # 运行 prereq["check"]，失败 → 提示安装命令
 ```
 
-输出：
+- `git checkout -b evolve/<tag>`
+- Generate `.evolve/adapter.py` (from reference adapters + project scan)
+- Create `.evolve/results.tsv` (header only)
+- Create `.evolve/strategy.md` (empty template)
+- Create `.evolve/run.log` (empty)
+- Add `.evolve/` to `.gitignore`
 
 ```
-✓ 产品需求: 5 条
-✓ 评估维度: 3 个 (功能完整性, 代码质量, 数据一致性)
-✓ adapter: 可加载
-✓ python3 — 3.11.5
-✓ git — 2.43.0
-⚠ Git 工作区有未提交改动（建议先 commit）
-
-校验通过，进入 Planner 阶段？(Y/n)
-```
-
-### Step 6 — 选择 Evaluator（一个问题）
-
-**核心原则：评审必须由独立模型完成，不能自评。** Builder 用 Claude 时，Evaluator 不能是同一个 Claude 实例——自评偏差会导致分数虚高（实测：Claude 自评 8.5-9.0，Codex 独立评审只给 6-7）。
-
-「用什么做评估？」
-- A. Codex（推荐，独立评估最客观，以 Codex 分数决定 pass/fail）
-- B. Claude（仅在 Codex 不可用时降级，必须 spawn 独立 Agent）
-- C. 其他
-
-将选择记录到 `.evolve/program.md` 的 `## 评估方式` 部分。
-
-### Step 7 — Planner 生成 spec.md（自动）
-
-1. 创建 git 分支：`git checkout -b evolve/<tag>`
-2. 读 `.evolve/program.md` + `.evolve/eval.yml`
-3. 生成 `.evolve/spec.md`（功能列表 + 验收标准）
-4. 创建 `.evolve/results.tsv`（header 行）
-5. 创建 `.evolve/run.log`（空）
-6. 将 `.evolve/` 加入 `.gitignore`
-
-展示 spec.md 给用户审阅。确认后：
-
-```
-Init 完成。运行 /loop 1m /evolve 启动自动循环。
+Init complete. Run /loop 1m /evolve to start.
 ```
 
 ---
 
-## prepare.py 函数参考
+## prepare.py Function Reference
 
 ```bash
 python -c "import sys; sys.path.insert(0, '.claude/skills/evolve'); from prepare import <func>; ..."
 ```
 
-| 函数 | 签名 | 说明 |
-|------|------|------|
-| `load_eval_config` | `(eval_yml_path) → list[dict]` | 解析 eval.yml，返回维度列表 |
-| `load_adapter` | `(adapter_path) → module` | 从文件路径加载 adapter |
-| `append_result` | `(results_tsv, row) → None` | 追加一行到 results.tsv |
-| `read_progress` | `(results_tsv) → dict` | 读取当前进度和状态机状态 |
-| `generate_report` | `(results_tsv) → str` | 生成结构化进度报告 |
-| `acquire_lock` | `(evolve_dir) → dict` | 获取并发锁 |
-| `update_lock` | `(evolve_dir, phase, feature) → None` | 更新心跳 |
-| `release_lock` | `(evolve_dir) → None` | 释放锁 |
+| Function | Signature | Description |
+|----------|-----------|-------------|
+| `load_eval_config` | `(path) -> list[dict]` | Parse eval.yml, return dimension list |
+| `load_adapter` | `(path) -> module` | Load adapter from file path |
+| `append_result` | `(tsv, row) -> None` | Append one row to results.tsv |
+| `read_progress` | `(tsv) -> dict` | Read progress and state machine state |
+| `generate_report` | `(tsv) -> str` | Generate structured progress report |
+| `analyze_trajectory` | `(tsv, feature, window=3) -> dict` | Trend analysis (rising/flat/falling) |
+| `should_stop` | `(tsv, feature) -> (bool, str)` | Code-enforced stop conditions |
+| `validate_eval_result` | `(result) -> None` | Enforce independent evaluator |
+| `get_evaluator` | `() -> str\|None` | Find available evaluator CLI |
+| `acquire_lock` | `(dir) -> dict` | Acquire concurrency lock |
+| `update_lock` | `(dir, phase, feature) -> None` | Update heartbeat |
+| `release_lock` | `(dir) -> None` | Release lock |

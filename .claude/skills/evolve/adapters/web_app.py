@@ -1,5 +1,5 @@
 """
-Web Application adapter — reference implementation for Evolve skill.
+Web Application adapter -- reference implementation for Evolve skill.
 Evaluates full-stack Web/Python applications.
 
 This file is a REFERENCE for the Agent during Init. It is NOT imported at runtime.
@@ -83,7 +83,7 @@ def setup(project_dir: str) -> dict:
 def run_checks(project_dir: str, feature: str) -> dict:
     """Run tests (deterministic scoring)."""
     test_result = _run_tests(project_dir)
-    scores = {"测试通过率": test_result["score"]}
+    scores = {"Test Pass Rate": test_result["score"]}
     details = (f"Framework: {test_result['framework']}, "
                f"{test_result['passed']}/{test_result['total']} passed, "
                f"score: {test_result['score']}")

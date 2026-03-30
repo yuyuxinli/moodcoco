@@ -12,7 +12,7 @@ Adapters are NOT imported as a package at runtime. The engine loads
 ## Interface
 
 Module-level attributes:
-    prerequisites: list[dict]  — what to check/install before running
+    prerequisites: list[dict]  -- what to check/install before running
 
 Required functions:
     setup(project_dir) -> dict

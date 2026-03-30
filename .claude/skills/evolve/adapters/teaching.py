@@ -1,5 +1,5 @@
 """
-Teaching Evaluation adapter — reference implementation for Evolve skill.
+Teaching Evaluation adapter -- reference implementation for Evolve skill.
 Evaluates teaching document quality using Kirkpatrick 4-level model.
 
 This file is a REFERENCE for the Agent during Init. It is NOT imported at runtime.
@@ -47,7 +47,7 @@ def setup(project_dir: str) -> dict:
 
 def run_checks(project_dir: str, feature: str) -> dict:
     """
-    Teaching has no deterministic scoring — all dimensions are LLM-judged.
+    Teaching has no deterministic scoring -- all dimensions are LLM-judged.
     Return empty scores.
     """
     return {"scores": {}, "details": "All dimensions are LLM-judged by evaluator"}

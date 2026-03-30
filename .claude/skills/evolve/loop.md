@@ -1,16 +1,16 @@
-# Evolve Loop: Build → Eval 自动循环
+# Evolve Loop V2: O → B → C → B → C → ... → Done
 
-本文件由 SKILL.md 的 Init 完成后加载。Agent 在自动循环中读此文件。
+This file is loaded after Init (SKILL.md) completes. The Agent reads this file during the autonomous loop.
 
-设计为配合 `/loop 1m /evolve` 使用——每轮是新会话，通过文件恢复上下文。
+Designed for use with `/loop 1m /evolve` -- each round is a new session that recovers context from files.
 
 ---
 
-## 前置条件
+## Prerequisites
 
-每次 `/evolve` 被触发且 `.evolve/results.tsv` 存在时，进入此循环。
+Each time `/evolve` is triggered and `.evolve/results.tsv` exists, enter this loop.
 
-### 0. 并发锁
+### 0. Concurrency Lock
 
 ```python
 import sys
@@ -19,28 +19,50 @@ from prepare import acquire_lock, update_lock, release_lock
 
 lock = acquire_lock(".evolve")
 if not lock["acquired"]:
-    print(f"⏳ {lock['reason']}")
-    → 立即停止
+    print(f"Waiting: {lock['reason']}")
+    -> stop immediately
 ```
 
-每个关键步骤调用 `update_lock(".evolve", phase, feature)`。
-完成时 `release_lock(".evolve")`。
-崩溃后锁 2 分钟自动过期。
+Call `update_lock(".evolve", phase, feature)` at every major step.
+Call `release_lock(".evolve")` when done.
+Lock auto-expires after 2 minutes if session crashes.
+
+### 1. should_stop() Gate
+
+**Before any AI work**, check code-enforced stop conditions:
+
+```python
+from prepare import read_progress, should_stop
+
+progress = read_progress(".evolve/results.tsv")
+feature = progress.get("current_feature") or "<first unfinished>"
+
+stop, reason = should_stop(".evolve/results.tsv", feature)
+if stop:
+    print(f"⛔ {feature} stopped by code after {progress['total_iterations']} rounds")
+    print(f"   Reason: {reason}")
+    print(f"   Action needed: adjust program.md / lower threshold / provide hints")
+    print(f"   Re-run /evolve to continue.")
+    release_lock(".evolve")
+    -> stop immediately
+```
+
+AI does not participate in this decision.
 
 ---
 
-## 每轮必读清单
+## Per-Round Reading List
 
-新会话，做任何判断前，**按顺序读取**：
+New session -- before making any decisions, **read in order**:
 
-| # | 文件 | 读取方式 | 目的 |
-|---|------|---------|------|
-| 1 | `.evolve/program.md` | 全文 | 用户策略和约束 |
-| 2 | `.evolve/spec.md` | 全文 | 功能列表和验收标准 |
-| 3 | `.evolve/eval.yml` | 全文 | 评估维度和阈值 |
-| 4 | `.evolve/results.tsv` | 最后 10 行 | 当前进度 |
-| 5 | `.evolve/evaluation.md` | 全文（如存在） | 上轮评审反馈 |
-| 6 | git log --oneline -3 | 命令 | 最近改了什么 |
+| # | File | How | Purpose |
+|---|------|-----|---------|
+| 1 | `.evolve/program.md` | Full text | User goals, constraints, V2 design reference |
+| 2 | `.evolve/spec.md` | Full text | Feature list and acceptance criteria |
+| 3 | `.evolve/eval.yml` | Full text | Evaluation dimensions and thresholds |
+| 4 | `.evolve/results.tsv` | Last 10 lines | Current progress |
+| 5 | `.evolve/strategy.md` | Full text (if exists) | C's previous strategic decisions |
+| 6 | git log --oneline -3 | Command | What changed recently |
 
 ```python
 from prepare import read_progress, load_eval_config, load_adapter
@@ -52,89 +74,90 @@ adapter = load_adapter(".evolve/adapter.py")
 
 ---
 
-## 状态机路由
+## State Machine (V2)
+
+```
+build/keep       → dispatch C (evaluate the build)
+build/crash      → dispatch B (fix)
+eval/pass        → dispatch B (next feature; C resets strategy.md)
+eval/fail        → dispatch B (C already updated strategy.md with decision)
+All features pass → Done
+```
+
+No contract phase. No skip status. Stuck = code stops the loop via should_stop().
+
+### Routing
+
+`read_progress()` returns the NEXT phase to execute:
+
+| Last results.tsv row | read_progress phase | Dispatch |
+|---------------------|---------------------|----------|
+| build/keep | eval | C (evaluate the build) |
+| build/crash | build | B (fix the crash) |
+| eval/pass | build | B (next feature) |
+| eval/fail | build | B (C already wrote strategy.md) |
 
 ```python
-if progress["phase"] == "init":
-    → 说明 Init 未完成，提示运行 /evolve 重新初始化
-
-elif progress["total_iterations"] >= 100:
-    → Done Flow（全局上限）
-
-elif progress["phase"] == "build":
-    # 检查是否所有功能已完成/跳过
-    # 读 spec.md 提取 spec_features
-    # done = set(progress["completed_features"] + progress["skipped_features"])
-    # if set(spec_features) <= done → Done Flow
-    → Build Flow
+if progress["phase"] == "build":
+    # Check if all features completed
+    # Read spec.md to extract spec_features
+    # if all spec_features in progress["completed_features"] -> Done Flow
+    -> Build Flow (dispatch B)
 
 elif progress["phase"] == "eval":
-    → Eval Flow
-```
-
-### 尾行映射
-
-```
-没有数据行              → Init 未完成
-plan/keep              → Build（取 spec 第一个功能）
-build/keep             → Eval（当前功能完成，评审）
-build/crash            → Build（读 run.log 修复；连续 crash ≥ 3 → skip）
-contract/pass          → Build（开始编码）
-contract/fail          → Build（重写 contract）
-eval/pass              → Build（下一个未完成功能）
-eval/fail              → Build（读 evaluation.md 修复；连续 fail > 3 → reset）
-eval/skip              → Build（下一个未完成功能）
-所有功能 pass/skip      → Done
-全局迭代 ≥ 100         → Done
+    -> Eval Flow (dispatch C)
 ```
 
 ---
 
-## Build Flow
+## Build Flow (B Agent)
 
-### 选择功能
+O dispatches B subagent. B reads program.md + strategy.md.
 
-读 `.evolve/spec.md`，按顺序找第一个不在 `progress["completed_features"]` 且不在 `progress["skipped_features"]` 的功能。
+### Feature Selection
 
-### 新功能流程
+Read `.evolve/spec.md`, find the first feature not in `progress["completed_features"]`, in order.
 
-1. 写 Sprint Contract（`.evolve/sprint_contract.md`）
-2. 快速审核 contract
-3. 记录 `contract/pass` 或 `contract/fail`
-4. 开始编码
+### New Feature (after eval/pass)
 
-### 修复轮（eval/fail 后）
+B starts fresh on the next feature. No sprint contract needed (V2 removed contracts).
 
-1. 读 `.evolve/evaluation.md` 的修复优先级
-2. 按优先级修复
-3. 直接编码（复用已有 contract）
+### Fix Round (after eval/fail)
 
-### 编码规则
+B reads `.evolve/strategy.md` which C already updated with the strategic decision:
+- Continue → keep current approach, fix specific issues
+- Pivot → new technical approach described in strategy.md
+- Rollback → revert to specified commit, restart
+- Re-execute → redo following strategy.md more closely
+- Decompose → only implement first sub-task from strategy.md
+- Consolidate → clean up dead code / stale comments / contradictions (no new features)
 
-**输出隔离：**
+### Coding Rules
+
+**Output Isolation:**
 
 ```bash
-# 所有构建/测试命令重定向到 run.log
-npm run build > .evolve/run.log 2>&1
-python -m pytest > .evolve/run.log 2>&1
+# Redirect all build/test commands to run.log (append, not overwrite)
+npm run build >> .evolve/run.log 2>&1
+python -m pytest >> .evolve/run.log 2>&1
 ```
 
-- crash 时 `tail -n 50 .evolve/run.log` 诊断
-- 不将原始长输出灌入 agent 上下文
+- On crash: `tail -n 50 .evolve/run.log` to diagnose
+- Do not pipe raw long output into agent context
 
-**编码流程：**
+**Coding Flow:**
 
-1. 实现功能
-2. `git add` + `git commit`（每个功能一个 commit）
-3. 追加 results.tsv
+1. Implement feature / fix
+2. `git add` + `git commit` (one commit per B run — finer rollback granularity)
+3. Append to results.tsv
 
-**简单性原则：**
+**Simplicity Principle:**
 
-- 默认禁止新依赖（除非 program.md 允许）
-- 同等达标选更简实现
-- 删代码后效果不变 = 好结果
+- No new dependencies by default (unless program.md allows)
+- When equally effective, choose the simpler implementation
+- Deleting code without affecting results = good outcome
 
-**成功记录：**
+**Success Record:**
 
 ```python
 from prepare import append_result
@@ -145,7 +168,7 @@ append_result(".evolve/results.tsv", {
 })
 ```
 
-**Crash 记录：**
+**Crash Record:**
 
 ```python
 append_result(".evolve/results.tsv", {
@@ -155,60 +178,45 @@ append_result(".evolve/results.tsv", {
 })
 ```
 
-### 失败处理
-
-```
-consecutive_crashes >= 3
-  → skip, 继续下一功能
-
-consecutive_fails <= 3
-  → 读 evaluation.md 修复 → 重新 Build
-
-consecutive_fails > 3 and not has_been_reset
-  → git reset --hard <base_commit>
-  → 记录 reset，允许重试 1 次
-
-consecutive_fails > 3 and has_been_reset
-  → skip（已重试仍失败）
-```
-
 ---
 
-## Eval Flow
+## Eval Flow (C Agent)
 
-### 环境准备
+O dispatches C subagent. C evaluates the build and makes strategic decisions.
+
+### Environment Setup
 
 ```python
 env = adapter.setup(project_dir)
 if env["status"] == "crash":
     append_result(..., status="crash", summary=f"setup failed: {env['error']}")
-    → 返回 Build Flow
+    -> return to Build Flow
 ```
 
-### 确定性评分
+### Deterministic Scoring
 
 ```python
 check_result = adapter.run_checks(project_dir, feature)
 deterministic_scores = check_result["scores"]
-# e.g. {"测试通过率": 9.2}
 ```
 
-### LLM 评审
+### Independent Evaluator (MANDATORY)
 
-**评审必须由独立模型完成，不能自评。** Claude 作为 Builder 时，不能同时做 Evaluator——自评偏差会导致分数虚高（实测：Claude 自评 8.5-9.0，Codex 独立评审只给 6-7）。
+C must call an independent evaluator. Enforced by prepare.py:
 
-评审优先级：
-1. **Codex**（推荐）：通过 codex CLI 调用，与 Builder 完全独立
-2. **Claude**：仅在 Codex 不可用时降级使用，且必须 spawn 独立 Agent（不能在 Builder 会话内自评）
-3. **其他**：按 program.md 配置
+```python
+from prepare import get_evaluator, validate_eval_result
 
-如果同时跑了多个评审，以 Codex 分数决定 pass/fail。
+evaluator = get_evaluator()  # returns "codex", "claude", or None
+if evaluator is None:
+    # Cannot proceed without independent evaluator
+    -> stop loop, report to user
+```
 
-评审 prompt 基于 eval.yml 的维度定义动态生成。只评 `type: llm-judged` 的维度。
+Invoke the evaluator CLI to score `type: llm-judged` dimensions.
+Eval output written to `.evolve/eval_codex.md` (or `.evolve/eval_claude.md`).
 
-评审输出写入 `.evolve/eval_codex.md`（或 `.evolve/eval_claude.md`）。
-
-### 评分汇总
+### Score Aggregation
 
 ```python
 final_scores = {}
@@ -219,19 +227,27 @@ for dim in dimensions:
     else:
         final_scores[name] = llm_scores.get(name, 0)
 
-# 判断：任一维度低于 threshold → fail
+# Any dimension below threshold -> fail
 status = "pass"
 for dim in dimensions:
     if final_scores.get(dim["name"], 0) < dim["threshold"]:
         status = "fail"
 ```
 
-写汇总到 `.evolve/evaluation.md`，包含：
-- 各维度分数和门槛
-- PASS/FAIL 结论
-- 修复优先级（红/黄/绿）
+### Trajectory Analysis + Strategic Decision
 
-### 记录结果
+```python
+from prepare import analyze_trajectory
+
+trajectory = analyze_trajectory(".evolve/results.tsv", feature)
+# Returns: {"trend": "rising"|"flat"|"falling"|"insufficient", ...}
+```
+
+C reads trajectory + strategy.md + eval results, then picks one action from the 6-option menu (see agents/critic.md).
+
+Writes updated `.evolve/strategy.md`.
+
+### Record Result
 
 ```python
 scores_str = "/".join(str(final_scores.get(d["name"], "-")) for d in dimensions)
@@ -241,11 +257,11 @@ append_result(".evolve/results.tsv", {
     "commit": "<hash>", "phase": "eval", "feature": "<name>",
     "scores": scores_str, "total": str(total),
     "status": status,
-    "summary": "all pass" if status == "pass" else "<维度> 低于门槛"
+    "summary": "all pass" if status == "pass" else "<dimension> below threshold"
 })
 ```
 
-### 清理 + 更新报告
+### Cleanup + Update Report
 
 ```python
 adapter.teardown(env.get("info", {}))
@@ -259,40 +275,39 @@ Path(".evolve/report.md").write_text(report)
 
 ## Done Flow
 
-所有功能 pass/skip，或迭代达 100 轮：
+All features pass, or should_stop() halts the loop:
 
 ```python
 report = generate_report(".evolve/results.tsv")
 release_lock(".evolve")
 ```
 
-输出报告给用户，停止循环。
+Output report to user, stop the loop.
 
 ---
 
-## Agent 规则
+## Agent Rules
 
-1. **不修改 program.md** — 人和 agent 的合约
-2. **不修改 .claude/skills/evolve/ 下的文件** — 评估基础设施不可篡改
-3. **不安装新包** — 除非 program.md 允许
-4. **每个功能一个 commit**
-5. **results.tsv 只追加**
-6. **输出重定向到 .evolve/run.log**
-7. **简单优先** — 同等效果选更简实现
-8. **永不停止** — 直到所有功能 pass/skip 或人类中断。不问"是否继续"。
-9. **可 spawn subagent** — 通过 Agent tool 并行处理独立子任务（限于不同文件）
+1. **Do not modify program.md** -- contract between human and agent
+2. **Do not modify files under .claude/skills/evolve/** -- evaluation infrastructure is immutable
+3. **Do not install new packages** -- unless program.md allows
+3. **Git commit per B/C run** -- finer rollback granularity
+4. **results.tsv is append-only**
+5. **run.log is append-only** -- with timestamp separators
+6. **Simplicity first** -- when equally effective, choose simpler implementation
+7. **Never stop** -- until all features pass or should_stop() halts. Do not ask "should I continue?"
+8. **Can spawn subagents** -- via Agent tool for parallel independent subtasks
 
 ---
 
-## 文件权限矩阵
+## File Permission Matrix (V2)
 
-| 文件 | 人 | Planner | Generator | Evaluator |
-|------|-----|---------|-----------|-----------|
-| program.md | 读写 | 只读 | 只读 | 只读 |
-| eval.yml | 读写 | 只读 | 只读 | 只读 |
-| adapter.py | 读写 | 只读 | 只读 | 只读 |
-| spec.md | 读 | 写 | 只读 | 只读 |
-| results.tsv | 读 | 追加 | 追加 | 追加 |
-| evaluation.md | 读 | - | 读 | 写 |
-| run.log | 读 | - | 写 | 写 |
-| 项目代码 | 读写 | - | 读写 | 只读 |
+| File | O | B | C |
+|------|---|---|---|
+| program.md | read-only | read-only | read-only |
+| eval.yml | read-only | read-only | read-only |
+| adapter.py | read-only | read-only | read-only |
+| strategy.md | - | read-only | read/write |
+| results.tsv | read | append | append |
+| run.log | append | append | append |
+| Project code | - | read/write | read-only |

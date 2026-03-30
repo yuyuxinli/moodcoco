@@ -1,5 +1,5 @@
 """
-prepare.py — Generic evaluation engine for Evolve skill.
+prepare.py -- Generic evaluation engine for Evolve skill.
 Agent MUST NOT modify this file.
 
 Generic engine: append_result, read_progress, generate_report,
@@ -12,6 +12,7 @@ import csv
 import importlib.util
 import json
 import os
+import shutil
 import time
 from pathlib import Path
 
@@ -20,8 +21,18 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 
 HEADER_FIELDS = ["commit", "phase", "feature", "scores", "total", "status", "summary"]
-VALID_PHASES = {"plan", "build", "contract", "eval"}
-VALID_STATUSES = {"keep", "pass", "fail", "crash", "skip", "reset"}
+VALID_PHASES = {"plan", "build", "eval"}
+VALID_STATUSES = {"keep", "pass", "fail", "crash", "reset"}
+
+HARD_LIMITS = {
+    "max_rounds_total": 100,
+    "max_rounds_per_feature": 30,
+    "max_consecutive_crashes": 5,
+    "max_consecutive_fails": 10,
+    "max_flat_after_pivot": 3,
+}
+
+INDEPENDENT_EVALUATORS = ["codex", "claude"]
 
 REQUIRED_ADAPTER_FUNCTIONS = ["setup", "run_checks", "teardown"]
 
@@ -72,7 +83,7 @@ def load_eval_config(eval_yml_path: str) -> list[dict]:
     """Parse eval.yml into list of dimension dicts.
 
     Simple line-based parser for the fixed eval.yml schema.
-    No PyYAML dependency — only handles the constrained eval.yml format:
+    No PyYAML dependency -- only handles the constrained eval.yml format:
 
         dimensions:
           - name: <name>
@@ -117,6 +128,113 @@ def load_eval_config(eval_yml_path: str) -> list[dict]:
 
     return dimensions
 
+
+# ---------------------------------------------------------------------------
+# Trajectory Analysis
+# ---------------------------------------------------------------------------
+
+def analyze_trajectory(results_tsv: str, feature: str, window: int = 3) -> dict:
+    """
+    Extract recent eval scores for a feature, determine trend.
+
+    Returns:
+        {"trend": "rising"|"flat"|"falling"|"insufficient",
+         "scores": [float, ...], "rounds": int, "latest": float}
+
+    Logic:
+        - Fewer than window eval rows -> "insufficient"
+        - latest - earliest > +0.5 -> "rising"
+        - latest - earliest < -0.5 -> "falling"
+        - Otherwise -> "flat"
+    Only reads eval phase rows, ignores build/crash.
+    """
+    path = Path(results_tsv)
+    if not path.exists():
+        return {"trend": "insufficient", "scores": [], "rounds": 0, "latest": 0.0}
+
+    with open(path, newline="") as f:
+        rows = list(csv.DictReader(f, delimiter="\t"))
+
+    scores = []
+    for r in rows:
+        if r.get("phase") == "eval" and r.get("feature") == feature:
+            try:
+                scores.append(float(r["total"]))
+            except (ValueError, TypeError, KeyError):
+                continue
+
+    if len(scores) < window:
+        return {
+            "trend": "insufficient",
+            "scores": scores,
+            "rounds": len(scores),
+            "latest": scores[-1] if scores else 0.0,
+        }
+
+    recent = scores[-window:]
+    diff = recent[-1] - recent[0]
+
+    if diff > 0.5:
+        trend = "rising"
+    elif diff < -0.5:
+        trend = "falling"
+    else:
+        trend = "flat"
+
+    return {"trend": trend, "scores": recent, "rounds": len(scores), "latest": recent[-1]}
+
+
+# ---------------------------------------------------------------------------
+# Stop Conditions
+# ---------------------------------------------------------------------------
+
+def should_stop(results_tsv: str, feature: str) -> tuple:
+    """
+    Called BEFORE AI is dispatched. Returns (stop: bool, reason: str).
+    AI does not participate in this decision.
+    """
+    progress = read_progress(results_tsv)
+    trajectory = analyze_trajectory(results_tsv, feature)
+
+    if progress["total_iterations"] >= HARD_LIMITS["max_rounds_total"]:
+        return True, "Total round limit reached"
+
+    if progress.get("feature_iterations", 0) >= HARD_LIMITS["max_rounds_per_feature"]:
+        return True, f"{feature}: per-feature round limit reached"
+
+    if progress["consecutive_crashes"] >= HARD_LIMITS["max_consecutive_crashes"]:
+        return True, f"{feature}: consecutive crashes"
+
+    if progress["consecutive_fails"] >= HARD_LIMITS["max_consecutive_fails"]:
+        return True, f"{feature}: consecutive eval failures"
+
+    pivots = progress.get("pivots_on_this_feature", 0)
+    if trajectory["trend"] == "flat" and pivots >= HARD_LIMITS["max_flat_after_pivot"]:
+        return (True,
+                f"{feature}: pivoted {HARD_LIMITS['max_flat_after_pivot']} "
+                f"times, still no improvement")
+
+    return False, ""
+
+
+# ---------------------------------------------------------------------------
+# Independent Evaluator
+# ---------------------------------------------------------------------------
+
+def get_evaluator() -> str | None:
+    """Try each evaluator in order, return first available CLI command. None = unavailable."""
+    for name in INDEPENDENT_EVALUATORS:
+        if shutil.which(name) is not None:
+            return name
+    return None
+
+
+def validate_eval_result(result: dict) -> None:
+    """Validate that an independent evaluator was used. Raises ValueError if not."""
+    if not result.get("independent_evaluator_used"):
+        raise ValueError("Eval invalid: no independent evaluator was called")
+
+
 # ---------------------------------------------------------------------------
 # TSV Helpers
 # ---------------------------------------------------------------------------
@@ -138,16 +256,13 @@ def read_progress(results_tsv: str) -> dict:
     """
     Read results.tsv and return current phase + decision info.
 
-    State machine:
+    State machine (V2):
     - No data rows -> init
     - Last row plan/keep -> build
-    - Last row build/keep -> eval
-    - Last row build/crash -> build (retry or skip)
+    - Last row build/keep -> eval (dispatch C)
+    - Last row build/crash -> build (fix)
     - Last row eval/pass -> build (next feature)
-    - Last row eval/fail -> build (fix) or reset
-    - Last row eval/skip -> build (next feature)
-    - Last row contract/pass -> build (start coding)
-    - Last row contract/fail -> build (rewrite contract)
+    - Last row eval/fail -> build (C already updated strategy.md)
     """
     path = Path(results_tsv)
     rows = []
@@ -168,12 +283,14 @@ def read_progress(results_tsv: str) -> dict:
         "completed_features": [],
         "skipped_features": [],
         "last_pass_commit": None,
+        "feature_iterations": 0,
+        "pivots_on_this_feature": 0,
     }
 
     if not rows:
         return result
 
-    # Collect completed and skipped features
+    # Collect completed features (no skip in V2)
     for row in rows:
         phase = row.get("phase", "")
         status = row.get("status", "")
@@ -184,9 +301,6 @@ def read_progress(results_tsv: str) -> dict:
             if feature not in result["completed_features"] and feature != "-":
                 result["completed_features"].append(feature)
             result["last_pass_commit"] = commit
-        elif status == "skip":
-            if feature not in result["skipped_features"] and feature != "-":
-                result["skipped_features"].append(feature)
 
     last = rows[-1]
     last_phase = last.get("phase", "")
@@ -215,11 +329,17 @@ def read_progress(results_tsv: str) -> dict:
             break
         elif row.get("phase") == "build" and row.get("status") == "keep":
             continue
-        elif row.get("phase") in ("plan", "contract"):
+        elif row.get("phase") == "plan":
             break
     result["has_been_reset"] = has_been_reset
 
-    # Determine current phase from last row
+    # Count feature iterations (all rows for current feature)
+    if last_feature and last_feature != "-":
+        result["feature_iterations"] = sum(
+            1 for r in rows if r.get("feature") == last_feature
+        )
+
+    # Determine current phase from last row (V2: no contract, no skip)
     if last_phase == "plan" and last_status == "keep":
         result["phase"] = "build"
     elif last_phase == "build" and last_status == "keep":
@@ -228,19 +348,11 @@ def read_progress(results_tsv: str) -> dict:
     elif last_phase == "build" and last_status == "crash":
         result["phase"] = "build"
         result["current_feature"] = last_feature if last_feature != "-" else None
-    elif last_phase == "contract" and last_status == "pass":
-        result["phase"] = "build"
-        result["current_feature"] = last_feature if last_feature != "-" else None
-    elif last_phase == "contract" and last_status == "fail":
-        result["phase"] = "build"
-        result["current_feature"] = last_feature if last_feature != "-" else None
     elif last_phase == "eval" and last_status == "pass":
         result["phase"] = "build"
     elif last_phase == "eval" and last_status == "fail":
         result["phase"] = "build"
         result["current_feature"] = last_feature if last_feature != "-" else None
-    elif last_phase == "eval" and last_status == "skip":
-        result["phase"] = "build"
     else:
         result["phase"] = "init"
 
@@ -252,15 +364,15 @@ def read_progress(results_tsv: str) -> dict:
 # ---------------------------------------------------------------------------
 
 def generate_report(results_tsv: str) -> str:
-    """Generate structured progress report per evolve design spec.
+    """Generate structured progress report.
 
     Format:
         # Evolve Progress
-        ## \u72b6\u6001: \u8fdb\u884c\u4e2d \u2014 \u7b2c N \u8f6e | \u76ee\u6807: \u6240\u6709\u529f\u80fd \u2265 7.0
-        ## \u603b\u89c8
-        ## \u5404\u529f\u80fd\u8fdb\u5ea6
-        ## \u5f53\u524d\u529f\u80fd\u8fed\u4ee3\u8bb0\u5f55 (if in progress)
-        ## \u8017\u65f6
+        ## Status: In Progress -- Round N | Goal: All features >= threshold
+        ## Overview
+        ## Feature Progress
+        ## Current Feature Iteration Record (if in progress)
+        ## Elapsed
     """
     path = Path(results_tsv)
     rows = []
@@ -303,45 +415,45 @@ def generate_report(results_tsv: str) -> str:
 
     # Status line
     if not features:
-        lines.append("## \u72b6\u6001: \u7b49\u5f85\u542f\u52a8")
+        lines.append("## Status: Waiting to start")
     elif len(completed) + len(skipped) == total_features and total_features > 0:
-        lines.append(f"## \u72b6\u6001: \u5b8c\u6210 \u2014 \u7b2c {total_rounds} \u8f6e | \u5168\u90e8\u8fbe\u6807")
+        lines.append(f"## Status: Complete -- Round {total_rounds} | All passed")
     else:
-        lines.append(f"## \u72b6\u6001: \u8fdb\u884c\u4e2d \u2014 \u7b2c {total_rounds} \u8f6e")
+        lines.append(f"## Status: In Progress -- Round {total_rounds}")
 
     lines.append("")
 
     # Overview
-    lines.append("## \u603b\u89c8")
+    lines.append("## Overview")
     if current_feat:
         best = features[current_feat]["final_total"] or "-"
-        lines.append(f"  \u5df2\u8fbe\u6807: {len(completed)}/{total_features} \u529f\u80fd | "
-                     f"\u5f53\u524d: {current_feat} (\u6700\u9ad8 {best})")
+        lines.append(f"  Passed: {len(completed)}/{total_features} features | "
+                     f"Current: {current_feat} (best {best})")
     elif total_features > 0:
-        lines.append(f"  \u5df2\u8fbe\u6807: {len(completed)}/{total_features} \u529f\u80fd")
+        lines.append(f"  Passed: {len(completed)}/{total_features} features")
     else:
-        lines.append("  \u65e0\u529f\u80fd\u6570\u636e")
+        lines.append("  No feature data")
     lines.append("")
 
     # Feature progress
     if features:
-        lines.append("## \u5404\u529f\u80fd\u8fdb\u5ea6")
+        lines.append("## Feature Progress")
         for feat, info in features.items():
             if info["final_status"] == "pass":
                 rnd = info["pass_round"] or "?"
                 score = info["final_total"] or "-"
-                lines.append(f"  \u2713 {feat}    \u2014 \u7b2c {rnd} \u8f6e\u8fbe\u6807 ({score})")
+                lines.append(f"  \u2713 {feat}    -- passed round {rnd} ({score})")
             elif info["final_status"] == "skip":
-                lines.append(f"  \u2717 {feat}    \u2014 \u8df3\u8fc7")
+                lines.append(f"  \u2717 {feat}    -- skipped")
             elif feat == current_feat:
                 eval_count = sum(1 for r in info["rows"]
                                  if r.get("phase") == "eval")
                 last_summary = (info["rows"][-1].get("summary", "")
                                 if info["rows"] else "")
-                lines.append(f"  \u25b6 {feat}    \u2014 \u5c1d\u8bd5 {eval_count} \u6b21\uff0c"
-                             f"\u4e0a\u8f6e: \"{last_summary}\"")
+                lines.append(f"  \u25b6 {feat}    -- {eval_count} attempts, "
+                             f"last: \"{last_summary}\"")
             else:
-                lines.append(f"  \u00b7 {feat}    \u2014 \u672a\u5f00\u59cb")
+                lines.append(f"  \u00b7 {feat}    -- not started")
         lines.append("")
 
     # Current feature iteration record
@@ -349,8 +461,8 @@ def generate_report(results_tsv: str) -> str:
         eval_rows = [r for r in features[current_feat]["rows"]
                      if r.get("phase") == "eval"]
         if eval_rows:
-            lines.append("## \u5f53\u524d\u529f\u80fd\u8fed\u4ee3\u8bb0\u5f55")
-            lines.append("  \u8f6e\u6b21 | \u5206\u6570 | \u5173\u952e\u53cd\u9988")
+            lines.append("## Current Feature Iteration Record")
+            lines.append("  Round | Score | Key Feedback")
             for i, r in enumerate(eval_rows, 1):
                 total_score = r.get("total", "-")
                 summary = r.get("summary", "-")
@@ -361,8 +473,8 @@ def generate_report(results_tsv: str) -> str:
             lines.append("")
 
     # Elapsed
-    lines.append("## \u8017\u65f6")
-    lines.append(f"  \u5df2\u8fd0\u884c: {total_rounds} \u8f6e")
+    lines.append("## Elapsed")
+    lines.append(f"  Rounds completed: {total_rounds}")
 
     return '\n'.join(lines)
 
@@ -371,7 +483,7 @@ def generate_report(results_tsv: str) -> str:
 # Lock (concurrency guard for /loop)
 # ---------------------------------------------------------------------------
 
-LOCK_STALE_SECONDS = 120  # 2 minutes — if heartbeat older than this, lock is stale
+LOCK_STALE_SECONDS = 120  # 2 minutes -- if heartbeat older than this, lock is stale
 
 
 def acquire_lock(evolve_dir: str) -> dict:
@@ -399,7 +511,7 @@ def acquire_lock(evolve_dir: str) -> dict:
                     ),
                     "owner": data,
                 }
-            # Stale lock — take over
+            # Stale lock -- take over
         except (json.JSONDecodeError, KeyError, OSError):
             pass  # Corrupted lock, take over
 
@@ -436,5 +548,3 @@ def release_lock(evolve_dir: str) -> None:
         lock_path.unlink(missing_ok=True)
     except OSError:
         pass
-
-
