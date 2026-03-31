@@ -4,17 +4,24 @@
 用法: breathe-fast.py <channel> [cycles]
 示例: breathe-fast.py feishu 3
 """
+
+from __future__ import annotations
+
 import json
 import os
 import sys
 import time
 import uuid
 from pathlib import Path
+from typing import Any
 
 try:
     import websocket
 except ImportError:
-    print("错误：缺少 websocket-client 库，请运行 pip3 install websocket-client", file=sys.stderr)
+    print(
+        "错误：缺少 websocket-client 库，请运行 pip3 install websocket-client",
+        file=sys.stderr,
+    )
     sys.exit(1)
 
 # --- 参数 ---
@@ -28,11 +35,13 @@ DRY_RUN = bool(os.environ.get("DRY_RUN"))
 
 # --- 从 sessions.json 找 target ---
 sessions_path = Path.home() / ".openclaw/agents/coco/sessions/sessions.json"
-target = account = None
+target: str | None = None
+account: str | None = None
 if not DRY_RUN:
-    with open(sessions_path) as f:
+    with sessions_path.open() as f:
         sessions = json.load(f)
-    best, best_ts = None, 0
+    best: dict[str, Any] | None = None
+    best_ts: int = 0
     for val in sessions.values():
         if isinstance(val, dict) and val.get("lastChannel") == CHANNEL:
             ts = int(val.get("updatedAt", 0))
@@ -45,10 +54,10 @@ if not DRY_RUN:
     account = best.get("lastAccountId", "")
 
 # --- 连接 gateway WebSocket ---
-ws = None
+ws: websocket.WebSocket | None = None
 if not DRY_RUN:
     config_path = Path.home() / ".openclaw/openclaw.json"
-    with open(config_path) as f:
+    with config_path.open() as f:
         config = json.load(f)
     port = config["gateway"]["port"]
     token = config["gateway"]["auth"]["token"]
@@ -59,35 +68,40 @@ if not DRY_RUN:
     )
 
     # 收 challenge
-    challenge = json.loads(ws.recv())
+    _challenge = json.loads(ws.recv())
 
     # 发 connect + auth
     connect_id = str(uuid.uuid4())
-    ws.send(json.dumps({
-        "type": "req",
-        "id": connect_id,
-        "method": "connect",
-        "params": {
-            "minProtocol": 3,
-            "maxProtocol": 3,
-            "client": {
-                "id": "gateway-client",
-                "version": "1.0.0",
-                "platform": "node",
-                "mode": "backend",
-            },
-            "role": "operator",
-            "scopes": [
-                "operator.admin",
-                "operator.read",
-                "operator.write",
-                "operator.approvals",
-                "operator.pairing",
-            ],
-            "auth": {"token": token},
-        },
-    }))
+    ws.send(
+        json.dumps(
+            {
+                "type": "req",
+                "id": connect_id,
+                "method": "connect",
+                "params": {
+                    "minProtocol": 3,
+                    "maxProtocol": 3,
+                    "client": {
+                        "id": "gateway-client",
+                        "version": "1.0.0",
+                        "platform": "node",
+                        "mode": "backend",
+                    },
+                    "role": "operator",
+                    "scopes": [
+                        "operator.admin",
+                        "operator.read",
+                        "operator.write",
+                        "operator.approvals",
+                        "operator.pairing",
+                    ],
+                    "auth": {"token": token},
+                },
+            }
+        )
+    )
     # 等待 connect 响应，跳过事件消息
+    resp: dict[str, Any] = {}
     while True:
         resp = json.loads(ws.recv())
         if resp.get("type") == "res" and resp.get("id") == connect_id:
@@ -97,21 +111,23 @@ if not DRY_RUN:
         sys.exit(1)
 
 
-def recv_response(req_id: str):
+def recv_response(req_id: str) -> dict[str, Any]:
     """接收响应，跳过 gateway 推送的事件消息（如 health）。"""
+    assert ws is not None, "WebSocket 未连接"
     while True:
-        msg = json.loads(ws.recv())
+        msg: dict[str, Any] = json.loads(ws.recv())
         if msg.get("type") == "res" and msg.get("id") == req_id:
             return msg
         # 跳过事件和其他非响应消息
 
 
-def send(text: str):
+def send(text: str) -> None:
     if DRY_RUN:
         print(f"[{time.strftime('%H:%M:%S')}] {text}")
         return
+    assert ws is not None, "WebSocket 未连接"
     req_id = str(uuid.uuid4())
-    frame = {
+    frame: dict[str, Any] = {
         "type": "req",
         "id": req_id,
         "method": "send",
@@ -132,7 +148,7 @@ def send(text: str):
         sys.exit(1)
 
 
-def send_and_pause(pause_sec: float, text: str):
+def send_and_pause(pause_sec: float, text: str) -> None:
     t0 = time.monotonic()
     send(text)
     elapsed = time.monotonic() - t0

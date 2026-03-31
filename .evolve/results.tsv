@@ -1,0 +1,19 @@
+commit	phase	feature	scores	total	status	summary
+7572f24	plan	-	-	-	keep	Init v2: 7-step implementation, 4+1 eval dims, sequential execution
+c5d762b	build	Step1_cleanup	-	-	keep	删除5个冗余Skill(calm-down/sigh/emotion-journal/relationship-coach/relationship-skills)，skills/保留10个目录，AGENTS.md新增闲聊vs情绪事件分流路由
+c5d762b	eval	Step1_cleanup	9.2/9.1/8.8/9.4/10.0	9.3	pass	Step1 通过: skills/10目录正确, AGENTS.md无冗余引用, 闲聊/情绪分流路由完整匹配F06 spec
+bbcf920	build	Step2_storage	-	-	keep	MEMORY.md+pending_followup+time_capsules+USER.md模式级洞察段，Skill间数据管道就位
+bbcf920	eval	Step2_storage	10.0/10.0/9.8/9.9/10.0	9.9	pass	Step2 通过: MEMORY.md+pending_followup+time_capsules+USER.md模式级洞察段全部匹配spec，管道标注正确
+30d9545	build	Step3_scripts	-	-	keep	pattern_engine空行泄漏bug修复+parse_people_files/update_cross_patterns提取为独立函数, growth_tracker补全format_for_conversation, archive_manager验证通过无修改, 3脚本import+mock烟测全部通过
+30d9545	eval	Step3_scripts	9.0/7.0/8.5/7.0	7.9	fail	Step3 未通过: pattern_engine缺outcome维度, growth_tracker缺Performing Change IM, archive_manager缺open_time_capsule()+ritual_type参数
+34c5d81	build	Step4_skills	-	-	keep	Filled 4 stub SKILL.md files: onboarding (7 nodes, F04), check-in (Heartbeat triggered, 3-round max), weekly-reflection (Sunday 20:00, no-discovery-no-send), growth-story (>=30d threshold, INT/IMA framework)
+55dfd53	build	Step3_scripts	-	-	keep	Fix 4 issues: pattern_engine +outcome维度, growth_tracker +performing_change IM, archive_manager +open_time_capsule() +ritual_type参数, 4/4 smoke test passed
+55dfd53	eval	Step3_scripts	8.0/8.5/8.5/9.0	8.5	pass	Step3 R2 通过: 4/4 fix验证PASS, 所有维度>=8.0, integrity+openclaw 10.0/10.0
+34c5d81	eval	Step4_skills	8.2/9.1/8.2/9.0/10.0/10.0	8.6	pass	Step4 通过: 4个SKILL.md完整(onboarding 7节点+check-in 3轮+weekly-reflection 无发现不发+growth-story >=30天INT/IMA), 所有维度>=8.0, integrity+openclaw 10.0/10.0
+906f06c	build	Step5_journeys	-	-	keep	AGENTS.md新增J1-J5旅程状态机(路由决策树+入口条件+内部流转+Skill触发+互斥+防死循环)+跨旅程触发条件(5条转场管道+4类转场+7条硬规则+2h规则+元数据记录), HEARTBEAT.md新增4条Cron规则(决策冷却回访/时间胶囊/周日回顾/日记提醒)+优先级总表
+906f06c	eval	Step5_journeys	8.5/9.0/9.0/9.0/10.0*/10.0	8.9	pass	Step5 通过: J1-J5状态机完整(路由决策树+6条转场+4类型+7硬规则+防死循环), HEARTBEAT 4条Cron全匹配, adapter false positive(sigh∈insights需修复), 所有维度>=8.0
+c332be9	build	Step6_edge	-	-	keep	AGENTS.md新增F11边缘防护(同名消歧+记忆冲突4级优先级+旅程中断恢复6场景)+情绪词簇定义文件(7簇3层粒度+理论锚点+跨簇规则)
+c332be9	eval	Step6_edge	8.5/9.0/8.0/8.5/10.0/10.0	8.5	pass	Step6 通过: 同名消歧3x3判定表+记忆冲突4级优先级+旅程中断6场景恢复+情绪词簇7簇3层完整, 所有维度>=8.0, integrity 10.0, openclaw实质PASS(adapter "你有"false positive)
+2cd5c0f	build	Step7_interaction	-	-	keep	Canvas周情绪地图HTML模板+Poll通道降级规则(8渠道)+ritual_image.py(3仪式)+milestone_image.py(里程碑)+AGENTS.md交互增强章节
+2cd5c0f	eval	Step7_interaction	8.5/8.5/8.5/8.5/10.0/10.0	8.5	pass	Step7 通过: weekly_review.py Canvas HTML完整(4773字符有效HTML)+Poll 8通道降级表+决策树+3场景异常处理+ritual_image 3仪式+milestone_image 4里程碑, 所有维度>=8.0, integrity+openclaw 10.0/10.0
+33d2e67	build	Step7_interaction	-	-	keep	E2E test fixes: session isolation + memory seeding via real conversation
