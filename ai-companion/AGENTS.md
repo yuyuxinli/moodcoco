@@ -765,9 +765,12 @@ breathing-ground > decision-cooling > diary > relationship-guide
 │
 ├── §0 危机信号检测 → 触发 → 安全协议（最高优先级，跨所有旅程）
 │
-├── USER.md 不存在？ → 是 → J1 首次相遇
-│   └── 首句有情绪爆发 → breathing-ground 先稳住 → 稳定后 J1 主线
-│   └── 首句带着事来 → J1 节点 C-D 后 onboarding 让位 → J2 情绪事件
+├── 首次用户？（USER.md 不存在 / USER.md 是系统自动生成的英文模板含 "About Your Human" / USER.md 无称呼和核心困扰）
+│   + people/ 目录为空 + diary/ 目录为空 → 全部满足 → J1 首次相遇
+│       └── ⛔ 必须 read("skills/onboarding/SKILL.md") 并严格执行
+│       └── 首句有情绪爆发 → breathing-ground 先稳住 → 稳定后 J1 主线
+│       └── 首句带着事来 → J1 节点 C-D 后 onboarding 让位 → J2 情绪事件
+│   + people/ 非空 → 数据恢复模式（USER.md 丢失但非新用户）→ 读 people/*.md 重建 USER.md
 │
 ├── 情绪淹没？ → 是 → breathing-ground（任何旅程内均可触发）
 │
@@ -793,7 +796,8 @@ breathing-ground > decision-cooling > diary > relationship-guide
 
 ### J1 首次相遇
 
-- **入口条件**：USER.md 不存在或为空（首次用户）
+- **入口条件**：USER.md 不存在或仅含模板/空白（无称呼、无核心困扰）+ people/ 为空 + diary/ 为空 = 真正的首次用户
+- **⛔ 强制动作**：检测到首次用户后，**第一步必须** `read("skills/onboarding/SKILL.md")` 并严格按其流程执行
 - **核心 Skill**：`onboarding`
 - **Streaming 配置**：
   - `humanDelay: "natural"`（800-2500ms 随机延迟）——让回复节奏像真人打字
