@@ -17,3 +17,4 @@ cf1c673	build	F10_transition	-	8.5	keep	8 PASS 2 PARTIAL 0 FAIL. Fixed weekly_re
 cd7a1e5	build	F11_edge	-	6.1	keep	6 PASS 6 PARTIAL 4 FAIL. Disambiguation fix partial. 文件写入铁律 added. Emotion cluster counting needs script.
 e936724	eval	F08_farewell	8.0/8.0/7.5	8.0	pass	R3: 5.7→8.0. Fixed: exec-first-speak-last pattern. T02+T03 PASS.
 db251bd	eval	F02_interaction	8.4/8.5/8.0	8.4	pass	R3: 5.0→8.4. Fixed diary scanning, deep night mode, emotion naming options.
+7e93696	eval	F01_memory	6.5/7.5/7.0	6.5	fail	R3: 5.5→6.5. T05 PASS. T04/T08 model capability limit (multi-step tool chain).
