@@ -12,6 +12,8 @@
       }
     ],
     "defaults": {
+      "bootstrapMaxChars": 80000,
+      "bootstrapTotalMaxChars": 300000,
       "compaction": "压缩时必须保留：用户的反复情绪模式、核心困扰关键词、人物关系（people/ 目录中的人名）、本次对话中发现的新模式",
       "sandbox": {
         "mode": "all",
