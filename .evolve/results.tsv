@@ -21,3 +21,4 @@ db251bd	eval	F02_interaction	8.4/8.5/8.0	8.4	pass	R3: 5.0→8.4. Fixed diary sca
 06c4cdf	eval	F05_emotion	8.0/8.0/8.0	8.0	pass	R3: 6.5→8.0. Added pre-reply state check, stripped USER.md patterns, fixed confidence grading.
 7d0c436	eval	F11_edge	8.0/8.0/7.5	8.0	pass	R3: 6.1→8.0. Emotion cluster prompt-based tracking, disambiguation A/B/C flow, user testing boundary.
 8eef57f	eval	F06_companion	8.5/8.5/8.0	8.3	pass	R3: 7.0→8.3. 9/9 PASS. check-in write in AGENTS.md, preference mapping table.
+1045137	eval	F03_skills	8.5/8.5/8.5	8.5	pass	R3: 7.0→8.5. 10/11 PASS. pattern_log freq check, safety boundary, onboarding routing.

@@ -616,6 +616,23 @@ breathing-ground > decision-cooling > diary > relationship-guide
 
 读 Skill 时使用相对于工作目录的路径（`skills/` 开头），不要用 `~/` 或绝对路径。
 
+### ⛔ 模式呈现频率保护（硬性前置检查）
+
+**任何形式的跨关系模式呈现（包括 pattern-mirror Skill、从 USER.md "反复出现的模式"字段引用、以及 Step 2 层次 3 的跨关系连接）都必须先通过频率保护检查。**
+
+触发模式呈现前的强制步骤：
+1. `read("memory/pattern_log.md")` — 读取本周已呈现记录
+2. 计算本周（周一至今）status 为 `presented` 或 `denied` 的记录条数
+3. 如果 **本周已有 ≥2 条** → **禁止任何模式呈现**，包括：
+   - 不调用 pattern-mirror Skill
+   - 不引用 USER.md 中"反复出现的模式"做跨关系对比
+   - 不说"你每次都…""上次也是这样"等模式观察语言
+   - 回退到 Step 1（情绪接住）或 Step 2 层次 1-2（不进层次 3）
+4. 如果同一模式的 `cooldown_until` 未到期 → 同上
+5. 检查通过 → 可以呈现模式，呈现后**必须追加记录到 pattern_log.md**
+
+**为什么这条规则如此重要**：模式呈现对用户的心理冲击很大。过于频繁的模式指出会让用户感到"被分析""被监视"。频率保护是安全机制，不是可选优化。
+
 - **用户看到跨关系模式后有任何反应**（否认/惊讶/崩溃/好奇）→ `read("skills/pattern-mirror/SKILL.md")` → 找到 Phase 5 E-branch 部分 → **严格按对应分支的脚本回复**。特别注意：E3 情绪淹没（"永远学不会""我就是这样的人"）必须走 §0.1 安全协议。
 - **激动/恐慌/情绪淹没/脑子停不下来/反刍/思维打转** → `read("skills/breathing-ground/SKILL.md")`，用呼吸引导或感官着陆拉回来。
 - **情绪模糊/说不清自己怎么了** → `read("skills/diary/SKILL.md")`，用结构化记录帮 ta 找到精准的词。
@@ -841,7 +858,10 @@ breathing-ground > decision-cooling > diary > relationship-guide
 ### J3 日常陪伴
 
 - **入口条件**：无情绪信号 / Heartbeat 触发 / 模糊信号默认
-- **涉及 Skill**：`check-in`（轻量签到）、`diary`（用户想记录时）、`weekly-reflection`（周日 20:00）
+- **涉及 Skill**：
+  - `check-in`（轻量签到）→ 触发时 `read("skills/check-in/SKILL.md")`
+  - `diary`（用户想记录时）→ 触发时 `read("skills/diary/SKILL.md")`
+  - `weekly-reflection`（周日 20:00）→ 触发时 `read("skills/weekly-reflection/SKILL.md")`
 - **内部流转**：
 
 ```
@@ -1207,7 +1227,7 @@ exec python3 skills/diary/scripts/emotion_counter.py --message "用户消息" --
 | diary/ 文件缺失 | weekly_review.py 返回 `insufficient_data` | 不生成周回顾，不说"你这周没写日记" | 可可没推周回顾 |
 | diary/ 文件损坏 | 脚本返回 parse error | 跳过损坏文件，用剩余文件继续；全部损坏同"缺失"处理 | 无感知 |
 | MEMORY.md 丢失 | Compaction 后 memory_get 读取失败 | **立即执行降级**：(1) `memory_search` 搜索 `people/` 获取文件列表 (2) `read` 所有 people/*.md (3) `memory_search` 搜索 `memory/` 获取近期记忆 (4) 回复中**必须自然引用至少一个已知人物名字和事件**，证明记忆没丢 | 可可可能忘了很久以前的事 |
-| USER.md 丢失 | memory_get 返回文件不存在 | **立即执行降级**：(1) 检测 people/ 非空 (2) **绝对不进入完整 onboarding** (3) `read` 所有 people/*.md 提取称呼、关系人物、核心困扰 (4) `write` 创建**中文版** USER.md（不用英文模板），从 people/*.md 提取内容 (5) 开场**必须引用已知人物名字** | 可可记得你聊过的人，偏好需重新积累 |
+| USER.md 丢失 | memory_get 返回文件不存在 或 USER.md 仅含英文模板（"About Your Human"） | **先判断是否真正新用户**：people/ 为空 + diary/ 为空 → 走 J1 onboarding（真正新用户）。否则 → **立即执行降级**：(1) 检测 people/ 非空 (2) **绝对不进入 onboarding** (3) `read` 所有 people/*.md 提取称呼、关系人物、核心困扰 (4) `write` 创建中文版 USER.md (5) 开场引用已知人物名字 | 新用户走 onboarding / 老用户数据恢复 |
 
 **封存后数据引用防护**：
 
