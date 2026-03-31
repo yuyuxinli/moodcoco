@@ -79,49 +79,57 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 
 #### Phase 3：执行仪式
 
+> **⛔ 硬性规则：仪式最后一步 = 先 exec，后说话。**
+> 
+> 当仪式对话到达收束点（用户写完最后内容、或表达"好了"），你的下一个动作必须是调用 exec。
+> **禁止在调用 exec 之前发送任何收束文字给用户。** 顺序是：
+> 1. 调用 exec（archive / capsule / delete）
+> 2. 读取 exec 返回的 JSON
+> 3. 用 edit 写入 USER.md（insights / 信念）
+> 4. 最后才发送收束话术
+>
+> 如果你发现自己正在写"封存了""烧掉了""信收到了"等收束句子，但还没有调用 exec → **停下来，先调用 exec。**
+
 **🔥 烧掉日记：**
 1. "你想对这段关系说最后一句话吗？"
-2. 用户写完 → 在同一轮中执行：
-   a. `exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
-   b. 将 insights 写入 USER.md → 发送："封存了。这段关系教你的东西我记着，故事本身，翻篇了。"
+2. 用户写完 → 仪式到达收束点，执行封存序列：
+   - **步骤 1（exec）**：`exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
+   - **步骤 2（写入）**：将 exec 返回的 insights 写入 USER.md 模式级洞察段
+   - **步骤 3（说话）**："封存了。这段关系教你的东西我记着，故事本身，翻篇了。"
 
 **💭 烧掉信念：**
 1. "在这段关系里，有没有一个信念一直在你脑子里转？那种你知道不一定对，但就是摆脱不了的声音。"
 2. 用户写出旧信念 → 可可原文复述（见证）→ "好，我看到了。现在把它烧掉。"
    → exec ritual_image.py --type burn（生成火焰图，失败则跳过）
 3. "烧掉了。现在，如果你想写一个新的——不一定是反面，就是你想试试看相信的东西。你会写什么？"
-4. 用户写新信念 → 在同一轮中依次完成以下 3 步：
-   a. 将新信念写入 USER.md "用户信念记录" 段（edit 工具追加）：
+4. 用户写新信念（或说不想写）→ 仪式到达收束点，执行封存序列：
+   - **步骤 1（写信念）**：将新信念写入 USER.md "用户信念记录" 段（edit 工具追加）：
       ```markdown
       ## 用户信念记录
       - {日期}: "{新信念}"（来自告别仪式·烧掉信念）
       ```
-   b. **立即执行数据封存**（不等用户说话，在这一轮内完成）：
-      ```bash
-      exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/
-      ```
-   c. 将 exec 返回的 insights 写入 USER.md 模式级洞察段 → 然后发送收束话术："旧的烧掉了，新的我替你记着。你以后遇到类似的时候，我会提醒你。"
-- 用户不想写新信念 → "不急，新的信念不一定要现在就有。旧的烧掉就够了。" → 仍然执行 Phase 4 数据封存（同上 b-c 步骤）
+      （用户不想写新信念 → 跳过此步）
+   - **步骤 2（exec 封存）**：`exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
+   - **步骤 3（写洞察）**：将 exec 返回的 insights 写入 USER.md 模式级洞察段
+   - **步骤 4（说话）**："旧的烧掉了，新的我替你记着。你以后遇到类似的时候，我会提醒你。"（不想写新信念时："不急，新的信念不一定要现在就有。旧的烧掉就够了。"）
 - 用户写了多个旧信念 → "先选一个最重的。其他的，以后想烧的时候跟我说。"
 
 **⏳ 时间胶囊：**
 1. "你想对 3 个月后的自己说什么？"
-2. 用户写完 → 用 exec 调用（不要手动 edit time_capsules.md，格式必须匹配 check/open 解析器）：
-   ```bash
-   exec python3 skills/farewell/scripts/archive_manager.py capsule memory/ create "{用户写的内容}"
-   ```
-   脚本返回 JSON 包含 `capsule_id`、`sealed_date`、`open_date`（精确3个自然月，含月末溢出处理）。
-3. 在同一轮中执行：
-   a. `exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
-   b. 将 insights 写入 USER.md → 发送："封好了。{open_date}，我会打开给你看。到时候我们再聊。"
+2. 用户写完 → 仪式到达收束点，执行封存序列：
+   - **步骤 1（exec 胶囊）**：`exec python3 skills/farewell/scripts/archive_manager.py capsule memory/ create "{用户写的内容}"`（不要手动 edit time_capsules.md，格式必须匹配 check/open 解析器。脚本返回 capsule_id / sealed_date / open_date）
+   - **步骤 2（exec 封存）**：`exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
+   - **步骤 3（写洞察）**：将 exec 返回的 insights 写入 USER.md 模式级洞察段
+   - **步骤 4（说话）**："封好了。{open_date}，我会打开给你看。到时候我们再聊。"
 
 **✉️ 未寄出的信：**
 1. "如果你能对{名字}说任何话——不用考虑 ta 会怎么想，不用考虑对不对——你想说什么？这封信不会寄出去，只有我和你知道。"
-2. 用户写完 → 在同一轮中执行：
-   a. exec ritual_image.py --type letter（生成信封图，失败则跳过）
-   b. 信内容记录到 diary/YYYY/MM/YYYY-MM-DD.md，标记为"告别信"
-   c. `exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
-   d. 将 insights 写入 USER.md → 发送："信收到了。你不需要寄出去，你已经说了你想说的话。"
+2. 用户写完 → 仪式到达收束点，执行封存序列：
+   - **步骤 1（图片）**：exec ritual_image.py --type letter（生成信封图，失败则跳过）
+   - **步骤 2（日记）**：信内容记录到 diary/YYYY/MM/YYYY-MM-DD.md，标记为"告别信"
+   - **步骤 3（exec 封存）**：`exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
+   - **步骤 4（写洞察）**：将 exec 返回的 insights 写入 USER.md 模式级洞察段
+   - **步骤 5（说话）**："信收到了。你不需要寄出去，你已经说了你想说的话。"
 
 **自由形式告别（无仪式）：**
 
@@ -134,21 +142,23 @@ Poll 配置（复用 F02 §3.2 场景 P1）：
 - 用户的表达从叙述转为收束语气
 - 用户沉默 >=2 轮 → 可可轻声确认"你说完了？"
 
-终止后 → 可可说"我收到了。" → 自动执行 Phase 4 数据封存 → Phase 4.5 纪念卡（如有 insights）→ Phase 5 收束（使用自由形式专用话术"我收到了。你走吧。"）
+终止后 → 仪式到达收束点，执行封存序列：
+   - **步骤 1（exec 封存）**：`exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/`
+   - **步骤 2（写洞察）**：将 exec 返回的 insights 写入 USER.md 模式级洞察段
+   - **步骤 3（纪念卡）**：insights 非空 → Phase 4.5 纪念卡；为空 → 跳过
+   - **步骤 4（说话）**："我收到了。你走吧。"
 
-#### Phase 4：数据处理（仪式完成后必须执行）
+#### Phase 4：数据处理（已内嵌到每个仪式的"封存序列"中）
 
-**每个仪式完成后必须执行此步骤。** 不执行 = 数据未封存 = 用户以为告别了但数据还在。
-
-用 exec 调用 `archive_manager.py archive`（不要手动 edit 文件，脚本处理原子性更好）：
+上面每个仪式的最后都包含一个"封存序列"，核心是这条 exec 命令：
 
 ```bash
 exec python3 skills/farewell/scripts/archive_manager.py archive --person {名字} --people-dir people/ --diary-dir diary/ --memory-dir memory/
 ```
 
-**关键**：这个 exec 调用不能省略——脚本会一次性完成备份、封存标记、diary 清理、memory 段级清理、insights 提取。手动 edit 无法完成 pending_followup.md 和 time_capsules.md 的段级清理。
+**你不需要单独想着"Phase 4"这个概念——只需要在仪式收束点按上面的步骤 1-2-3-4 顺序执行即可。exec 是第一步，说话是最后一步。**
 
-操作结果（脚本自动完成）：
+这条 exec 的作用（脚本自动完成）：
 1. `people/{名字}.md` → 标记 `当前状态：封存`，清空具体事件，保留结构
 2. `archive/{名字}_{日期}/` → 创建完整备份
 3. `diary/` 中相关条目 → 标记封存，保留情绪标签
