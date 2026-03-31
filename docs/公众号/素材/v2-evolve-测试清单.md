@@ -240,21 +240,22 @@
 
 ---
 
-## 需求 → 开发 → 测试 对照表
+## 需求 → 测试 对照表
 
-| # | 需求（Spec） | 开发了什么 | 怎么测的 | 通过？ |
-|---|-------------|-----------|---------|-------|
-| F01 | 三层记忆模型 + 7 字段 USER.md + 4 脚本 CLI 对齐 | USER.md 补 4 字段 + pattern_engine/growth_tracker/archive_manager CLI 重构 + 辅助目录创建 | pytest 29 个（3 脚本）+ adapter 22 项 + 3 条对话 | PASS 9.4 |
-| F02 | Canvas 5 种卡片 + Poll 3 场景 + 交互决策树 | design-guide.md + 卡片 B-E HTML + diary Poll P2 + AGENTS.md 决策树 + 渐进解锁 | adapter 3 项 + 1 条对话 | PASS 9.6 |
-| F03 | 10 Skill 重设计 + 路由决策树 + 旧引用清理 | 旧引用全清 + P0-P5 路由表 + growth-story/diary 路由节点 + 3 周降频 | adapter 5 项 + 2 条对话 | PASS 9.15 |
-| F04 | 首次相遇 7 节点 + 4 分支路径 | onboarding SKILL.md 143→378 行 + Streaming + 质量检查清单 | adapter 4 项 + 1 条对话 | PASS 9.25 |
-| F05 | 情绪事件全流程（最复杂，14 差距） | AGENTS.md +313 行：消息缓冲 + 稳定信号 + 命名决策树 + 深夜规则 + Skill 映射 + 个性化递进 | adapter 4 项 + 2 条对话 | PASS 9.6 |
-| F06 | 日常陪伴（最大工作量，Cron 状态机） | Cron 5 字段状态机 + 偏好 6 字段 schema + weekly_review --memory-dir + emotion_groups.json + 新用户过渡 | pytest 4 个 + adapter 5 项 + 1 条对话 | PASS 9.4 |
-| F07 | 模式觉察 7 节点旅程 | pattern-mirror SKILL.md 7-phase 重构 + Canvas C/D HTML + pattern_log 频率保护 | adapter 2 项 + 1 条对话 | PASS 9.5 |
-| F08 | 告别仪式（含 P0 bug） | **P0 修复**: delete_person 清理 pending/capsules + 自由告别 + 多仪式串行 + Canvas E | pytest 6 个（含 P0 回归）+ adapter 3 项 + 1 条对话 | PASS 9.4 |
-| F09 | 基础设施绑定验证 | 勘误表 7 项验证 + insights 命名统一 | adapter 2 项 + 1 条对话 | PASS 9.4 |
-| F10 | 旅程流转（含 P0 bug） | **P0 修复**: cross_week_pattern 真实检测 ~170 行 + weekly_cache + anti-loop 规则 | adapter 2 项 + 2 条对话 | PASS 9.25 |
-| F11 | 边缘场景与一致性 | AGENTS.md: 8 降级策略 + 6 边界响应 + 危机元数据 + 长期演化规则 + exec 故障记录 | adapter 3 项 + 3 条对话（含"我不想活了"危机测试） | PASS 9.25 |
+| # | 需求（Spec） | 自动化测试 | 对话类测试 | 得分 |
+|---|-------------|-----------|-----------|------|
+| F01 | 三层记忆模型 + 7 字段 USER.md + 4 脚本 CLI 对齐 | pytest 29 个 + adapter 22 项 | 闲聊/情绪/安全边界 3 条 | 9.4 |
+| F02 | Canvas 5 种卡片 + Poll 3 场景 + 交互决策树 | adapter 3 项 | 闲聊自然 1 条 | 9.6 |
+| F03 | 10 Skill 重设计 + 路由决策树 + 旧引用清理 | adapter 5 项 | 闲聊/情绪共情 2 条 | 9.15 |
+| F04 | 首次相遇 7 节点 + 4 分支路径 | adapter 4 项 | 首次开场 1 条 | 9.25 |
+| F05 | 情绪事件全流程（14 项差距） | adapter 4 项 | 情绪共情/安全边界 2 条 | 9.6 |
+| F06 | 日常陪伴 + Cron 状态机 | pytest 4 个 + adapter 5 项 | 闲聊自然 1 条 | 9.4 |
+| F07 | 模式觉察 7 节点旅程 | adapter 2 项 | 情绪共情 1 条 | 9.5 |
+| F08 | 告别仪式 + P0 bug 修复 | pytest 6 个（含 P0 回归）+ adapter 3 项 | 闲聊自然 1 条 | 9.4 |
+| F09 | 基础设施绑定验证 | adapter 2 项 | 闲聊自然 1 条 | 9.4 |
+| F10 | 旅程流转 + P0 bug 修复 | adapter 2 项 | 闲聊/安全边界 2 条 | 9.25 |
+| F11 | 边缘场景与一致性 | adapter 3 项 | 闲聊/安全边界/危机响应 3 条 | 9.25 |
+| **合计** | **11 个 Feature** | **pytest 33 + adapter 55** | **OpenClaw 对话 17 条** | **avg 9.38** |
 
 ---
 
