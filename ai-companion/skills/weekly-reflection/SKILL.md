@@ -23,14 +23,14 @@ description: 周日回顾——帮用户看见这周的全貌。周日 20:00 Hea
 
 ## 数据准备
 
-调用 `exec` 运行两个脚本：
+调用 Service Tool 获取本周数据：
 
 ```
-python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format json --people-dir people/ --memory-dir memory/
-python3 ai-companion/skills/diary/scripts/growth_tracker.py diary/
+emotion_count(message="weekly_summary", threshold=3)
+growth_track(since="{本周一日期}", im_types="reflection,protest,action")
 ```
 
-weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触发因素和每日明细。growth_tracker.py 输出成长节点（仅在有 ≥2 周数据时做跨周对比）。
+`emotion_count()` 输出本周情绪统计（按簇聚合）、人物频次、触发因素和每日明细。`growth_track()` 输出成长节点（仅在有 ≥2 周数据时做跨周对比）。
 
 同时由 AI 直接读取本周 memory/ 中的 check-in 数据作为补充。
 
@@ -57,7 +57,7 @@ weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触
 | 疲惫族 | 累、疲惫、有点累、倦、心累 |
 | 平静族 | 平静、一般、还行、中性、无感 |
 
-语义分组后同一族内情绪词总计 ≥3 次，纳入重复主题。weekly_review.py 启动时从 `skills/weekly-reflection/config/emotion_groups.json` 加载分组表。
+语义分组后同一族内情绪词总计 ≥3 次，纳入重复主题。`emotion_count()` Service Tool 内部从 `config/emotion_groups.json` 加载分组表。
 
 **成长信号检测**（轻量级，仅比较相邻两周）：
 
@@ -89,11 +89,11 @@ weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触
 
 **Canvas 方式**（macOS 桌面端可用时）：
 
-调用 `exec` 生成 Canvas HTML：
+调用 `emotion_count()` Service Tool 获取数据，agent 生成 Canvas HTML：
 ```
-python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/
+emotion_count(message="weekly_summary", threshold=3)
 ```
-生成周情绪地图卡片——7 天色块（暖色=正面，冷色=负面，灰色=无记录），每天标注情绪词和关键事件。
+agent 根据返回数据生成周情绪地图卡片——7 天色块（暖色=正面，冷色=负面，灰色=无记录），每天标注情绪词和关键事件。
 通过 `openclaw nodes canvas present` 展示。
 
 非 macOS 渠道 → 使用 `--format json` 获取数据，agent 生成纯文字版本（见 AGENTS.md 交互增强 §Canvas 降级规则）。
@@ -150,7 +150,7 @@ python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --
 |------------|-------------|
 | 随口提一句观察 | 展开完整的成长叙事 |
 | 用 1 句话引发觉察 | 用 Canvas 展示纵向对比 |
-| 等用户自己回应 | 调用 growth_tracker.py 做系统分析 |
+| 等用户自己回应 | 调用 `growth_track()` 做系统分析 |
 | 用户不接就算了 | 坚持让用户"看到变化" |
 
 每周最多 1 次成长种子，语气像朋友随口一提。
@@ -161,7 +161,7 @@ python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --
 |------|---------|
 | 本周 diary < 3 条 | 不触发周回顾，Heartbeat 改为常规关怀，不说"这周你只写了 2 篇日记" |
 | 本周 diary = 0 但 check-in ≥ 3 条 | 不触发完整周回顾（数据太薄），可发轻量总结："这周你签到了几次，看起来整体还行。有什么想补充的？" |
-| growth_tracker.py 执行失败 | 降级为纯 AI 推理：直接读 diary/ + memory/ 做手动总结，纯对话版精简回顾 |
+| `growth_track()` 调用失败 | 降级为纯 AI 推理：通过 `diary_read()` + `memory_get()` 做手动总结，纯对话版精简回顾 |
 | 用户看到重复主题后情绪变很重 | 周回顾变成情绪事件——无缝切换到 AGENTS.md 四步框架，不说"我们继续看回顾吧" |
 | 用户对周回顾反感（"别搞这种总结"） | "好，不总结了。" → USER.md 标记 `周回顾偏好: 不喜欢`，后续周日降级为常规关怀 |
 
