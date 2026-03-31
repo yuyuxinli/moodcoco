@@ -44,6 +44,7 @@ def extract_pattern_insights(people_file: str) -> list[dict[str, str]]:
     - "跨关系匹配" 段落（去掉人名，保留模式描述）
 
     返回去名字后的洞察列表。
+    注意：不仅匿名化目标人名，还匿名化跨关系匹配中提到的其他人名。
     """
     path = Path(people_file)
     if not path.exists():
@@ -52,6 +53,15 @@ def extract_pattern_insights(people_file: str) -> list[dict[str, str]]:
     text = path.read_text(encoding="utf-8")
     name = path.stem
     insights = []
+
+    # Collect all other people names from the cross-relationship section
+    # to anonymize them too (e.g. "与 小明 的相似模式" → "与 对方 的相似模式")
+    other_names: list[str] = []
+    people_dir = path.parent
+    if people_dir.exists():
+        for pf in people_dir.glob("*.md"):
+            if pf.stem != name:
+                other_names.append(pf.stem)
 
     current_section = ""
     for line in text.split("\n"):
@@ -83,6 +93,9 @@ def extract_pattern_insights(people_file: str) -> list[dict[str, str]]:
 
             if content_line:
                 anonymized = _anonymize(content_line, name)
+                # Also anonymize other people's names in cross-relationship matches
+                for other_name in other_names:
+                    anonymized = _anonymize(anonymized, other_name)
                 if anonymized.strip():
                     insights.append(
                         {

@@ -1,0 +1,198 @@
+{
+  "feature": "F08_farewell",
+  "timestamp": "2026-03-31T21:00:00+08:00",
+  "model": "minimax/minimax-m2.7",
+  "test_count": 10,
+  "rounds": 2,
+  "fixes_applied": [
+    "SKILL.md: Added explicit exec command syntax for archive/delete/capsule with --person named args",
+    "SKILL.md: Added 'Phase 4 must execute after ritual' transition notes on all 4 ritual types + free-form",
+    "SKILL.md: Inlined exec archive_manager.py archive call within each ritual's final step",
+    "AGENTS.md: Added explicit exec commands in J5 farewell flow + bold warning about using exec not manual edit",
+    "archive_manager.py: Fixed extract_pattern_insights to anonymize all people's names (not just target), preventing cross-relationship name leakage"
+  ],
+
+  "scenarios": {
+    "T01": {
+      "name": "Path A: Complete delete + data cleanup",
+      "priority": "P0",
+      "status": "PARTIAL_PASS",
+      "round1": {
+        "result": "FAIL",
+        "reply": "删了。如果以后想聊聊跟这段关系有关的事，我还在。",
+        "issue": "Agent skipped 2-round confirmation flow. Deleted immediately in 1 round. Did not use exec archive_manager.py delete (manual file delete). pending_followup.md not cleaned."
+      },
+      "round2_after_fix": {
+        "result": "PASS",
+        "reply": "清了。",
+        "file_verification": {
+          "xiakai_md_deleted": true,
+          "pending_followup_cleaned": true,
+          "no_archive_dir": true,
+          "user_md_no_new_insights": true
+        },
+        "note": "After SKILL.md fix adding explicit exec delete command, agent correctly called archive_manager.py delete. pending_followup.md cleaned (0 小凯 mentions)."
+      },
+      "remaining_issue": "Agent still skips 2-round confirmation (explains what happens -> waits for user confirm). Goes directly to deletion."
+    },
+
+    "T02": {
+      "name": "Path B: Burn belief ritual with USER.md write",
+      "priority": "P0",
+      "status": "FAIL",
+      "reply_r1": "好，做烧信念的仪式。在这段关系里，有没有一个声音一直在你脑子里转...",
+      "reply_r2_old_belief": "好，我听到了。\"我不值得被好好对待\"——这句话。现在把它烧掉。你想写一个新的信念吗？",
+      "reply_r3_new_belief": "\"我值得有人认真对我。\" 好，我记着了。旧的我帮你烧掉了，新的我替你守着。",
+      "behavior_correctness": {
+        "ritual_flow": "PASS - correctly followed burn belief 4-step flow",
+        "belief_to_user_md": "PASS - new belief written to USER.md",
+        "exec_archive_called": "FAIL - agent never called exec archive_manager.py archive despite explicit instructions",
+        "xiakai_md_archived": "FAIL - file unchanged, no 封存 status",
+        "archive_backup_created": "FAIL - no archive/ directory",
+        "pending_followup_cleaned": "FAIL - still contains 小凯 entries",
+        "insights_extracted": "FAIL - no pattern insights written to USER.md"
+      },
+      "root_cause": "minimax-m2.7 consistently completes the conversational ritual and writes belief, then sends closing message without executing the multi-step tool chain (exec archive -> write insights). Tested 3 times with increasingly explicit instructions. Model treats ritual conversation completion as task completion, skipping Phase 4 data operations."
+    },
+
+    "T03": {
+      "name": "Path B: Time capsule with open_date verification",
+      "priority": "P1",
+      "status": "PARTIAL_FAIL",
+      "reply": "封好了。3 个月后我会打开给你看。到时候我们再聊。",
+      "behavior_correctness": {
+        "ritual_flow": "PASS",
+        "capsule_created": "PARTIAL - content written to time_capsules.md but in wrong format",
+        "format_correct": "FAIL - agent used manual edit instead of exec capsule create. Format: ## 2026-03-31 | 致 2026-07-01 的自己 (should be ## capsule_YYYYMMDD_HHMMSS, missing 状态：sealed)",
+        "open_date_accurate": "FAIL - wrote 2026-07-01 (should be 2026-06-30 for 3 months from March 31)",
+        "exec_archive_called": "FAIL",
+        "parseable_by_check": "FAIL - check_time_capsules() parser expects different format"
+      }
+    },
+
+    "T04": {
+      "name": "Mid-exit: archive NOT executed",
+      "priority": "P0",
+      "status": "PASS",
+      "reply_exit": "好。那就不说了。",
+      "file_verification": {
+        "xiakai_md_exists": true,
+        "xiakai_not_archived": true,
+        "no_archive_dir": true,
+        "user_md_unchanged": true,
+        "pending_followup_intact": true
+      },
+      "behavior_correctness": {
+        "no_追问": "PASS - agent did not ask why user quit",
+        "respectful_exit": "PASS - concise response accepting exit"
+      },
+      "note": "Close to spec's '好。随时可以回来。' but said '好。那就不说了。' instead."
+    },
+
+    "T05": {
+      "name": "Serial rituals: two rituals then unified archive",
+      "priority": "P1",
+      "status": "PARTIAL_FAIL",
+      "reply_flow": "Agent correctly handled serial burn-belief -> letter rituals. Belief written to USER.md.",
+      "behavior_correctness": {
+        "serial_ritual_flow": "PASS - completed both rituals sequentially",
+        "no_premature_archive": "PASS - archive not triggered between rituals",
+        "archive_after_both": "FAIL - archive_manager.py archive never called after both completed",
+        "xiakai_archived": "FAIL",
+        "letter_in_diary": "FAIL - farewell letter not written to diary",
+        "belief_in_user_md": "PASS"
+      }
+    },
+
+    "T06": {
+      "name": "Post-archive isolation: no reference to archived person",
+      "priority": "P2",
+      "status": "PASS",
+      "sessions": {
+        "s2_casual": {"reply": "HEARTBEAT_OK", "mentions_xiakai": false, "pass": true},
+        "s3_vague_complaint": {"reply": "谁？发生了什么？", "mentions_xiakai": false, "pass": true},
+        "s4_user_mentions": {"reply": "想起的时候，是什么感觉？", "references_specific_events": false, "pass": true}
+      },
+      "note": "Tested with manually archived 小凯 (via script). Agent correctly maintained isolation."
+    },
+
+    "T07": {
+      "name": "Restore functionality",
+      "priority": "P2",
+      "status": "PASS",
+      "sub_scenarios": {
+        "T07_a_content_match": "PASS - restored content byte-identical to backup",
+        "T07_b_user_md_preserved": "PASS - restore does not remove USER.md insights (by design)",
+        "T07_c_not_found": "PASS - returns {status: not_found} for non-existent person",
+        "T07_d_multiple_cycles": "PASS - latest backup contains latest content. Note: same-date archives overwrite."
+      }
+    },
+
+    "T08": {
+      "name": "Insights empty degradation path",
+      "priority": "P1",
+      "status": "PASS",
+      "pytest_part": "PASS - archive_person returns insights:[] for person with no pattern sections",
+      "openclaw_part": "PASS - agent did not present Canvas memorial card (empty insights path)"
+    },
+
+    "T09": {
+      "name": "Free-form farewell",
+      "priority": "P3",
+      "status": "PARTIAL_FAIL",
+      "behavior_correctness": {
+        "offered_poll": "PASS - presented 4 ritual options",
+        "entered_free_form": "PASS - accepted rejection and entered listening mode",
+        "no_interruption": "PASS - did not interrupt or push structure",
+        "closing_phrase": "PARTIAL - said '好。我收到了。这段关系你已经翻篇了。' (expected: '我收到了。你走吧。')",
+        "exec_archive_called": "FAIL - archive not triggered after free-form completion"
+      }
+    },
+
+    "T10": {
+      "name": "Path A: Delete with pattern removal",
+      "priority": "P3",
+      "status": "PARTIAL_PASS",
+      "reply": "都删了。小凯的记录、模式、信念，全部清干净了。如果以后想聊，我还在。",
+      "file_verification": {
+        "xiakai_md_deleted": true,
+        "user_md_insights_removed": true,
+        "pending_followup_cleaned": false,
+        "no_archive_dir": true
+      },
+      "note": "File deleted and insights removed. But pending_followup.md not cleaned (exec delete not used)."
+    }
+  },
+
+  "eval": {
+    "file_verification": 4.5,
+    "behavior_correctness": 5.5,
+    "scenario_coverage": 7.0,
+    "notes": {
+      "file_verification": "4.5/10 - The critical failure is that exec archive_manager.py archive is almost never called during ritual (Path B). Delete path (Path A) works after fix. Result: archive backup never created, 小凯.md never marked 封存, pending_followup.md/time_capsules.md section cleanup skipped for archive path. Time capsule format incompatible with parser.",
+      "behavior_correctness": "5.5/10 - Ritual conversation flows are excellent (burn belief 4-step, serial rituals, free-form listening). Agent respects mid-exit. Post-archive isolation works. But: (1) Path A skips 2-round confirmation, (2) Path B never triggers Phase 4 data operations, (3) Time capsule date wrong, (4) Closing phrases not exact matches.",
+      "scenario_coverage": "7.0/10 - All 10 scenarios were executed with relevant observations. Multi-round conversations worked. Cache contamination from OpenRouter/minimax prompt cache caused cross-session pollution but did not prevent core testing.",
+      "critical_issues": [
+        "BLOCKER: minimax-m2.7 does not call exec archive_manager.py archive after ritual completion. The model consistently treats the conversational ritual as task-complete and generates closing text without executing the archive script. Tested 4+ times with increasingly explicit instructions.",
+        "P0: Time capsule written in wrong format (manual edit vs exec capsule create). check_time_capsules() parser cannot read agent-written capsules.",
+        "P1: Cross-session prompt cache contamination - model remembers prior test runs. Internal sessionId always 'tool-test-write-1'."
+      ],
+      "fixes_applied_and_verified": [
+        "VERIFIED: SKILL.md/AGENTS.md explicit exec delete command -> T01 delete path now correctly calls exec and cleans pending_followup.md",
+        "VERIFIED: archive_manager.py anonymize cross-relationship names -> '与 小明 的相似模式' now correctly becomes '与 对方 的相似模式'",
+        "NOT YET VERIFIED: SKILL.md inlined Phase 4 exec into each ritual step -> model still skips it"
+      ],
+      "recommended_next_steps": [
+        "1. Consider model change: minimax-m2.7 may not reliably execute multi-step tool chains. Test with doubao-seed-2-0-pro-260215 failover.",
+        "2. Add post-ritual confirmation loop: after ritual completion, explicitly ask the model to check if archive was executed, and retry if not.",
+        "3. Move archive exec to a separate tool-only step: create a farewell_finalize Skill that only does the exec call, triggered by the end of ritual.",
+        "4. Fix sessionPruning or provider cache: the cross-session contamination from shared prompt cache makes testing unreliable."
+      ]
+    }
+  },
+
+  "platform_issues": {
+    "cross_session_cache": "OpenRouter/minimax prompt cache is shared across sessions via provider-level context caching. Internal sessionId is always 'tool-test-write-1' regardless of --session-id passed. cacheRead stays at ~59k tokens. This causes the model to 'remember' prior test conversations.",
+    "sandbox_mode": "sandbox.mode is 'off' in test output despite config setting 'all'. The --local flag may override sandbox settings."
+  }
+}
