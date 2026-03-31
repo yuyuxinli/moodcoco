@@ -722,7 +722,9 @@ def _fuzzy_match_theme(
         if not prev_words:
             continue
 
-        overlap = len(current_words & prev_words) / max(
+        # 使用较短集合的长度做分母（containment ratio），
+        # 这样 "不回消息" 是 "不回消息怀疑自己" 的子集时能匹配成功。
+        overlap = len(current_words & prev_words) / min(
             len(current_words), len(prev_words),
         )
         if overlap >= 0.5 and overlap > best_overlap:
@@ -733,18 +735,33 @@ def _fuzzy_match_theme(
 
 
 def _tokenize_theme(theme: dict[str, Any]) -> list[str]:
-    """将主题的关键文本拆分为词集。"""
+    """将主题的关键文本拆分为词集。
+
+    对中文文本使用 2-gram 切分以支持模糊匹配；
+    对空格分隔的文本（英文 / 混合）按空格切分。
+    """
     text = theme.get("word", "") or theme.get("name", "") or ""
     context = theme.get("context", "")
     combined = f"{text} {context}".strip()
-    # 简单按字符级别拆分（中文无空格分词）
-    tokens = []
-    for part in combined.split():
-        tokens.append(part)
-    if not tokens and combined:
-        # 中文文本：按 2-gram 切分
-        tokens = [combined[i:i+2] for i in range(len(combined) - 1)]
-        tokens.append(combined)
+    if not combined:
+        return []
+
+    parts = combined.split()
+    # 如果 split 只产出一个 token 且含有 CJK 字符，使用 2-gram 切分
+    if len(parts) == 1 and any("\u4e00" <= ch <= "\u9fff" for ch in parts[0]):
+        word = parts[0]
+        tokens = [word[i:i+2] for i in range(len(word) - 1)]
+        tokens.append(word)  # 保留完整词作为 token
+        return tokens
+
+    # 多个空格分隔的 token → 直接用，但对每个中文 token 也做 2-gram
+    tokens: list[str] = []
+    for part in parts:
+        if len(part) > 2 and any("\u4e00" <= ch <= "\u9fff" for ch in part):
+            tokens.extend(part[i:i+2] for i in range(len(part) - 1))
+            tokens.append(part)
+        else:
+            tokens.append(part)
     return tokens
 
 
