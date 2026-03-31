@@ -9,6 +9,56 @@
           "doubao-seed-2-0-pro-260215",
           "openrouter/auto"
         ]
+      },
+      {
+        "name": "coco-t3",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "workspace": "/tmp/coco-test-3",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
+      },
+      {
+        "name": "coco-t4",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "workspace": "/tmp/coco-test-4",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
+      },
+      {
+        "name": "coco-t5",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "workspace": "/tmp/coco-test-5",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
+      },
+      {
+        "name": "coco-t6",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "workspace": "/tmp/coco-test-6",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
+      },
+      {
+        "name": "coco-t1",
+        "model": "openrouter/minimax/minimax-m2.7",
+        "thinking": "high",
+        "workspace": "/tmp/coco-test-1",
+        "fallback": [
+          "doubao-seed-2-0-pro-260215",
+          "openrouter/auto"
+        ]
       }
     ],
     "defaults": {
