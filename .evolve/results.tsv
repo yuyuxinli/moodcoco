@@ -7,3 +7,4 @@ f690977	build	F02_interaction	-	5.0	keep	3 PASS 4 PARTIAL 3 FAIL. Canvas/exec ne
 f690977	eval	F02_interaction	5.0/7.0/6.5	6.2	fail	file_verification 5.0<10.0. Canvas never generated. exec never called.
 f690977	build	F03_skills	-	7.0	keep	R2: 7/14 PASS. BG/DC routing solid. pattern freq protection + onboarding bypass bugs found.
 f690977	eval	F03_skills	7.0/8.0/7.5	7.5	fail	file_verification 7.0<10.0. pattern_log freq check missing, onboarding bypass via pending_followup.
+34ca809	build	F06_companion	-	7.0	keep	5 PASS 2 PARTIAL 2 FAIL. Cron state machine perfect. check-in record write missing. Fixes applied to SKILL.md+AGENTS.md.
