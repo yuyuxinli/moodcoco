@@ -14,3 +14,4 @@ a236ca8	build	F09_infrabind	-	8.0	keep	5 PASS 1 PARTIAL 1 FAIL. Script pipeline 
 c35a51a	build	F08_farewell	-	5.7	keep	4 PASS 2 PARTIAL 4 FAIL. exec archive_manager never called. 4 fixes applied to SKILL.md+AGENTS.md+archive_manager.py.
 cf1c673	build	F10_transition	-	8.5	keep	8 PASS 2 PARTIAL 0 FAIL. Fixed weekly_review.py CJK tokenization + fuzzy match. 45 pytest all pass.
 06935b0	build	F04_firstmeet	-	7.0	keep	5 PASS 7 PARTIAL 3 FAIL. Conv quality 8.5. Crisis hotline fixed. Tool+text same-turn blocked by arch.
+cd7a1e5	build	F11_edge	-	6.1	keep	6 PASS 6 PARTIAL 4 FAIL. Disambiguation fix partial. 文件写入铁律 added. Emotion cluster counting needs script.
