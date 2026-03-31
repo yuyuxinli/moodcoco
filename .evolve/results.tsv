@@ -12,3 +12,4 @@ b7667d5	build	F07_pattern	-	6.8	keep	5 PASS 3 PARTIAL 2 FAIL. CRITICAL: E-branch
 558a783	build	F05_emotion	-	6.5	keep	4 PASS 4 PARTIAL 3 FAIL. USER.md pattern data causes premature pattern display. session-id not isolating history.
 a236ca8	build	F09_infrabind	-	8.0	keep	5 PASS 1 PARTIAL 1 FAIL. Script pipeline solid. weekly_review.py design colors fixed. Agent exec invocation gap.
 c35a51a	build	F08_farewell	-	5.7	keep	4 PASS 2 PARTIAL 4 FAIL. exec archive_manager never called. 4 fixes applied to SKILL.md+AGENTS.md+archive_manager.py.
+cf1c673	build	F10_transition	-	8.5	keep	8 PASS 2 PARTIAL 0 FAIL. Fixed weekly_review.py CJK tokenization + fuzzy match. 45 pytest all pass.
