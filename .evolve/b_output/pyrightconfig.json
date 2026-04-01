@@ -1,0 +1,6 @@
+{
+  "reportOptionalCall": "none",
+  "reportUnusedFunction": "none",
+  "reportPossiblyUnbound": "warning",
+  "ignore": ["*.py"]
+}
