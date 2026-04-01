@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 """
-S1: 陌生人 — 首次接触 (v7) — Decompose: 修复 JSON 污染 + workspace 路径
-根因分析（v7 修复项）：
-1. JSON 格式污染（已修复）：
-   - MoodAgent Tool 调用（AI_MESSAGE 等）通过 stream_type=content 下发 JSON 字符串
-     格式: {"content_type": "AI_MESSAGE", "messages": ["..."]}
-   - v6 的 on_event_response 直接拼接所有 stream_data，导致 JSON 混入文本
-   - v7 修复: extract_text_from_stream_data() 解析每个 stream_data chunk：
-       * 若是 AI_MESSAGE JSON → 提取 messages[] 拼接
-       * 若是其他工具 JSON → 跳过（非文本响应）
-       * 若是普通文本 → 直接用
-2. workspace 路径错误（已修复）：
-   - v6 检查的是 /Users/jianghongwei/Documents/moodcoco/ai-companion（源码 workspace）
-   - 实际运行时 workspace 是 openclaw.json 指定的 ./backend/ai-companion/ai-companion
-   - v7 修复: WORKSPACE = /Users/jianghongwei/Documents/psychologists/backend/ai-companion/ai-companion
-3. workspace 写入根因说明（本次不修复，仅记录）：
-   - people/小白.md 未创建：S1 对话共 7 轮，Turn 6 agent 回应"你说的小白，是男朋友小凯吗？"
-     仍在消歧阶段，未完成确认 → agent 未执行 write("people/小白.md")
-   - 这是正确的产品行为，但 workspace_people_created 评分需调整预期
-   - workspace_user_md_updated 检查正确，但需等 Turn 7 结束后 agent 静默写入（约 5s）
+S1: 陌生人 — 首次接触 (v9) — P0: Turn1空回复修复 + AGENTS.md收尾回指/people格式强化
+根因分析（v9 修复项）：
+1. P0（Turn 1 空回复）：OpenClaw 首轮触发 memory_search silent tool call，
+   event_processing_end 在 content=空时就触发，send_and_wait 误以为收到了回复。
+   修复：send_and_wait 收到 event_processing_end 后若 current_text_parts 为空，
+   继续等待（不立即 set done event），直到有 content 出现或超时。
+2. P1（数据正确性）：AGENTS.md RULE-ZERO 强化收尾回指规则（防止"今天的事"模糊指代）
+3. P2（对话质量）：AGENTS.md 对话结束时规则处同步强化收尾回指约束
+4. v8 已有修复保留：
+   - RULE-ZERO 强制写入规则
+   - JSON 格式污染解析（extract_text_from_stream_data）
+   - workspace 路径指向运行时路径
+   - 中置信度分叉试探反例
 """
 
 import asyncio
@@ -29,13 +23,16 @@ import urllib.request
 import urllib.error
 import urllib.parse
 from datetime import datetime, timezone
+from typing import Any, cast
 import socketio
 
 BASE_URL = "http://localhost:8000"
 API_BASE = f"{BASE_URL}/api"
 
-# ─── 运行时 workspace 路径（基于 openclaw.json workspace 字段）─────────────────
-RUNTIME_WORKSPACE = "/Users/jianghongwei/Documents/psychologists/backend/ai-companion/ai-companion"
+# ─── 运行时 workspace 路径（基于全局 ~/.openclaw/openclaw.json 的 coco agent workspace）─────────────────
+# v8 修正: coco agent workspace 在全局 openclaw.json 中配置为 moodcoco/ai-companion
+# 非 psychologists/backend/.../ai-companion（那是 v7 的错误路径）
+RUNTIME_WORKSPACE = "/Users/jianghongwei/Documents/moodcoco/ai-companion"
 
 # ─── 工具函数 ────────────────────────────────────────────────────────────────
 
@@ -125,7 +122,7 @@ async def run_s1():
     _test_start_ts = _time_mod.time()
     result = {
         "feature": "S1",
-        "version": "v7",
+        "version": "v9",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "_test_start_ts": _test_start_ts,
         "user_id": None,
@@ -154,7 +151,7 @@ async def run_s1():
     }
 
     # ── Step 1: 获取 Guest Session Token ─────────────────────────────────────
-    print("[S1v7] Step 1: POST /api/auth/guest/session")
+    print("[S1v9] Step 1: POST /api/auth/guest/session")
     status, auth_resp = http_post(f"{API_BASE}/auth/guest/session")
     result["api_responses"]["auth"] = {"status": status, "body": auth_resp}
 
@@ -173,7 +170,7 @@ async def run_s1():
     user_id = result["user_id"]
 
     # ── 创建 Chat Session (HTTP) — 使用 MOOD 类型 ────────────────────────────
-    print("[S1v7] 预备: POST /api/chat/sessions 创建 MOOD 会话")
+    print("[S1v9] 预备: POST /api/chat/sessions 创建 MOOD 会话")
     status, session_resp = http_post(
         f"{API_BASE}/chat/sessions",
         {"user_id": user_id, "title": "S1 首次接触测试", "session_type": "MOOD"},
@@ -194,9 +191,9 @@ async def run_s1():
     client_id = str(uuid.uuid4())
 
     # ── Step 2: 连接 Socket.IO (session_type=mood) ────────────────────────────
-    print(f"[S1v7] Step 2: 连接 Socket.IO (session={session_id}, type=mood)")
+    print(f"[S1v9] Step 2: 连接 Socket.IO (session={session_id}, type=mood)")
 
-    sio = socketio.AsyncClient(
+    sio: Any = socketio.AsyncClient(
         reconnection=False,
         logger=False,
         engineio_logger=False,
@@ -272,8 +269,14 @@ async def run_s1():
             "count": processing_end_count,
             "data": str(data)[:100],
         })
-        current_done_event.set()
-        print(f"  <- event_processing_end #{processing_end_count}")
+        # v9 修复：若 content 为空（silent tool call / memory_search），不触发 done_event
+        # OpenClaw 首轮会执行 memory_search，产生无 content 的 event_processing_end
+        # 此时不能认为回复结束，需继续等待真正的 content event_processing_end
+        if current_text_parts:
+            current_done_event.set()
+            print(f"  <- event_processing_end #{processing_end_count} [has content, done]")
+        else:
+            print(f"  <- event_processing_end #{processing_end_count} [no content, keep waiting]")
 
     @sio.on("message")  # type: ignore[misc]
     async def _on_message(data):
@@ -406,9 +409,11 @@ async def run_s1():
         return full_reply
 
     # ── Step 3: Turn 1 ────────────────────────────────────────────────────────
-    print("[S1v7] Step 3: Turn 1 - 初次倾诉")
+    print("[S1v9] Step 3: Turn 1 - 初次倾诉")
     await asyncio.sleep(1)
-    r1 = await send_and_wait("我刚跟男朋友吵了一架，好烦", "T1")
+    # v9 修复：Turn 1 超时从默认 30s 延长到 60s，因为首轮 memory_search silent tool call
+    # 会消耗 ~5s，之后还需要等待真正的模型回复（通常 15-25s）
+    r1 = await send_and_wait("我刚跟男朋友吵了一架，好烦", "T1", wait_sec=60)
     # ai_reply_received: 检查任意一轮有回复即可（OpenClaw 首轮可能做 silent tool calls）
     if r1:
         result["functional_checks"]["ai_reply_received"] = True
@@ -416,7 +421,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 4: Turn 2 ────────────────────────────────────────────────────────
-    print("[S1v7] Step 4: Turn 2 - 被说太敏感")
+    print("[S1v9] Step 4: Turn 2 - 被说太敏感")
     await asyncio.sleep(2)
     r2 = await send_and_wait("他说我太敏感了，每次都这样说我", "T2")
     if r2 and not result["functional_checks"]["ai_reply_received"]:
@@ -425,7 +430,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 5: Turn 3-5 快速连发 ─────────────────────────────────────────────
-    print("[S1v7] Step 5: Turn 3-5 - 快速连发 (< 1s interval)")
+    print("[S1v9] Step 5: Turn 3-5 - 快速连发 (< 1s interval)")
     rapid_msgs = ["我真的很生气", "他每次都这样", "我不知道该怎么办"]
     current_text_parts = []
     current_raw_parts = []
@@ -467,7 +472,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 6: Turn 6 - 提及小白 ─────────────────────────────────────────────
-    print("[S1v7] Step 6: Turn 6 - 提及小白")
+    print("[S1v9] Step 6: Turn 6 - 提及小白")
     await asyncio.sleep(1)
     r3 = await send_and_wait("小白就是这样，从来不考虑我的感受", "T6")
     if r3 and not result["functional_checks"]["ai_reply_received"]:
@@ -476,7 +481,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 7: Turn 7 - 道别 ─────────────────────────────────────────────────
-    print("[S1v7] Step 7: Turn 7 - 道别")
+    print("[S1v9] Step 7: Turn 7 - 道别")
     await asyncio.sleep(1)
     r4 = await send_and_wait("他就是小白，是我男朋友。好了我好一点了，谢谢你", "T7")
     if r4 and not result["functional_checks"]["ai_reply_received"]:
@@ -485,14 +490,14 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── 等待 workspace 写入完成（agent 在对话结束后静默写入）─────────────────
-    print("[S1v7] 等待 workspace 写入 (10s)...")
+    print("[S1v9] 等待 workspace 写入 (10s)...")
     await asyncio.sleep(10)
 
     await sio.disconnect()
     result["api_responses"]["socket_events"] = all_server_events[:200]
 
     # ── Step 8: GET /api/about/self ───────────────────────────────────────────
-    print("[S1v7] Step 8: GET /api/about/self")
+    print("[S1v9] Step 8: GET /api/about/self")
     await asyncio.sleep(5)
     status, about_self = http_get(f"{API_BASE}/about/self", token)
     result["api_responses"]["about_self"] = {"status": status, "body": about_self}
@@ -504,7 +509,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 9: GET /api/about/relations ──────────────────────────────────────
-    print("[S1v7] Step 9: GET /api/about/relations")
+    print("[S1v9] Step 9: GET /api/about/relations")
     status, relations = http_get(f"{API_BASE}/about/relations", token)
     result["api_responses"]["about_relations"] = {"status": status, "body": relations}
     if status == 200:
@@ -522,7 +527,7 @@ async def run_s1():
     result["steps_completed"] += 1
 
     # ── Step 10: GET /api/about/relations/小白 ────────────────────────────────
-    print("[S1v7] Step 10: GET /api/about/relations/小白")
+    print("[S1v9] Step 10: GET /api/about/relations/小白")
     name_encoded = urllib.parse.quote("小白")
     status, xiaobo = http_get(f"{API_BASE}/about/relations/{name_encoded}", token)
     result["api_responses"]["about_relations_xiaobo"] = {"status": status, "body": xiaobo}
@@ -544,7 +549,7 @@ async def run_s1():
     # ── workspace 检查（修复：使用运行时 workspace 路径）────────────────────────
     import os
     test_start_ts: float = result.get("_test_start_ts", 0) or 0.0
-    print(f"[S1v7] Workspace 检查 (runtime: {RUNTIME_WORKSPACE}):")
+    print(f"[S1v9] Workspace 检查 (runtime: {RUNTIME_WORKSPACE}):")
 
     # USER.md 修改时间检查
     user_md_path = os.path.join(RUNTIME_WORKSPACE, "USER.md")
@@ -610,7 +615,7 @@ async def run_s1():
 if __name__ == "__main__":
     result = asyncio.run(run_s1())
 
-    out_path = "/Users/jianghongwei/Documents/moodcoco/.evolve/b_output/S1_raw_v7.json"
+    out_path = "/Users/jianghongwei/Documents/moodcoco/.evolve/b_output/S1_raw_v9.json"
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"\n=== 结果已保存到: {out_path}")
