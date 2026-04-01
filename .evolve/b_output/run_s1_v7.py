@@ -214,23 +214,23 @@ async def run_s1():
     all_server_events = []
 
     @sio.event
-    async def connect():
+    async def connect():  # type: ignore
         nonlocal socket_connected
         socket_connected = True
         print("  OK Socket.IO connected")
 
     @sio.event
-    async def connect_error(data):
+    async def connect_error(data):  # type: ignore
         print(f"  FAIL connect_error: {data}")
 
     @sio.event
-    async def disconnect():
+    async def disconnect():  # type: ignore
         print("  Socket.IO disconnected")
 
     # ── 捕获所有事件 ──────────────────────────────────────────────────────────
 
     @sio.on("event_response")  # type: ignore
-    async def on_event_response(data):
+    async def _on_event_response(data):
         try:
             payload = data.get("payload", data) if isinstance(data, dict) else {}
             stream_data = payload.get("stream_data", "")
@@ -263,7 +263,7 @@ async def run_s1():
             print(f"  [warn] on_event_response: {e}")
 
     @sio.on("event_processing_end")  # type: ignore
-    async def on_event_processing_end(data):
+    async def _on_event_processing_end(data):
         nonlocal processing_end_count
         processing_end_count += 1
         all_server_events.append({
@@ -276,28 +276,28 @@ async def run_s1():
         print(f"  <- event_processing_end #{processing_end_count}")
 
     @sio.on("message")  # type: ignore
-    async def on_message(data):
+    async def _on_message(data):
         all_server_events.append({"event": "message", "ts": time.time(), "data": str(data)[:100]})
         current_done_event.set()
 
     @sio.on("error")  # type: ignore
-    async def on_error(data):
+    async def _on_error(data):
         print(f"  [server error] {data}")
         all_server_events.append({"event": "error", "data": str(data)[:200], "ts": time.time()})
         current_done_event.set()
 
     @sio.on("event_processing_start")  # type: ignore
-    async def on_processing_start(_data):
+    async def _on_processing_start(_data):
         all_server_events.append({"event": "event_processing_start", "ts": time.time()})
         print("  <- event_processing_start")
 
     @sio.on("message_buffered")  # type: ignore
-    async def on_buffered(_data):
+    async def _on_buffered(_data):
         all_server_events.append({"event": "message_buffered", "ts": time.time()})
         print("  <- message_buffered")
 
     @sio.on("content_chunk")  # type: ignore
-    async def on_content_chunk(data):
+    async def _on_content_chunk(data):
         all_server_events.append({"event": "content_chunk", "ts": time.time(), "data": str(data)[:100]})
         if isinstance(data, dict) and data.get("content"):
             text = extract_text_from_stream_data(data["content"])
@@ -305,17 +305,17 @@ async def run_s1():
                 current_text_parts.append(text)
 
     @sio.on("action_result")  # type: ignore
-    async def on_action_result(data):
+    async def _on_action_result(data):
         all_server_events.append({"event": "action_result", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- action_result: {str(data)[:100]}")
 
     @sio.on("async_task_progress")  # type: ignore
-    async def on_async_task_progress(data):
+    async def _on_async_task_progress(data):
         all_server_events.append({"event": "async_task_progress", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- async_task_progress: {str(data)[:100]}")
 
     @sio.on("session_updated")  # type: ignore
-    async def on_session_updated(data):
+    async def _on_session_updated(data):
         nonlocal session_id
         all_server_events.append({"event": "session_updated", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- session_updated: {str(data)[:200]}")
@@ -327,7 +327,7 @@ async def run_s1():
 
     # 注册所有其他事件的通用捕获器
     @sio.on("*")  # type: ignore
-    async def on_any(event, data):
+    async def _on_any(event, data):
         if event not in ("event_response", "event_processing_end", "event_processing_start",
                          "message", "error", "message_buffered", "content_chunk",
                          "action_result", "async_task_progress", "session_updated",
