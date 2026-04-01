@@ -1,20 +1,20 @@
 {
   "feature": "S1",
   "version": "v4",
-  "timestamp": "2026-04-01T06:05:38.311016+00:00",
-  "user_id": "71127ab9-e9d0-46db-ac3e-cabce645a292",
-  "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MTEyN2FiOS1lOWQwLTQ2ZGItYWMzZS1jYWJjZTY0NWEyOTIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyODMzOCwiaWF0IjoxNzc1MDIzNTM4fQ.kZYurA0-y_P8gS8z2GE3KMTTeXg773bCSqp2Q8bKP_Q",
-  "session_id": "a9ce952f-f664-40cc-8895-7e4dd4d28f1d",
+  "timestamp": "2026-04-01T06:20:29.769767+00:00",
+  "user_id": "4c829ebf-18b8-420a-8717-33df6edb765b",
+  "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzgyOWViZi0xOGI4LTQyMGEtODcxNy0zM2RmNmVkYjc2NWIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyOTIyOSwiaWF0IjoxNzc1MDI0NDI5fQ.T34iF8gqGx4QQHklsOWuAHEBA_wFxERz38SLU41RN3I",
+  "session_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
   "conversations": [
     {
       "turn": 1,
       "user": "我刚跟男朋友吵了一架，好烦",
-      "ai_response": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"吵架真的特别消耗人，你现在肯定又累又委屈吧\", \"愿意跟我说说刚才发生什么了吗？\"]}"
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
     },
     {
       "turn": 2,
       "user": "他说我太敏感了，每次都这样说我",
-      "ai_response": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8b832f48f04e28cf71b018c3f29_1775023546428_87.mp3?Expires=1775109946&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=GBFiyIQXyq2Scyb19XBdJsj8Fvw%3D{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"被说敏感的时候，肯定特别委屈吧\", \"明明只是在意细节，却被当成小题大做\", \"这种不被理解的感觉真的糟透了\"]}"
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
     },
     {
       "turn": "3_5",
@@ -24,313 +24,202 @@
         "我不知道该怎么办"
       ],
       "ai_responses": [
-        "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8bd416d61c82a919c95d5b07fdc_1775023551232_6468.mp3?Expires=1775109951&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=3nvo21lj4Ihkm3qKkh5Y0bDcB9U%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8bd8524f951f60410d3dfe3ce97_1775023551429_6881.mp3?Expires=1775109951&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=SuYXauyhrwAg1hpE9nEg3dTeSiQ%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8bd638fb7231d14e95d2ef89f17_1775023551434_2418.mp3?Expires=1775109951&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=jGUIHkuWSGaQd1QHZau4teCjmxE%3D{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"换作是我，我也会气炸的！\", \"明明是他没接住你的情绪，反倒说你敏感\", \"这种指责真的太伤人了\"]}https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8c039b3e664cb96ddff23490c07_1775023554207_943.mp3?Expires=1775109954&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=%2FkOeg8mAndokSl25vhrmepwOZD8%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8c05adc59f1022496a6075254cc_1775023554246_6279.mp3?Expires=1775109954&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=%2B9CK1qdnOgngX7aUShJ3KPm8Vn0%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8c0a0c70a06e44fe6efe26fe1b5_1775023554718_8174.mp3?Expires=1775109954&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=ekp1x1BhIc7O4%2FoROyKnnVbeccU%3D{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"这种每次都被误解的感觉，真的无力又委屈。\", \"你其实只是想被他看见你的情绪，对不对？\"]}https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8c49a4ec44ca5463029952d42de_1775023558049_2028.mp3?Expires=1775109958&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=ek0qk5oqF4YkbIBlyhplkWtbYsA%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8c41dff03d0fd533a4fda730d09_1775023558185_9021.mp3?Expires=1775109958&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=H%2B%2FJA8HtkHFilJw1eJORixXqctY%3D"
+        "ChatProxy unexpected error: Illegal header value b'Bearer 'ChatProxy unexpected error: Illegal header value b'Bearer 'ChatProxy unexpected error: Illegal header value b'Bearer '"
       ],
-      "event_processing_end_count": 2,
-      "rapid_fire_merged": true,
-      "note": "发送3条，收到 2 个 event_processing_end"
+      "event_processing_end_count": 3,
+      "rapid_fire_merged": false,
+      "note": "发送3条，收到 3 个 event_processing_end"
     },
     {
       "turn": 6,
       "user": "小白就是这样，从来不考虑我的感受",
-      "ai_response": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"他总这样忽略你的感受，换谁都会寒心的\", \"你心里的委屈，他一点都没接住，太过分了\"]}"
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
     },
     {
       "turn": 7,
       "user": "好了我好一点了，谢谢你",
-      "ai_response": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8fe817a8246972e59ce52f8f9bb_1775023616424_1386.mp3?Expires=1775110016&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=JspNuhyONk%2F28LNxbKRjg4wDY3c%3Dhttps://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F061be8fec0e6ddc4af07500fb2e18781_1775023616493_3304.mp3?Expires=1775110016&OSSAccessKeyId=LTAI5tGLnRTkBjLuYPjNcKQ8&Signature=%2BDOIWNwgnA%2FSYmgZ0mwAQ3IbYFw%3D{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"能让你感觉好一点，我超开心的😊\", \"以后要是再遇到不开心的事，随时来找我呀\"]}"
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
     }
   ],
   "api_responses": {
     "auth": {
       "status": 200,
       "body": {
-        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3MTEyN2FiOS1lOWQwLTQ2ZGItYWMzZS1jYWJjZTY0NWEyOTIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyODMzOCwiaWF0IjoxNzc1MDIzNTM4fQ.kZYurA0-y_P8gS8z2GE3KMTTeXg773bCSqp2Q8bKP_Q",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzgyOWViZi0xOGI4LTQyMGEtODcxNy0zM2RmNmVkYjc2NWIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyOTIyOSwiaWF0IjoxNzc1MDI0NDI5fQ.T34iF8gqGx4QQHklsOWuAHEBA_wFxERz38SLU41RN3I",
         "token_type": "bearer",
-        "user_id": "71127ab9-e9d0-46db-ac3e-cabce645a292",
+        "user_id": "4c829ebf-18b8-420a-8717-33df6edb765b",
         "is_guest": true,
-        "expires_at": "2026-04-08T06:05:38.333287+00:00",
-        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNzExMjdhYjktZTlkMC00NmRiLWFjM2UtY2FiY2U2NDVhMjkyIiwiaXNfZ3Vlc3QiOnRydWUsInRva2VuX3R5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzc3NjE1NTM4LCJpYXQiOjE3NzUwMjM1Mzh9.zkLGDxBV89RqexvmyG-I653DPX2NXICp7-qlHC8w_5U",
-        "refresh_token_expires_at": "2026-05-01T06:05:38.333639+00:00"
+        "expires_at": "2026-04-08T06:20:29.786168+00:00",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNGM4MjllYmYtMThiOC00MjBhLTg3MTctMzNkZjZlZGI3NjViIiwiaXNfZ3Vlc3QiOnRydWUsInRva2VuX3R5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzc3NjE2NDI5LCJpYXQiOjE3NzUwMjQ0Mjl9.Sc6Fhx37Lxdrvtln54rEMUg3MqcT-QE58c0xhf133NQ",
+        "refresh_token_expires_at": "2026-05-01T06:20:29.791957+00:00"
       }
     },
     "socket_events": [
       {
         "event": "UNKNOWN:connection_established",
-        "ts": 1775023538.3547258,
-        "data": "{'client_id': '08b498e9-1534-4330-89e1-3a1f1fff7350', 'connection_id': '71127ab9-e9d0-46db-ac3e-cabce645a292_a9ce952f-f664-40cc-8895-7e4dd4d28f1d_08b4"
+        "ts": 1775024429.823791,
+        "data": "{'client_id': '49361309-0c9c-4b3a-bc70-251a730723d7', 'connection_id': '4c829ebf-18b8-420a-8717-33df6edb765b_a6d8ab41-dada-47d2-98b9-595a23063e5f_4936"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023541.3561442,
+        "ts": 1775024432.816693,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023541.3564029
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023544.30251,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"吵架真的特别消耗人，你现"
+        "ts": 1775024432.818322
       },
       {
         "event": "event_response",
-        "ts": 1775023544.302717,
-        "stream_id": "mood_msg_2a7dc702-cb41-4f84-a7bd-a71a24fa3df1",
-        "stream_type": "content",
+        "ts": 1775024432.842996,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"吵架真的特别消耗人，你现在肯定又累又委屈吧\", \"愿意跟我说说刚才发生"
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023544.326632,
+        "ts": 1775024432.8431811,
         "count": 1,
-        "data": "{'stream_id': 'mood_msg_2a7dc702-cb41-4f84-a7bd-a71a24fa3df1', 'timestamp': '2026-04-01T14:05:44.325"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023546.1809,
-        "stream_id": "mood_msg_2a7dc702-cb41-4f84-a7bd-a71a24fa3df1",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:32.842934', 'ch"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023546.333133,
+        "ts": 1775024434.846616,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023546.334033
+        "ts": 1775024434.84693
       },
       {
         "event": "event_response",
-        "ts": 1775023546.514412,
-        "stream_id": "mood_msg_2a7dc702-cb41-4f84-a7bd-a71a24fa3df1",
-        "stream_type": "sentence_audio",
+        "ts": 1775024434.874944,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023549.625875,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"被说敏感的时候，肯定特别"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023549.6260328,
-        "stream_id": "mood_msg_9c50678b-05dc-4f73-b324-299b6c94f3c7",
-        "stream_type": "content",
-        "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"被说敏感的时候，肯定特别委屈吧\", \"明明只是在意细节，却被当成小题大"
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023549.6473558,
+        "ts": 1775024434.8751302,
         "count": 2,
-        "data": "{'stream_id': 'mood_msg_9c50678b-05dc-4f73-b324-299b6c94f3c7', 'timestamp': '2026-04-01T14:05:49.645"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:34.874749', 'ch"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023549.649716,
+        "ts": 1775024434.8765922,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023549.650347
-      },
-      {
-        "event": "message_buffered",
-        "ts": 1775023549.9528818
-      },
-      {
-        "event": "message_buffered",
-        "ts": 1775023550.254057
+        "ts": 1775024434.876868
       },
       {
         "event": "event_response",
-        "ts": 1775023551.326057,
-        "stream_id": "mood_msg_9c50678b-05dc-4f73-b324-299b6c94f3c7",
-        "stream_type": "sentence_audio",
+        "ts": 1775024434.8936698,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023551.49239,
-        "stream_id": "mood_msg_9c50678b-05dc-4f73-b324-299b6c94f3c7",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023551.509353,
-        "stream_id": "mood_msg_9c50678b-05dc-4f73-b324-299b6c94f3c7",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023552.6846101,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"换作是我，我也会气炸的！"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023552.685311,
-        "stream_id": "mood_msg_402caf9b-0036-4fa3-b488-36cad1353779",
-        "stream_type": "content",
-        "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"换作是我，我也会气炸的！\", \"明明是他没接住你的情绪，反倒说你敏感\""
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023552.70091,
+        "ts": 1775024434.893755,
         "count": 3,
-        "data": "{'stream_id': 'mood_msg_402caf9b-0036-4fa3-b488-36cad1353779', 'timestamp': '2026-04-01T14:05:52.699"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:34.893577', 'ch"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023552.70135,
+        "ts": 1775024435.179874,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023552.7015119
+        "ts": 1775024435.180177
       },
       {
         "event": "event_response",
-        "ts": 1775023554.2818382,
-        "stream_id": "mood_msg_402caf9b-0036-4fa3-b488-36cad1353779",
-        "stream_type": "sentence_audio",
+        "ts": 1775024435.20477,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023554.317742,
-        "stream_id": "mood_msg_402caf9b-0036-4fa3-b488-36cad1353779",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023554.8266308,
-        "stream_id": "mood_msg_402caf9b-0036-4fa3-b488-36cad1353779",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023556.37073,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"这种每次都被误解的感觉，"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023556.371341,
-        "stream_id": "mood_msg_22c0632c-fef8-4e1a-b8d9-35759d4bdcf6",
-        "stream_type": "content",
-        "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"这种每次都被误解的感觉，真的无力又委屈。\", \"你其实只是想被他看见你"
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023556.3868108,
+        "ts": 1775024435.204986,
         "count": 4,
-        "data": "{'stream_id': 'mood_msg_22c0632c-fef8-4e1a-b8d9-35759d4bdcf6', 'timestamp': '2026-04-01T14:05:56.385"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023558.136344,
-        "stream_id": "mood_msg_22c0632c-fef8-4e1a-b8d9-35759d4bdcf6",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023558.285523,
-        "stream_id": "mood_msg_22c0632c-fef8-4e1a-b8d9-35759d4bdcf6",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:35.204724', 'ch"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023611.5604548,
+        "ts": 1775024435.4843159,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023611.560895
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023614.588126,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"他总这样忽略你的感受，换"
+        "ts": 1775024435.4845319
       },
       {
         "event": "event_response",
-        "ts": 1775023614.588646,
-        "stream_id": "mood_msg_48ec86a1-d52d-4b1e-b1ce-8cf98fbe1dfb",
-        "stream_type": "content",
+        "ts": 1775024435.5085142,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"他总这样忽略你的感受，换谁都会寒心的\", \"你心里的委屈，他一点都没接"
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023614.612792,
+        "ts": 1775024435.5086222,
         "count": 5,
-        "data": "{'stream_id': 'mood_msg_48ec86a1-d52d-4b1e-b1ce-8cf98fbe1dfb', 'timestamp': '2026-04-01T14:06:54.611"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:35.508387', 'ch"
       },
       {
         "event": "UNKNOWN:message_received",
-        "ts": 1775023615.619467,
+        "ts": 1775024496.787574,
         "data": "{'event_type': 'user_message'}"
       },
       {
         "event": "event_processing_start",
-        "ts": 1775023615.620398
+        "ts": 1775024496.787731
       },
       {
         "event": "event_response",
-        "ts": 1775023616.4905112,
-        "stream_id": "mood_msg_48ec86a1-d52d-4b1e-b1ce-8cf98fbe1dfb",
-        "stream_type": "sentence_audio",
+        "ts": 1775024496.804266,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
         "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023616.5864892,
-        "stream_id": "mood_msg_48ec86a1-d52d-4b1e-b1ce-8cf98fbe1dfb",
-        "stream_type": "sentence_audio",
-        "has_data": true,
-        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
-      },
-      {
-        "event": "content_chunk",
-        "ts": 1775023619.9011059,
-        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"能让你感觉好一点，我超开"
-      },
-      {
-        "event": "event_response",
-        "ts": 1775023619.9014752,
-        "stream_id": "mood_msg_3694d499-2ccf-48b1-9105-233195433319",
-        "stream_type": "content",
-        "has_data": true,
-        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"能让你感觉好一点，我超开心的😊\", \"以后要是再遇到不开心的事，随时来"
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
       },
       {
         "event": "event_processing_end",
-        "ts": 1775023619.917643,
+        "ts": 1775024496.80434,
         "count": 6,
-        "data": "{'stream_id': 'mood_msg_3694d499-2ccf-48b1-9105-233195433319', 'timestamp': '2026-04-01T14:06:59.916"
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:21:36.804172', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024497.809056,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024497.8099132
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024497.837219,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024497.837331,
+        "count": 7,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:21:37.837072', 'ch"
       }
     ],
     "about_self": {
@@ -395,9 +284,9 @@
     "about_relations_200": true,
     "xiaobo_profile_found": true,
     "xiaobo_relation_type_correct": false,
-    "rapid_fire_merged": true
+    "rapid_fire_merged": false
   },
-  "passed_checks": 7,
+  "passed_checks": 6,
   "total_checks": 8,
   "errors": [],
   "steps_completed": 10,
