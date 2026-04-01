@@ -327,3 +327,13 @@
 ```
 
 - `mood_hint`: string，可选。
+
+---
+
+## 系统内部类型（LLM 不应输出）
+
+以下 content_type 由后端系统自动生成，**LLM 不应在回复中使用**：
+
+| content_type | 说明 |
+|---|---|
+| `LESSON_STAGE_COMPLETE` | 课程阶段完成标记，由后端在学员完成某课程阶段时自动写入 |
