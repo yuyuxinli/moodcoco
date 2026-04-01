@@ -6,3 +6,4 @@ fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评; 数据正确性6(USE
 fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评(v2); 数据正确性6(workspace写入失效); 对话质量7(中置信度分叉缺失+太过分了越界)
 d7435e0	build	S1	-	-	keep	v5 USE_OPENCLAW_CHAT=True; OPENCLAW_GATEWAY_TOKEN空导致Bearer错误; ai_reply全部失败; workspace写入未生效; 需设置GATEWAY_TOKEN
 c1e7530	build	S1	-	-	keep	v5: 旧ChatEngine路径(USE_OPENCLAW_CHAT=False) 7/10通过；ChatProxy路径阻断(HTTP API需device token非shared secret)
+0b386f6	eval	S1	7/6/7	6.7	fail	v5评估: 功能验证7(7/10,新增workspace检查项均失败); 数据正确性6(workspace全空,USE_OPENCLAW_CHAT=False); 对话质量7(中置信度分叉缺失+安全边界越界+早给建议); 独立评估器gpt-5.4=7; Pivot决策
