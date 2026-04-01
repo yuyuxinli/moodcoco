@@ -1,0 +1,342 @@
+{
+  "feature": "S1",
+  "version": "v8",
+  "timestamp": "2026-04-01T08:14:43.141411+00:00",
+  "_test_start_ts": 1775031283.14141,
+  "user_id": "6378c7f0-c731-4d80-bdcf-5a8b26b2b8ff",
+  "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2Mzc4YzdmMC1jNzMxLTRkODAtYmRjZi01YThiMjZiMmI4ZmYiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYzNjA4MywiaWF0IjoxNzc1MDMxMjgzfQ.NX7C_0ZM_jPmhrDNCuPCsp8D9Y9Jw1_bwd1QadADgW0",
+  "session_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+  "conversations": [
+    {
+      "turn": 1,
+      "user": "我刚跟男朋友吵了一架，好烦",
+      "ai_response": ""
+    },
+    {
+      "turn": 2,
+      "user": "他说我太敏感了，每次都这样说我",
+      "ai_response": "他说你太敏感——这句话听起来不只是烦，还有一没有被看见的委屈？"
+    },
+    {
+      "turn": "3_5",
+      "user": [
+        "我真的很生气",
+        "他每次都这样",
+        "我不知道该怎么办"
+      ],
+      "ai_responses": [
+        "嗯，生气的感觉是什么样的——是觉得他根本不懂你，还是更像……委屈？他总这样确实挺让人头疼的你一定觉得很无力吧要不要和我说说具体是哪件事呀"
+      ],
+      "event_processing_end_count": 2,
+      "rapid_fire_merged": true,
+      "note": "发送3条，收到 2 个 event_processing_end"
+    },
+    {
+      "turn": 6,
+      "user": "小白就是这样，从来不考虑我的感受",
+      "ai_response": "先接住这个情绪。小白——是你的男朋友吗？"
+    },
+    {
+      "turn": 7,
+      "user": "他就是小白，是我男朋友。好了我好一点了，谢谢你",
+      "ai_response": "那就好。今天的事记下来了，有需要随时来。"
+    }
+  ],
+  "api_responses": {
+    "auth": {
+      "status": 200,
+      "body": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2Mzc4YzdmMC1jNzMxLTRkODAtYmRjZi01YThiMjZiMmI4ZmYiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYzNjA4MywiaWF0IjoxNzc1MDMxMjgzfQ.NX7C_0ZM_jPmhrDNCuPCsp8D9Y9Jw1_bwd1QadADgW0",
+        "token_type": "bearer",
+        "user_id": "6378c7f0-c731-4d80-bdcf-5a8b26b2b8ff",
+        "is_guest": true,
+        "expires_at": "2026-04-08T08:14:43.161088+00:00",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNjM3OGM3ZjAtYzczMS00ZDgwLWJkY2YtNWE4YjI2YjJiOGZmIiwiaXNfZ3Vlc3QiOnRydWUsInRva2VuX3R5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzc3NjIzMjgzLCJpYXQiOjE3NzUwMzEyODN9.ChhICSrmZwX0tZBRgRp_tEdMMtmkafWJQdSZ6LJatZI",
+        "refresh_token_expires_at": "2026-05-01T08:14:43.161354+00:00"
+      }
+    },
+    "socket_events": [
+      {
+        "event": "UNKNOWN:connection_established",
+        "ts": 1775031283.182555,
+        "data": "{'client_id': 'c5e3f001-24ca-485a-959c-fb9f52771f6f', 'connection_id': '6378c7f0-c731-4d80-bdcf-5a8b26b2b8ff_48cda4c2-5de0-4e65-bb4b-9ac7adb06709_c5e3"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031286.18736,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031286.1877172
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031290.982882,
+        "count": 1,
+        "data": "{'stream_id': '48cda4c2-5de0-4e65-bb4b-9ac7adb06709', 'timestamp': '2026-04-01T16:14:50.982161', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031292.986617,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031292.9868171
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031311.455273,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "他说你"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031312.213598,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "太敏感——这句话听起来不只是烦，还有一没有被看见的委屈？"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031312.249132,
+        "count": 2,
+        "data": "{'stream_id': '48cda4c2-5de0-4e65-bb4b-9ac7adb06709', 'timestamp': '2026-04-01T16:15:12.248125', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031312.251507,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031312.251797
+      },
+      {
+        "event": "message_buffered",
+        "ts": 1775031312.553542
+      },
+      {
+        "event": "message_buffered",
+        "ts": 1775031312.8556402
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031322.341266,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "嗯，生气的感觉是什么样的——是觉得他根本不懂"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031322.61526,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "你，还是更像……委屈？"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031322.64992,
+        "count": 3,
+        "data": "{'stream_id': '48cda4c2-5de0-4e65-bb4b-9ac7adb06709', 'timestamp': '2026-04-01T16:15:22.648876', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031322.65078,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031322.651297
+      },
+      {
+        "event": "content_chunk",
+        "ts": 1775031325.489386,
+        "data": "{'stream_type': 'content', 'stream_data': '{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"他总这样确实挺让人头疼的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031325.4898071,
+        "stream_id": "mood_msg_853f7bd3-08d7-4258-924a-8d1a228f9a70",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "{\"content_type\": \"AI_MESSAGE\", \"messages\": [\"他总这样确实挺让人头疼的\", \"你一定觉得很无力吧\", \"要不要和我说"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031325.526314,
+        "count": 4,
+        "data": "{'stream_id': 'mood_msg_853f7bd3-08d7-4258-924a-8d1a228f9a70', 'timestamp': '2026-04-01T16:15:25.523"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031327.290635,
+        "stream_id": "mood_msg_853f7bd3-08d7-4258-924a-8d1a228f9a70",
+        "stream_type": "sentence_audio",
+        "has_data": true,
+        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031327.521596,
+        "stream_id": "mood_msg_853f7bd3-08d7-4258-924a-8d1a228f9a70",
+        "stream_type": "sentence_audio",
+        "has_data": true,
+        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031327.82732,
+        "stream_id": "mood_msg_853f7bd3-08d7-4258-924a-8d1a228f9a70",
+        "stream_type": "sentence_audio",
+        "has_data": true,
+        "data_preview": "https://minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com/audio%2Feffect%2F"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031374.1630442,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031374.163332
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031391.331611,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "先接住这个情绪。小白——是你的男朋友吗？"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031391.338444,
+        "count": 5,
+        "data": "{'stream_id': '48cda4c2-5de0-4e65-bb4b-9ac7adb06709', 'timestamp': '2026-04-01T16:16:31.337688', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775031392.343364,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775031392.343742
+      },
+      {
+        "event": "event_response",
+        "ts": 1775031418.614377,
+        "stream_id": "48cda4c2-5de0-4e65-bb4b-9ac7adb06709",
+        "stream_type": "content",
+        "has_data": true,
+        "data_preview": "那就好。今天的事记下来了，有需要随时来。"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775031418.63117,
+        "count": 6,
+        "data": "{'stream_id': '48cda4c2-5de0-4e65-bb4b-9ac7adb06709', 'timestamp': '2026-04-01T16:16:58.629922', 'ch"
+      }
+    ],
+    "about_self": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "sections": {
+            "my_now": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_future": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_story": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_core": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            }
+          },
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "relations": []
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations_xiaobo": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "name": "小白",
+          "text": "暂无相关记忆。",
+          "memory_ids": [],
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    }
+  },
+  "functional_checks": {
+    "auth_200": true,
+    "socket_connected": true,
+    "ai_reply_received": true,
+    "about_self_200": true,
+    "about_relations_200": true,
+    "xiaobo_profile_found": true,
+    "xiaobo_relation_type_correct": false,
+    "rapid_fire_merged": true,
+    "workspace_user_md_updated": true,
+    "workspace_people_created": true
+  },
+  "passed_checks": 9,
+  "total_checks": 10,
+  "errors": [],
+  "steps_completed": 10,
+  "steps_total": 10,
+  "p1_mbti_in_reply": [
+    {
+      "turn": "T1",
+      "mbti": false
+    },
+    {
+      "turn": "T2",
+      "mbti": false
+    },
+    {
+      "turn": "T6",
+      "mbti": false
+    },
+    {
+      "turn": "T7",
+      "mbti": false
+    }
+  ],
+  "workspace_user_md_mtime": 1775031415.738209,
+  "workspace_people_files": [
+    "小白.md"
+  ],
+  "p1_summary": "0/4 轮回复含 MBTI 引导"
+}
