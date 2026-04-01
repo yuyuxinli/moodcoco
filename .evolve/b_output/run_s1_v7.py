@@ -213,23 +213,23 @@ async def run_s1():
     # 所有服务器事件（捕获所有类型）
     all_server_events = []
 
-    @sio.event
+    @sio.event  # type: ignore[misc]
     async def connect():  # type: ignore[misc]
         nonlocal socket_connected
         socket_connected = True
         print("  OK Socket.IO connected")
 
-    @sio.event
+    @sio.event  # type: ignore[misc]
     async def connect_error(data):  # type: ignore[misc]
         print(f"  FAIL connect_error: {data}")
 
-    @sio.event
+    @sio.event  # type: ignore[misc]
     async def disconnect():  # type: ignore[misc]
         print("  Socket.IO disconnected")
 
     # ── 捕获所有事件 ──────────────────────────────────────────────────────────
 
-    @sio.on("event_response")  # type: ignore
+    @sio.on("event_response")  # type: ignore[misc]
     async def _on_event_response(data):  # type: ignore[misc]
         try:
             payload = data.get("payload", data) if isinstance(data, dict) else {}
@@ -262,7 +262,7 @@ async def run_s1():
         except Exception as e:
             print(f"  [warn] on_event_response: {e}")
 
-    @sio.on("event_processing_end")  # type: ignore
+    @sio.on("event_processing_end")  # type: ignore[misc]
     async def _on_event_processing_end(data):  # type: ignore[misc]
         nonlocal processing_end_count
         processing_end_count += 1
@@ -275,28 +275,28 @@ async def run_s1():
         current_done_event.set()
         print(f"  <- event_processing_end #{processing_end_count}")
 
-    @sio.on("message")  # type: ignore
+    @sio.on("message")  # type: ignore[misc]
     async def _on_message(data):  # type: ignore[misc]
         all_server_events.append({"event": "message", "ts": time.time(), "data": str(data)[:100]})
         current_done_event.set()
 
-    @sio.on("error")  # type: ignore
+    @sio.on("error")  # type: ignore[misc]
     async def _on_error(data):  # type: ignore[misc]
         print(f"  [server error] {data}")
         all_server_events.append({"event": "error", "data": str(data)[:200], "ts": time.time()})
         current_done_event.set()
 
-    @sio.on("event_processing_start")  # type: ignore
-    async def _on_processing_start(*_):  # type: ignore[misc]
+    @sio.on("event_processing_start")  # type: ignore[misc]
+    async def _on_processing_start():  # type: ignore[misc]
         all_server_events.append({"event": "event_processing_start", "ts": time.time()})
         print("  <- event_processing_start")
 
-    @sio.on("message_buffered")  # type: ignore
-    async def _on_buffered(*_):  # type: ignore[misc]
+    @sio.on("message_buffered")  # type: ignore[misc]
+    async def _on_buffered():  # type: ignore[misc]
         all_server_events.append({"event": "message_buffered", "ts": time.time()})
         print("  <- message_buffered")
 
-    @sio.on("content_chunk")  # type: ignore
+    @sio.on("content_chunk")  # type: ignore[misc]
     async def _on_content_chunk(data):  # type: ignore[misc]
         all_server_events.append({"event": "content_chunk", "ts": time.time(), "data": str(data)[:100]})
         if isinstance(data, dict) and data.get("content"):
@@ -304,17 +304,17 @@ async def run_s1():
             if text:
                 current_text_parts.append(text)
 
-    @sio.on("action_result")  # type: ignore
+    @sio.on("action_result")  # type: ignore[misc]
     async def _on_action_result(data):  # type: ignore[misc]
         all_server_events.append({"event": "action_result", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- action_result: {str(data)[:100]}")
 
-    @sio.on("async_task_progress")  # type: ignore
+    @sio.on("async_task_progress")  # type: ignore[misc]
     async def _on_async_task_progress(data):  # type: ignore[misc]
         all_server_events.append({"event": "async_task_progress", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- async_task_progress: {str(data)[:100]}")
 
-    @sio.on("session_updated")  # type: ignore
+    @sio.on("session_updated")  # type: ignore[misc]
     async def _on_session_updated(data):  # type: ignore[misc]
         nonlocal session_id
         all_server_events.append({"event": "session_updated", "ts": time.time(), "data": str(data)[:200]})
@@ -326,7 +326,7 @@ async def run_s1():
             print(f"  [session_id updated to] {session_id}")
 
     # 注册所有其他事件的通用捕获器
-    @sio.on("*")  # type: ignore
+    @sio.on("*")  # type: ignore[misc]
     async def _on_any(event, data):  # type: ignore[misc]
         if event not in ("event_response", "event_processing_end", "event_processing_start",
                          "message", "error", "message_buffered", "content_chunk",
