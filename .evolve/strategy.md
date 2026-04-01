@@ -202,3 +202,84 @@ S1: 陌生人 — 首次接触
 - `about_relations` 硬编码空（Memory v2 迁移中，`list_relation_names()` 返回 `[]`，每日批处理任务未接入，无法通过对话修复）
 - `xiaobo_relation_type_correct`：依赖 about_relations，同上，永久 FAIL
 - 以上两项对应功能验证 -1 分（无法消除）
+
+---
+
+### 2026-04-01 — S1 eval v6: FAIL (7/5/7, total 6.3)
+
+**决策：Decompose（workspace 写入阻断根本未解决，需要拆解子任务单独攻坚）**
+
+#### 当前分数
+
+| 维度 | 分数 | 阈值 | 达标 |
+|------|------|------|------|
+| 功能验证 | 7/10 | 8.0 | fail |
+| 数据正确性 | 5/10 | 8.0 | fail |
+| 对话质量 | 7/10 | 8.0 | fail |
+| **总分** | **6.3** | - | **fail** |
+
+独立评估器（gpt-5.4）对话质量评分：**6分**（低于 C Agent 自评 7 分，主因 JSON 格式污染 + 结尾温度不足）
+
+#### 轨迹分析
+
+- v1: 4.0（基线）
+- v2-v3: 7.3（两轮持平）
+- v5: 6.7（首次下降）
+- v6: 6.3（继续下降）
+- 趋势：rising → flat → falling → falling，判定 **Decompose**
+
+#### 根因分析
+
+**功能验证 7 分（与 v5 持平，70% = 7/10）**：
+- P0 依然未修复：workspace_user_md_updated = false，workspace_people_created = false
+- workspace_user_md_mtime = 1774938869（约18小时前），不是本次测试时间（1775028103），说明 B Agent 的 GATEWAY_TOKEN 修复在 v6 依然未生效
+- 三个 FAIL 项：xiaobo_relation_type_correct（永久）+ 两个 workspace 检查项（P0 阻断）
+
+**数据正确性 5 分（下降 1 分，v5 也是 6 分）**：
+- workspace 全空，与 v5 相同
+- 新增严重问题：Turn 3-5 ai_responses 中出现 JSON 格式污染，`{"content_type": "AI_MESSAGE", "messages": [...]}` 字符串被直接拼入用户可见回复文本，数据污染属于格式错误
+- about_self 全4个 section 依然"暂无相关记忆。"
+
+**对话质量 7 分（与 v5 持平）**：
+- 改善：Turn 6 安全边界大幅改善（v5 "他这样真的很过分" → v6 执行 AGENTS.md §0.5 人名消歧"你说的小白，是男朋友小凯吗？"），正确
+- 仍然存在：Turn 1 中置信度规则未执行（"好烦"→应为二选一试探，实际给时态询问"吵完了还是正在吵？"）
+- 仍然存在：Turn 2 开放式问句（"他这么说，你什么感觉？"），情绪命名缺位
+- 仍然存在：Turn 7 结尾温度不足（"不客气。下次烦的时候再来。"）
+- JSON 格式污染对话质量影响较小（Turn 3-5 实际情绪内容正确），不额外扣分
+
+#### P0 阻断根因——workspace 写入 (B Agent v6 报告 8ba44ee)
+
+根据 B Agent v6 提交记录，B Agent 声称已修复 GATEWAY_TOKEN 并设置 USE_OPENCLAW_CHAT=True，但 workspace_user_md_mtime 时间戳显示文件未更新。可能根因：
+1. B Agent 修复了代码但后端服务未重启生效
+2. GATEWAY_TOKEN 值配置错误（仍然是空或错误值）
+3. chat_proxy.py 中 x-openclaw-scopes 头仍有问题（v6 提交显示已添加但效果待验证）
+4. workspace 路径配置错误（文件写入了错误位置）
+
+#### B Agent v7 具体操作指南
+
+**优先级 P0：直接验证并修复 workspace 写入**
+
+1. **验证当前 workspace 写入状态**：
+   - 直接检查后端 .env：`cat /Users/jianghongwei/Documents/psychologists/backend/.env | grep -E "USE_OPENCLAW|GATEWAY"`
+   - 查看运行中进程：`ps aux | grep uvicorn`
+   - 发送一条测试消息，在后端日志中确认是否有 workspace tool call 触发
+
+2. **定位 JSON 格式污染根因**：
+   - 检查 run_s1_v6.py 中 Turn 3-5 回复解析逻辑：ai_responses 中为什么 JSON 字符串会混入用户可见文本
+   - 可能是 ChatProxy 返回 AI_MESSAGE 格式但解析器将整个 JSON 字符串当成文本拼接
+   - 修复：在解析 ai_responses 时，如果内容是 JSON 格式，提取 `messages` 数组而不是返回原始字符串
+
+3. **修复对话质量问题（P1）**：
+   - Turn 1 中置信度二选一试探：确认运行时 AGENTS.md 中 §1 命名vs提问决策树是否存在于运行时 workspace
+   - 路径：检查 `/Users/jianghongwei/Documents/psychologists/backend/ai-companion/ai-companion/AGENTS.md` 是否包含"中置信度：二选一试探，用省略号制造停顿"规则
+   - Turn 7 结尾：在 AGENTS.md 的对话风格章节添加"对话自然结束时，给出有温度的收尾（如'好好休息，有什么随时来'），不能只说'不客气'"
+
+4. **重跑 S1 测试（v7）**：
+   - 确认后端服务已重启（workspace 写入才能生效）
+   - 目标：功能验证 ≥ 8（workspace 两项 FAIL 修复）、数据正确性 ≥ 8、对话质量 ≥ 8
+
+#### 已知限制（永久注记，不计入 B Agent 改进方向）
+
+- `about_relations` 硬编码空（Memory v2 迁移中）
+- `xiaobo_relation_type_correct`：依赖 about_relations，同上，永久 FAIL
+- 以上两项对应功能验证 -1 分（无法消除）
