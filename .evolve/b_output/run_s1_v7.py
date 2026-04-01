@@ -287,12 +287,12 @@ async def run_s1():
         current_done_event.set()
 
     @sio.on("event_processing_start")  # type: ignore
-    async def on_processing_start(data):
+    async def on_processing_start(_data):
         all_server_events.append({"event": "event_processing_start", "ts": time.time()})
         print("  <- event_processing_start")
 
     @sio.on("message_buffered")  # type: ignore
-    async def on_buffered(data):
+    async def on_buffered(_data):
         all_server_events.append({"event": "message_buffered", "ts": time.time()})
         print("  <- message_buffered")
 
@@ -326,7 +326,7 @@ async def run_s1():
             print(f"  [session_id updated to] {session_id}")
 
     # 注册所有其他事件的通用捕获器
-    @sio.on("*")
+    @sio.on("*")  # type: ignore
     async def on_any(event, data):
         if event not in ("event_response", "event_processing_end", "event_processing_start",
                          "message", "error", "message_buffered", "content_chunk",
@@ -543,13 +543,13 @@ async def run_s1():
 
     # ── workspace 检查（修复：使用运行时 workspace 路径）────────────────────────
     import os
+    test_start_ts: float = result.get("_test_start_ts", 0) or 0.0
     print(f"[S1v7] Workspace 检查 (runtime: {RUNTIME_WORKSPACE}):")
 
     # USER.md 修改时间检查
     user_md_path = os.path.join(RUNTIME_WORKSPACE, "USER.md")
     if os.path.exists(user_md_path):
         user_md_mtime = os.path.getmtime(user_md_path)
-        test_start_ts = result.get("_test_start_ts", 0)
         if user_md_mtime > test_start_ts:
             result["functional_checks"]["workspace_user_md_updated"] = True
             print(f"  OK USER.md 已更新: mtime={user_md_mtime:.0f} > test_start={test_start_ts:.0f}")
@@ -608,8 +608,6 @@ async def run_s1():
 
 
 if __name__ == "__main__":
-    import sys
-    import time as _time
     result = asyncio.run(run_s1())
 
     out_path = "/Users/jianghongwei/Documents/moodcoco/.evolve/b_output/S1_raw_v7.json"
