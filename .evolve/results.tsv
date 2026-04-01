@@ -1,3 +1,4 @@
 commit	phase	feature	scores	total	status	summary
 f26738b	build	S1	-	-	keep	执行了 10/10 步骤，通过 7/8 功能检查：auth/socket/AI回复/about_self/about_relations/xiaobo_found/rapid_merged 全通，xiaobo_relation_type_correct 未通过（档案暂无记忆）
 0fe8320	eval	S1	7/2/3	4.0	fail	对话质量 below threshold
+1e302bc	build	S1	-	-	keep	B agent 调查根因：P0=list_relation_names硬编码返回空(Memory v2迁移中)，P1=CHAT session_type误用已修复；重新执行S1 7/8通过
