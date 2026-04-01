@@ -1,0 +1,2 @@
+commit	phase	feature	scores	total	status	summary
+f26738b	build	S1	-	-	keep	执行了 10/10 步骤，通过 7/8 功能检查：auth/socket/AI回复/about_self/about_relations/xiaobo_found/rapid_merged 全通，xiaobo_relation_type_correct 未通过（档案暂无记忆）
