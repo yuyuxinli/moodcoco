@@ -164,6 +164,13 @@ openclaw agent --agent coco --local --thinking high
 | growth-story | 成长叙事检测 | INT/IMA |
 | weekly-reflection | 周回顾 | Ash insights |
 
+## 工程经验
+
+### 使用 Evolve 的注意事项
+
+- **任务粒度要细**：每个 Feature 拆得越小，迭代越快。10 个小任务比 5 个大任务效果好——更容易定位失败原因、更快收到反馈、单轮 B/C Agent 工作量更可控。
+- 建议每个 Feature 对应 1 个具体的用户操作序列（如"发一条消息 + 验证回复格式"），而不是"完整旅程"。
+
 ## 联系方式
 
 | 姓名 | 角色 | 联系方式 |
