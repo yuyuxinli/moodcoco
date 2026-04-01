@@ -4,3 +4,4 @@ f26738b	build	S1	-	-	keep	执行了 10/10 步骤，通过 7/8 功能检查：aut
 1e302bc	build	S1	-	-	keep	B agent 调查根因：P0=list_relation_names硬编码返回空(Memory v2迁移中)，P1=CHAT session_type误用已修复；重新执行S1 7/8通过
 fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评; 数据正确性6(USE_OPENCLAW_CHAT=False); 对话质量7(中置信度试探缺失)
 fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评(v2); 数据正确性6(workspace写入失效); 对话质量7(中置信度分叉缺失+太过分了越界)
+d7435e0	build	S1	-	-	keep	v5 USE_OPENCLAW_CHAT=True; OPENCLAW_GATEWAY_TOKEN空导致Bearer错误; ai_reply全部失败; workspace写入未生效; 需设置GATEWAY_TOKEN

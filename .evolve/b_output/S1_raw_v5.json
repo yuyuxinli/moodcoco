@@ -1,0 +1,60 @@
+{
+  "feature": "S1",
+  "version": "v5",
+  "timestamp": "2026-04-01T06:20:29.769767+00:00",
+  "use_openclaw_chat": true,
+  "root_cause": "OPENCLAW_GATEWAY_TOKEN=empty => Bearer header empty => ChatProxy error",
+  "functional_checks": {
+    "auth_200": true,
+    "socket_connected": true,
+    "ai_reply_received": false,
+    "about_self_200": true,
+    "about_relations_200": true,
+    "xiaobo_profile_found": true,
+    "xiaobo_relation_type_correct": false,
+    "rapid_fire_merged": false
+  },
+  "pass_count": 4,
+  "total_checks": 8,
+  "conversations": [
+    {
+      "turn": 1,
+      "user": "我刚跟男朋友吵了一架，好烦",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b\"Bearer \""
+    },
+    {
+      "turn": 2,
+      "user": "他说我太敏感了，每次都这样说我",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b\"Bearer \""
+    },
+    {
+      "turn": "3_5",
+      "user": [
+        "我真的很生气",
+        "他每次都这样",
+        "我不知道该怎么办"
+      ],
+      "ai_responses": [
+        "error x3"
+      ],
+      "rapid_fire_merged": false
+    },
+    {
+      "turn": 6,
+      "user": "小白就是这样，从来不考虑我的感受",
+      "ai_response": "error"
+    },
+    {
+      "turn": 7,
+      "user": "好了我好一点了，谢谢你",
+      "ai_response": "error"
+    }
+  ],
+  "workspace_status": {
+    "people_dir_exists": false,
+    "user_md_modified_after_test": false,
+    "db_workspace_files_table_exists": false,
+    "note": "workspace_files table not found in DB; people/ dir not created"
+  },
+  "fix_needed": "Set OPENCLAW_GATEWAY_TOKEN in config/.env"
+}
