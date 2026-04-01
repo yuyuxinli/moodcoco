@@ -1,18 +1,1 @@
 commit	phase	feature	scores	total	status	summary
-f26738b	build	S1	-	-	keep	执行了 10/10 步骤，通过 7/8 功能检查：auth/socket/AI回复/about_self/about_relations/xiaobo_found/rapid_merged 全通，xiaobo_relation_type_correct 未通过（档案暂无记忆）
-0fe8320	eval	S1	7/2/3	4.0	fail	对话质量 below threshold
-1e302bc	build	S1	-	-	keep	B agent 调查根因：P0=list_relation_names硬编码返回空(Memory v2迁移中)，P1=CHAT session_type误用已修复；重新执行S1 7/8通过
-fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评; 数据正确性6(USE_OPENCLAW_CHAT=False); 对话质量7(中置信度试探缺失)
-fa951f6	eval	S1	9/6/7	7.3	fail	基于v4 MOOD session重评(v2); 数据正确性6(workspace写入失效); 对话质量7(中置信度分叉缺失+太过分了越界)
-d7435e0	build	S1	-	-	keep	v5 USE_OPENCLAW_CHAT=True; OPENCLAW_GATEWAY_TOKEN空导致Bearer错误; ai_reply全部失败; workspace写入未生效; 需设置GATEWAY_TOKEN
-c1e7530	build	S1	-	-	keep	v5: 旧ChatEngine路径(USE_OPENCLAW_CHAT=False) 7/10通过；ChatProxy路径阻断(HTTP API需device token非shared secret)
-0b386f6	eval	S1	7/6/7	6.7	fail	v5评估: 功能验证7(7/10,新增workspace检查项均失败); 数据正确性6(workspace全空,USE_OPENCLAW_CHAT=False); 对话质量7(中置信度分叉缺失+安全边界越界+早给建议); 独立评估器gpt-5.4=7; Pivot决策
-1f930a2	build	S1	-	-	keep	P0 FIXED: OpenClaw 2026.3.28需x-openclaw-scopes:operator.write头 | chat_proxy.py+.env已修复 | AGENTS.md一致 | 7/10 checks (workspace写入待C评估)
-e5e5b5b	eval	S1	7/5/7	6.3	fail	v6评估: 功能验证7(7/10,workspace写入仍失效); 数据正确性5(workspace全空+JSON格式污染Turn3-5); 对话质量7(Turn6安全边界修复+消歧正确,但中置信度分叉缺失+结尾温度不足); 独立评估器gpt-5.4=6; Decompose决策
-df875c1	build	S1	-	-	keep	workspace写入根因=model不遵循write iron rules(people/小白.md未创建) + JSON污染已修复(extract_text_from_stream_data) + AGENTS.md已同步 + v7 7/10 checks
-686af41	eval	S1	7/6/7	6.7	fail	v7评估: 功能验证7(7/10,workspace写入仍失效); 数据正确性6(JSON污染修复+1,workspace全空); 对话质量7(Turn6人名消歧改善,Turn1中置信度第4次未执行); 决策Force-Write=后端强制写入(方向C)
-ed03158	build	S1	-	-	keep	P0方案B生效: RULE-ZERO注入正确workspace AGENTS.md，workspace_user_md_updated+people_created均PASS; P1中置信度反例已加; v8 9/10 checks PASS(唯一FAIL=xiaobo_relation_type_correct为批处理API非实时)
-ed03158	eval	S1	9/7/7	7.7	fail	v8评估: 功能验证9(9/10,workspace两项PASS); 数据正确性7(workspace写入生效+小白.md有内容,but about_self全空批处理限制+小白.md简略); 对话质量7(Turn6人名消歧正确+workspace写入PASS,Turn1中置信度第5次未执行空回复+Turn7收尾无具体细节); 独立评估器gpt-5.4=4(Turn1空回复扣分严); Continue决策
-40d31e4	build	S1	-	-	keep	Turn1根因=首轮时态确认非情绪分叉(连续6次); workspace 9/10 PASS; Turn7收尾有具体回指(小白说你太敏感这件事); Turn6改为提问不做评判; P1中置信度T3-5有分叉苗头
-71938f5	build	S1	-	-	keep	Turn1空回复根因=首轮memory_search silent tool call触发event_processing_end，修复=收到end但content空时继续等待；AGENTS.md收尾回指强化RULE-ZERO+对话结束规则双重写入；9/10 checks PASS
-6337d27	eval	S1	9/7/7	7.7	fail	v9评估: 功能验证9(9/10 PASS); 数据正确性7(小白.md情绪轨迹改善+小白表面生气底下委屈,about_self全空批处理限制); 对话质量7(T1中置信度二选一试探首次成功执行,T2追问有层次,T7空回复新P0-RULE-ZERO写入了但未生成收尾文字); 独立评估器gpt-5.4=6; Continue决策
