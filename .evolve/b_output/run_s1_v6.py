@@ -171,7 +171,7 @@ async def run_s1():
 
     # ── 捕获所有事件 ──────────────────────────────────────────────────────────
 
-    @sio.on("event_response")
+    @sio.on("event_response")  # type: ignore
     async def on_event_response(data):
         try:
             payload = data.get("payload", data) if isinstance(data, dict) else {}
@@ -189,7 +189,7 @@ async def run_s1():
         except Exception as e:
             print(f"  [warn] on_event_response: {e}")
 
-    @sio.on("event_processing_end")
+    @sio.on("event_processing_end")  # type: ignore
     async def on_event_processing_end(data):
         nonlocal processing_end_count
         processing_end_count += 1
@@ -202,44 +202,44 @@ async def run_s1():
         current_done_event.set()
         print(f"  <- event_processing_end #{processing_end_count}")
 
-    @sio.on("message")
+    @sio.on("message")  # type: ignore
     async def on_message(data):
         all_server_events.append({"event": "message", "ts": time.time(), "data": str(data)[:100]})
         current_done_event.set()
 
-    @sio.on("error")
+    @sio.on("error")  # type: ignore
     async def on_error(data):
         print(f"  [server error] {data}")
         all_server_events.append({"event": "error", "data": str(data)[:200], "ts": time.time()})
         current_done_event.set()
 
-    @sio.on("event_processing_start")
+    @sio.on("event_processing_start")  # type: ignore
     async def on_processing_start(data):
         all_server_events.append({"event": "event_processing_start", "ts": time.time()})
         print("  <- event_processing_start")
 
-    @sio.on("message_buffered")
+    @sio.on("message_buffered")  # type: ignore
     async def on_buffered(data):
         all_server_events.append({"event": "message_buffered", "ts": time.time()})
         print("  <- message_buffered")
 
-    @sio.on("content_chunk")
+    @sio.on("content_chunk")  # type: ignore
     async def on_content_chunk(data):
         all_server_events.append({"event": "content_chunk", "ts": time.time(), "data": str(data)[:100]})
         if isinstance(data, dict) and data.get("content"):
             current_content_parts.append(data["content"])
 
-    @sio.on("action_result")
+    @sio.on("action_result")  # type: ignore
     async def on_action_result(data):
         all_server_events.append({"event": "action_result", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- action_result: {str(data)[:100]}")
 
-    @sio.on("async_task_progress")
+    @sio.on("async_task_progress")  # type: ignore
     async def on_async_task_progress(data):
         all_server_events.append({"event": "async_task_progress", "ts": time.time(), "data": str(data)[:200]})
         print(f"  <- async_task_progress: {str(data)[:100]}")
 
-    @sio.on("session_updated")
+    @sio.on("session_updated")  # type: ignore
     async def on_session_updated(data):
         nonlocal session_id
         all_server_events.append({"event": "session_updated", "ts": time.time(), "data": str(data)[:200]})
