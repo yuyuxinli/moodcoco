@@ -26,6 +26,9 @@ FRONTEND_TYPES = (
     PSYCHOLOGISTS_ROOT / "frontend" / "miniprogram" / "types" / "chat.ts"
 )
 PYTHON_TOOLS_DIR = PSYCHOLOGISTS_ROOT / "backend" / "tools"
+UI_TOOLS_TS = (
+    PSYCHOLOGISTS_ROOT / "backend" / "openclaw_bridge" / "adapters" / "ui_tools.ts"
+)
 
 # AI Tool content_types that are only used by backend systems, not output by LLM
 SYSTEM_INTERNAL_TYPES = {
@@ -464,4 +467,56 @@ class TestEvalS1Validity:
         )
         assert "模式识别引用 2 个事件" not in rubric_text, (
             "对话质量 scoring_rubric should not contain '模式识别引用 2 个事件'"
+        )
+
+
+# ---------------------------------------------------------------------------
+# OpenClaw Plugin 注册完整性
+# ---------------------------------------------------------------------------
+
+
+class TestPluginRegistration:
+    """验证 ui_tools.ts 注册的 Tool 与 Python tool_registry 一致。"""
+
+    @staticmethod
+    def _parse_ui_tools_ts() -> Set[str]:
+        text = UI_TOOLS_TS.read_text(encoding="utf-8")
+        return set(re.findall(r'name:\s*"(ai_\w+)"', text))
+
+    @staticmethod
+    def _parse_python_tool_names() -> Set[str]:
+        names: Set[str] = set()
+        for py_file in PYTHON_TOOLS_DIR.rglob("ai_*.py"):
+            if py_file.name == "__init__.py":
+                continue
+            stem = py_file.stem
+            names.add(stem)
+        return names
+
+    def test_all_python_tools_registered_in_plugin(self):
+        """Every Python UI Tool must have a matching entry in ui_tools.ts."""
+        python_names = self._parse_python_tool_names()
+        plugin_names = self._parse_ui_tools_ts()
+        missing = python_names - plugin_names
+        assert not missing, (
+            f"Python Tools not registered in OpenClaw Plugin ui_tools.ts: {sorted(missing)}"
+        )
+
+    def test_no_phantom_plugin_tools(self):
+        """ui_tools.ts should not register tools that don't exist in Python."""
+        python_names = self._parse_python_tool_names()
+        plugin_names = self._parse_ui_tools_ts()
+        phantom = plugin_names - python_names
+        assert not phantom, (
+            f"Plugin registers tools with no Python implementation: {sorted(phantom)}"
+        )
+
+    def test_plugin_tool_count_matches_python(self):
+        """Plugin and Python should have the same number of UI Tools."""
+        python_names = self._parse_python_tool_names()
+        plugin_names = self._parse_ui_tools_ts()
+        assert len(plugin_names) == len(python_names), (
+            f"Plugin has {len(plugin_names)} tools, Python has {len(python_names)}: "
+            f"plugin_only={sorted(plugin_names - python_names)}, "
+            f"python_only={sorted(python_names - plugin_names)}"
         )
