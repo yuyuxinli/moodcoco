@@ -326,3 +326,173 @@
     [PASS] workspace_user_md_updated
     [PASS] workspace_people_created
 === P1 追踪: 0/4 轮回复含 MBTI 引导
+Task exception was never retrieved
+future: <Task finished name='Task-10' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-15' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-21' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-22' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_buffered() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_buffered() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-23' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_buffered() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_buffered() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-30' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-38' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+Task exception was never retrieved
+future: <Task finished name='Task-43' coro=<AsyncClient._handle_eio_message() done, defined at /Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py:563> exception=TypeError('run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given')>
+Traceback (most recent call last):
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 580, in _handle_eio_message
+    await self._handle_event(pkt.namespace, pkt.id, pkt.data)
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 417, in _handle_event
+    r = await self._trigger_event(data[0], namespace, *data[1:])
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/jianghongwei/.pyenv/versions/3.12.2/lib/python3.12/site-packages/socketio/async_client.py", line 472, in _trigger_event
+    ret = await handler(*args)
+                ^^^^^^^^^^^^^^
+TypeError: run_s1.<locals>._on_processing_start() takes 0 positional arguments but 1 was given
+[S1v9] Step 1: POST /api/auth/guest/session
+  OK Auth: user_id=305d8e9b-5c3d-41b8-a6cc-c9e15fe007df
+[S1v9] 预备: POST /api/chat/sessions 创建 MOOD 会话
+  HTTP session create: status=201, resp={'session_id': 'd9fd0644-d607-4a4d-80f2-aa2d4e9e82ee', 'title': 'S1 首次接触测试', 'summary': 'S1 首次接触测试', 'session_type': 'MOOD', 'thinking_mode': False, 'is_archived': False, 'created_at': '2026-04-01T08:
+  OK Session (MOOD): session_id=d9fd0644-d607-4a4d-80f2-aa2d4e9e82ee
+[S1v9] Step 2: 连接 Socket.IO (session=d9fd0644-d607-4a4d-80f2-aa2d4e9e82ee, type=mood)
+  OK Socket.IO connected
+  <- UNKNOWN EVENT: connection_established | {'client_id': 'a3baff86-8ef0-483c-ad23-d6cfb43454d0', 'connection_id': '305d8e9b-5c3d-41b8-a6cc-c9e1
+[S1v9] Step 3: Turn 1 - 初次倾诉
+  -> send(T1): 我刚跟男朋友吵了一架，好烦
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  <- event_processing_end #1 [has content, done]
+  <- reply(T1): 吵架之后那种烦，真的挺难受的。
+
+你是生气多一点，还是更像……委屈？
+[S1v9] Step 4: Turn 2 - 被说太敏感
+  -> send(T2): 他说我太敏感了，每次都这样说我
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  <- event_processing_end #2 [has content, done]
+  <- reply(T2): "每次都这样"——你有没有注意到，你说了两遍"每次"了。
+
+他这样说的时候，你最难受的是哪部分？是他不觉得你该有这种感觉，还是他觉得你"不该这样"？
+[S1v9] Step 5: Turn 3-5 - 快速连发 (< 1s interval)
+  -> rapid send: 我真的很生气
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  -> rapid send: 他每次都这样
+  -> rapid send: 我不知道该怎么办
+  Waiting for rapid-fire responses (max 60s)...
+  <- event_processing_end #3 [has content, done]
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  <- event_processing_end #4 [has content, done]
+[S1v9] Step 6: Turn 6 - 提及小白
+  -> send(T6): 小白就是这样，从来不考虑我的感受
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  <- event_processing_end #5 [has content, done]
+  <- reply(T6): 小白……是你朋友吗？还是？
+
+你说"从来"——这种感觉以前也有过？
+[S1v9] Step 7: Turn 7 - 道别
+  -> send(T7): 他就是小白，是我男朋友。好了我好一点了，谢谢你
+  <- UNKNOWN EVENT: message_received | {'event_type': 'user_message'}
+  [timeout] T7 超时 30s
+  <- reply(T7): [empty]
+[S1v9] 等待 workspace 写入 (10s)...
+  Socket.IO disconnected
+[S1v9] Step 8: GET /api/about/self
+  OK about/self: {'status': 'success', 'data': {'sections': {'my_now': {'text': '暂无相关记忆。', 'memory_ids': []}, 'my_future': {'text': '暂无相关记忆。', 'memory_ids': []}, 'my_story': {'text': '暂无相关记忆。', 'memory_ids': []}, 'my_
+[S1v9] Step 9: GET /api/about/relations
+  OK about/relations, 未发现'小白' (需要 >= 100 条消息后凌晨4点批处理)
+  内容: {"status": "success", "data": {"relations": []}, "cache_hit": true}
+  [P0 NOTE] about/relations 数据: {"status": "success", "data": {"relations": []}, "cache_hit": true}
+[S1v9] Step 10: GET /api/about/relations/小白
+  OK 小白档案: {"status": "success", "data": {"name": "小白", "text": "暂无相关记忆。", "memory_ids": [], "generated_at": null, "source": null}, "cache_hit": true}
+[S1v9] Workspace 检查 (runtime: /Users/jianghongwei/Documents/moodcoco/ai-companion):
+  OK USER.md 已更新: mtime=1775032734 > test_start=1775032570
+  OK people/ 存在且含小白档案: ['小白.md']
+
+  [P1 SUMMARY] 0/4 轮回复含 MBTI 引导
+
+=== 结果已保存到: /Users/jianghongwei/Documents/moodcoco/.evolve/b_output/S1_raw_v9.json
+=== 通过检查: 9/10
+=== 完成步骤: 10/10
+=== 功能检查详情:
+    [PASS] auth_200
+    [PASS] socket_connected
+    [PASS] ai_reply_received
+    [PASS] about_self_200
+    [PASS] about_relations_200
+    [PASS] xiaobo_profile_found
+    [FAIL] xiaobo_relation_type_correct
+    [PASS] rapid_fire_merged
+    [PASS] workspace_user_md_updated
+    [PASS] workspace_people_created
+=== P1 追踪: 0/4 轮回复含 MBTI 引导
