@@ -76,7 +76,11 @@ async def test_p4b_settings_update(http_client: httpx.AsyncClient):
     verify = await http_client.get("/api/setting/me")
     assert verify.status_code == 200
     data = verify.json()
-    print(f"[P4B] Settings after update: {str(data)[:300]}")
+    inner = data.get("data", data)
+    assert inner.get("remember_about_me") is True, (
+        f"Settings round-trip failed: remember_about_me should be True. Got: {inner}"
+    )
+    print(f"[P4B] Settings round-trip ✓: {str(inner)[:200]}")
 
 
 async def test_p4b_growth_narrative(
@@ -125,3 +129,33 @@ async def test_p4b_c_user_me_contract(http_client: httpx.AsyncClient):
         f"user/me missing id. Keys: {list(data.keys())}"
     )
     print(f"[P4B-C] user/me contract ✓: {list(data.keys())}")
+
+
+async def test_p4b_c_settings_contract(http_client: httpx.AsyncClient):
+    """settings 契约：包含 remember_about_me 等开关字段。"""
+    resp = await http_client.get("/api/setting/me")
+    assert resp.status_code == 200
+    data = resp.json()
+    inner = data.get("data", data)
+    assert "remember_about_me" in inner, (
+        f"settings missing remember_about_me. Keys: {list(inner.keys())}"
+    )
+    print(f"[P4B-C] settings contract ✓: {list(inner.keys())}")
+
+
+async def test_p4b_c_growth_narrative_quality():
+    """成长叙事质量：AI 应引用具体变化，不是空洞鼓励。"""
+    reply = _replies.get("growth")
+    if not reply:
+        pytest.skip("growth narrative not available")
+
+    text = reply.full_text
+    empty_encouragements = ["你做得很好", "继续加油", "你很棒", "保持下去"]
+    is_only_empty = text.strip() in empty_encouragements
+    assert not is_only_empty, (
+        f"Growth narrative is just empty encouragement: '{text}'"
+    )
+    assert len(text) > 20, (
+        f"Growth narrative too short to be meaningful: '{text}'"
+    )
+    print(f"[P4B-AI] Growth narrative quality: {text[:200]}")

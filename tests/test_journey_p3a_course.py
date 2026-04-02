@@ -318,7 +318,7 @@ async def test_p3a_practice_complete(
 
 
 async def test_p3a_completion_status(http_client: httpx.AsyncClient):
-    """GET /api/lesson/{id}/completion-status 检查完成状态。"""
+    """GET /api/lesson/{id}/completion-status — 微课和对话应标记完成。"""
     lesson_id = _state.get("lesson_id")
     if not lesson_id:
         pytest.skip("No lesson_id")
@@ -328,11 +328,16 @@ async def test_p3a_completion_status(http_client: httpx.AsyncClient):
 
     data = resp.json()
     inner = data.get("data", data)
-    print(f"[P3A] Completion status:")
-    print(f"  micro_done={inner.get('micro_done')}")
-    print(f"  practice_done={inner.get('practice_done')}")
-    print(f"  dialogue_done={inner.get('dialogue_done')}")
-    print(f"  lesson_done={inner.get('lesson_done')}")
+    assert inner.get("micro_done") is True, (
+        f"micro_done should be True after completing micro-lesson. Got: {inner.get('micro_done')}"
+    )
+    assert inner.get("dialogue_done") is True, (
+        f"dialogue_done should be True after completing dialogue. Got: {inner.get('dialogue_done')}"
+    )
+    print(f"[P3A] Completion status: micro={inner.get('micro_done')}, "
+          f"dialogue={inner.get('dialogue_done')}, "
+          f"practice={inner.get('practice_done')}, "
+          f"lesson={inner.get('lesson_done')}")
 
 
 async def test_p3a_overall_progress(http_client: httpx.AsyncClient):
@@ -343,8 +348,3 @@ async def test_p3a_overall_progress(http_client: httpx.AsyncClient):
     data = resp.json()
     progress = data.get("progress")
     print(f"[P3A] Overall progress: {str(progress)[:300]}")
-
-
-async def test_p3a_no_500_errors():
-    """全流程无 500 错误（meta-check）。"""
-    assert True, "All previous tests completed without 500 errors"

@@ -88,22 +88,33 @@ async def test_p4a_c_safety_no_motive_judgment():
 
 
 async def test_p4a_c_denial_handling():
-    """R3 否认处理：追问"哪里不同？"，不用数据反驳。"""
+    """R3 否认处理：不用数据反驳用户。"""
     r3 = _replies.get("R3")
     if not r3:
         pytest.skip("R3 not available")
 
     text = r3.full_text
     refute_patterns = [
-        "你之前说过",
         "数据显示",
-        "但其实",
-        "你自己说的",
+        "根据记录",
+        "但事实上",
     ]
     for pat in refute_patterns:
-        if pat in text:
-            print(f"[P4A-AI] WARNING: R3 may be refuting with data: '{pat}'")
+        assert pat not in text, (
+            f"R3 refutes user with data: '{pat}' in '{text[:200]}'"
+        )
+    print(f"[P4A-AI] R3 denial handling: no data refutation ✓")
 
-    exploratory = ["哪里不同", "怎么不同", "不一样", "区别", "你觉得"]
-    has_exploration = any(e in text for e in exploratory)
-    print(f"[P4A-AI] R3 denial handling: exploratory={has_exploration}")
+
+@pytest.mark.xfail(
+    reason="Migration gap: relation tracking not working.",
+    strict=False,
+)
+async def test_p4a_c_xiaojie_detail(http_client):
+    """GET /api/about/relations/小杰 返回小杰档案。"""
+    resp = await http_client.get("/api/about/relations/小杰")
+    assert resp.status_code == 200, f"HTTP {resp.status_code}: {resp.text[:200]}"
+    data = resp.json()
+    inner = data.get("data", data)
+    assert inner.get("name") == "小杰", f"Name mismatch: {inner}"
+    print(f"[P4A-C] 小杰 detail: {str(inner)[:300]}")

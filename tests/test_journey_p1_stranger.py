@@ -79,7 +79,7 @@ async def test_p1_b_full_conversation(
         assert len(r2.structured) > 0, "R2: No structured response"
         assert len(r2.full_text) > 10, f"R2 too short: {r2.full_text}"
 
-        # Step 4: burst — 快速连发
+        # Step 4: burst — 快速连发 3 条，验证合并回复
         burst = await _sio.send_burst([
             "我真的很生气",
             "他每次都这样",
@@ -88,6 +88,10 @@ async def test_p1_b_full_conversation(
         _replies["burst"] = burst
         print(f"[P1-burst] Responses: {len(burst.event_responses)}, "
               f"structured: {len(burst.structured)}")
+        assert len(burst.structured) < 3, (
+            f"Burst should merge responses: sent 3 messages but got "
+            f"{len(burst.structured)} structured replies (expected < 3)"
+        )
 
         # Wait for backend to finish processing burst before next message
         import asyncio
@@ -279,3 +283,31 @@ async def test_p1_c_stream_format():
         f"Response may not be streaming."
     )
     print(f"[P1-AI] Stream chunks: {len(reply.event_responses)}")
+
+
+async def test_p1_c_r3_name_recognition():
+    """R3 建档：提到"小白"后 AI 有所回应（识别人名）。"""
+    reply = _replies.get("R3")
+    if not reply:
+        pytest.skip("R3 not available")
+    assert len(reply.structured) > 0, (
+        "R3 (name recognition): AI did not produce a structured response "
+        "after user mentioned '小白'"
+    )
+    assert len(reply.full_text) > 5, (
+        f"R3 response too short to be meaningful: '{reply.full_text}'"
+    )
+
+
+@pytest.mark.xfail(
+    reason="Migration gap: OpenClaw does not persist messages for memory extraction.",
+    strict=False,
+)
+async def test_p1_c_relations_xiaobai_detail(http_client: httpx.AsyncClient):
+    """GET /api/about/relations/小白 返回小白档案详情。"""
+    resp = await http_client.get("/api/about/relations/小白")
+    assert resp.status_code == 200, f"HTTP {resp.status_code}: {resp.text[:200]}"
+    data = resp.json()
+    inner = data.get("data", data)
+    assert inner.get("name") == "小白", f"Name mismatch: {inner}"
+    print(f"[P1-C] 小白 detail: {str(inner)[:300]}")

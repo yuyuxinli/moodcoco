@@ -197,4 +197,47 @@ async def test_p2_c_mood_data_contract(http_client: httpx.AsyncClient):
 
     assert resp.status_code == 200
     data = resp.json()
+    assert "date" in data, f"Mood missing 'date' field: {data}"
+    assert "mood" in data, f"Mood missing 'mood' field: {data}"
+    assert "id" in data, f"Mood missing 'id' field: {data}"
     print(f"[P2-C] Mood data contract: {str(data)[:300]}")
+
+
+async def test_p2_c_cross_session_memory():
+    """R1 跨会话记忆：可可不重新自我介绍。"""
+    reply = _replies.get("R1")
+    if not reply:
+        pytest.skip("R1 not available")
+
+    text = reply.full_text
+    intro_patterns = ["你好，我是可可", "初次见面", "欢迎来到", "很高兴认识你", "我是你的"]
+    for pat in intro_patterns:
+        assert pat not in text, (
+            f"R1 re-introduces itself to returning user: '{pat}' in '{text[:200]}'"
+        )
+    print(f"[P2-AI] Cross-session memory: no re-introduction ✓")
+
+
+async def test_p2_c_relationship_context():
+    """R2 关系上下文：提到小白时带上次的情绪背景。"""
+    reply = _replies.get("R2")
+    if not reply:
+        pytest.skip("R2 not available")
+
+    text = reply.full_text
+    assert len(text) > 5, f"R2 too short: {text}"
+    print(f"[P2-AI] Relationship context response: {text[:200]}")
+
+
+@pytest.mark.xfail(
+    reason="Migration gap: relation extraction not working.",
+    strict=False,
+)
+async def test_p2_c_relations_xiaomei_detail(http_client: httpx.AsyncClient):
+    """GET /api/about/relations/小美 返回小美档案。"""
+    resp = await http_client.get("/api/about/relations/小美")
+    assert resp.status_code == 200, f"HTTP {resp.status_code}: {resp.text[:200]}"
+    data = resp.json()
+    inner = data.get("data", data)
+    assert inner.get("name") == "小美", f"Name mismatch: {inner}"
+    print(f"[P2-C] 小美 detail: {str(inner)[:300]}")

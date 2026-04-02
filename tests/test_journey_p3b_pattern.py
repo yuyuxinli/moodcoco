@@ -69,6 +69,29 @@ async def test_p3b_c_pattern_data(http_client):
     )
 
 
+async def test_p3b_c_pattern_recognition_in_conversation():
+    """R2 或 R3 中可可应指出重复模式（'每次'/'又'/'一样'等）。"""
+    all_text = ""
+    for label in ["R2", "R3"]:
+        r = _replies.get(label)
+        if r:
+            all_text += " " + r.full_text
+
+    if not all_text.strip():
+        pytest.skip("R2/R3 not available")
+
+    pattern_hints = [
+        "每次", "又", "一样", "重复", "同样", "总是", "模式",
+        "好几次", "规律", "循环", "来过这儿",
+    ]
+    has_pattern = any(hint in all_text for hint in pattern_hints)
+    assert has_pattern, (
+        f"AI should recognize repeated pattern in R2/R3 but found no "
+        f"pattern-related words. R2+R3 text: {all_text[:300]}"
+    )
+    print(f"[P3B-AI] Pattern recognition in conversation ✓")
+
+
 async def test_p3b_c_pattern_uses_events():
     """AI 应用具体事件描述模式，不用标签。"""
     all_text = " ".join(r.full_text for r in _replies.values() if r.full_text)
