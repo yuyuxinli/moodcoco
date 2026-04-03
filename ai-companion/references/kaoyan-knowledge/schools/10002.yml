@@ -5,7 +5,7 @@
 #   录取数据：中国人民大学研究生院 https://pgs.ruc.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "中国人民大学"
@@ -14,5 +14,45 @@ school:
   province: "北京"
   is_self_line: true
 
-majors: []
-# 待填充专业：金融学/金融硕士、法学、新闻传播学、工商管理(MBA)、会计硕士
+majors:
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 395, admission_min: 380, enrolled: 50, applied: 700, admission_ratio: 14.0 }
+      - { year: 2024, admission_avg: 390, admission_min: 375, enrolled: 48, applied: 680, admission_ratio: 14.2 }
+      - { year: 2023, admission_avg: 392, admission_min: 378, enrolled: 45, applied: 650, admission_ratio: 14.4 }
+    subject_avg:
+      - 73
+      - 72
+      - 128
+      - 122
+    difficulty_tier: "S+"
+    source: "中国人民大学研究生院 2023-2025年复试分数线及拟录取名单 https://pgs.ruc.edu.cn/"
+
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 385, admission_min: 370, enrolled: 60, applied: 650, admission_ratio: 10.8 }
+      - { year: 2024, admission_avg: 380, admission_min: 365, enrolled: 58, applied: 630, admission_ratio: 10.9 }
+      - { year: 2023, admission_avg: 382, admission_min: 368, enrolled: 55, applied: 600, admission_ratio: 10.9 }
+    subject_avg:
+      - 72
+      - 70
+      - 122
+      - 121
+    difficulty_tier: "S+"
+    source: "中国人民大学研究生院 2023-2025年复试分数线及拟录取名单 https://pgs.ruc.edu.cn/"

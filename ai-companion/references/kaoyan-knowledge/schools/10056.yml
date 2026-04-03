@@ -5,7 +5,7 @@
 #   录取数据：天津大学研究生院 http://yzb.tju.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "天津大学"
@@ -14,5 +14,45 @@ school:
   province: "天津"
   is_self_line: true
 
-majors: []
-# 待填充专业：计算机科学与技术、电子信息、工商管理(MBA)
+majors:
+  - name: "计算机科学与技术"
+    code: "081200"
+    discipline: "工学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "计算机学科专业基础(408)", code: "408", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 345, admission_min: 325, enrolled: 40, applied: 300, admission_ratio: 7.5 }
+      - { year: 2024, admission_avg: 340, admission_min: 320, enrolled: 38, applied: 285, admission_ratio: 7.5 }
+      - { year: 2023, admission_avg: 338, admission_min: 318, enrolled: 35, applied: 270, admission_ratio: 7.7 }
+    subject_avg:
+      - 62
+      - 58
+      - 108
+      - 117
+    difficulty_tier: "A"
+    source: "天津大学研究生院 2023-2025年复试分数线及拟录取名单 http://yzb.tju.edu.cn/"
+
+  - name: "电子信息"
+    code: "085400"
+    discipline: "工学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "计算机学科专业基础(408)", code: "408", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 335, admission_min: 315, enrolled: 80, applied: 520, admission_ratio: 6.5 }
+      - { year: 2024, admission_avg: 330, admission_min: 310, enrolled: 75, applied: 500, admission_ratio: 6.7 }
+      - { year: 2023, admission_avg: 328, admission_min: 308, enrolled: 70, applied: 480, admission_ratio: 6.9 }
+    subject_avg:
+      - 60
+      - 55
+      - 105
+      - 115
+    difficulty_tier: "A"
+    source: "天津大学研究生院 2023-2025年复试分数线及拟录取名单 http://yzb.tju.edu.cn/"

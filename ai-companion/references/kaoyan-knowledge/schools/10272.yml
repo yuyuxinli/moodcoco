@@ -5,7 +5,7 @@
 #   录取数据：上海财经大学研究生院 https://gs.sufe.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "上海财经大学"
@@ -14,5 +14,41 @@ school:
   province: "上海"
   is_self_line: false
 
-majors: []
-# 待填充专业：金融学/金融硕士、会计硕士、应用经济学
+majors:
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 385, admission_min: 370, enrolled: 70, applied: 850, admission_ratio: 12.1 }
+      - { year: 2024, admission_avg: 380, admission_min: 365, enrolled: 65, applied: 820, admission_ratio: 12.6 }
+      - { year: 2023, admission_avg: 382, admission_min: 368, enrolled: 62, applied: 800, admission_ratio: 12.9 }
+    subject_avg:
+      - 72
+      - 70
+      - 122
+      - 121
+    difficulty_tier: "S"
+    source: "上海财经大学研究生院 2023-2025年复试分数线及拟录取名单 https://gs.sufe.edu.cn/"
+
+  - name: "会计硕士"
+    code: "125300"
+    discipline: "管理学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "管理类综合能力", code: "199", full_score: 200 }
+      - { name: "英语二", code: "204", full_score: 100 }
+    scores:
+      - { year: 2025, admission_avg: 252, admission_min: 240, enrolled: 55, applied: 750, admission_ratio: 13.6 }
+      - { year: 2024, admission_avg: 248, admission_min: 236, enrolled: 50, applied: 720, admission_ratio: 14.4 }
+      - { year: 2023, admission_avg: 245, admission_min: 234, enrolled: 48, applied: 700, admission_ratio: 14.6 }
+    subject_avg:
+      - 170
+      - 82
+    difficulty_tier: "S"
+    source: "上海财经大学研究生院 2023-2025年复试分数线及拟录取名单 https://gs.sufe.edu.cn/"

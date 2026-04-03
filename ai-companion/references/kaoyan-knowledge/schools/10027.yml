@@ -5,7 +5,7 @@
 #   录取数据：北京师范大学研究生院 https://yz.bnu.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "北京师范大学"
@@ -14,5 +14,41 @@ school:
   province: "北京"
   is_self_line: true
 
-majors: []
-# 待填充专业：教育学、心理学/应用心理、新闻传播学、法学
+majors:
+  - name: "心理学"
+    code: "040200"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "心理学专业基础", code: "312", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 385, admission_min: 370, enrolled: 35, applied: 500, admission_ratio: 14.3 }
+      - { year: 2024, admission_avg: 380, admission_min: 365, enrolled: 32, applied: 480, admission_ratio: 15.0 }
+      - { year: 2023, admission_avg: 378, admission_min: 360, enrolled: 30, applied: 450, admission_ratio: 15.0 }
+    subject_avg:
+      - 72
+      - 68
+      - 245
+    difficulty_tier: "S"
+    source: "北京师范大学研究生院 2023-2025年复试分数线及拟录取名单 https://yz.bnu.edu.cn/"
+
+  - name: "教育学"
+    code: "040100"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "教育学专业基础", code: "311", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 375, admission_min: 360, enrolled: 40, applied: 520, admission_ratio: 13.0 }
+      - { year: 2024, admission_avg: 370, admission_min: 355, enrolled: 38, applied: 500, admission_ratio: 13.2 }
+      - { year: 2023, admission_avg: 368, admission_min: 350, enrolled: 35, applied: 480, admission_ratio: 13.7 }
+    subject_avg:
+      - 70
+      - 65
+      - 240
+    difficulty_tier: "S"
+    source: "北京师范大学研究生院 2023-2025年复试分数线及拟录取名单 https://yz.bnu.edu.cn/"

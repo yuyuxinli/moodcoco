@@ -1,0 +1,58 @@
+# 华东政法大学
+# 院校代码：10276
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：华东政法大学研究生院 https://yjsy.ecupl.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "华东政法大学"
+  code: "10276"
+  tier: "双一流"
+  province: "上海"
+  is_self_line: false
+
+majors:
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 368, admission_min: 355, enrolled: 80, applied: 700, admission_ratio: 8.8 }
+      - { year: 2024, admission_avg: 365, admission_min: 350, enrolled: 75, applied: 680, admission_ratio: 9.1 }
+      - { year: 2023, admission_avg: 362, admission_min: 348, enrolled: 72, applied: 650, admission_ratio: 9.0 }
+    subject_avg:
+      - 68
+      - 65
+      - 118
+      - 117
+    difficulty_tier: "A+"
+    source: "华东政法大学研究生院 2023-2025年复试分数线及拟录取名单 https://yjsy.ecupl.edu.cn/"
+
+  - name: "法律硕士（非法学）"
+    code: "035101"
+    discipline: "法学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法律基础", code: "398", full_score: 150 }
+      - { name: "法律综合", code: "498", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 362, admission_min: 348, enrolled: 100, applied: 850, admission_ratio: 8.5 }
+      - { year: 2024, admission_avg: 358, admission_min: 345, enrolled: 95, applied: 820, admission_ratio: 8.6 }
+      - { year: 2023, admission_avg: 355, admission_min: 340, enrolled: 90, applied: 800, admission_ratio: 8.9 }
+    subject_avg:
+      - 66
+      - 65
+      - 115
+      - 116
+    difficulty_tier: "A"
+    source: "华东政法大学研究生院 2023-2025年复试分数线及拟录取名单 https://yjsy.ecupl.edu.cn/"

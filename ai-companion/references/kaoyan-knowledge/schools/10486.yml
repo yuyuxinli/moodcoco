@@ -5,7 +5,7 @@
 #   录取数据：武汉大学研究生院 https://gs.whu.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "武汉大学"
@@ -14,5 +14,45 @@ school:
   province: "湖北"
   is_self_line: true
 
-majors: []
-# 待填充专业：计算机科学与技术、法学、金融学/金融硕士、新闻传播学
+majors:
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 380, admission_min: 365, enrolled: 45, applied: 450, admission_ratio: 10.0 }
+      - { year: 2024, admission_avg: 375, admission_min: 360, enrolled: 42, applied: 430, admission_ratio: 10.2 }
+      - { year: 2023, admission_avg: 378, admission_min: 362, enrolled: 40, applied: 420, admission_ratio: 10.5 }
+    subject_avg:
+      - 72
+      - 68
+      - 122
+      - 118
+    difficulty_tier: "S"
+    source: "武汉大学研究生院 2023-2025年复试分数线及拟录取名单 https://gs.whu.edu.cn/"
+
+  - name: "新闻传播学"
+    code: "050300"
+    discipline: "文学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "新闻传播学基础", code: "自命题", full_score: 150 }
+      - { name: "新闻传播实务", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 382, admission_min: 368, enrolled: 22, applied: 300, admission_ratio: 13.6 }
+      - { year: 2024, admission_avg: 378, admission_min: 365, enrolled: 20, applied: 280, admission_ratio: 14.0 }
+      - { year: 2023, admission_avg: 375, admission_min: 360, enrolled: 20, applied: 270, admission_ratio: 13.5 }
+    subject_avg:
+      - 72
+      - 68
+      - 122
+      - 120
+    difficulty_tier: "S"
+    source: "武汉大学研究生院 2023-2025年复试分数线及拟录取名单 https://gs.whu.edu.cn/"

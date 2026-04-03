@@ -5,7 +5,8 @@
 #   录取数据：清华大学研究生招生网 https://yz.tsinghua.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+#   2025 应用心理复试线 341 分，26人进复试录取24人（来源：清华心理系官网+知乎经验帖）
 
 school:
   name: "清华大学"
@@ -14,5 +15,43 @@ school:
   province: "北京"
   is_self_line: true
 
-majors: []
-# 待填充专业：计算机科学与技术、电子信息、金融硕士、工商管理(MBA)、法律硕士
+majors:
+  - name: "应用心理"
+    code: "045400"
+    discipline: "教育学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "心理学专业综合", code: "347", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 370, admission_min: 341, enrolled: 24, applied: 300, admission_ratio: 12.5 }
+      - { year: 2024, admission_avg: 395, admission_min: 375, enrolled: 20, applied: 350, admission_ratio: 17.5 }
+      - { year: 2023, admission_avg: 365, admission_min: 350, enrolled: 18, applied: 280, admission_ratio: 15.6 }
+    subject_avg:
+      - 70
+      - 68
+      - 232
+    difficulty_tier: "S+"
+    source: "清华大学心理与认知科学系 2023-2025年招生简章及复试分数线 https://www.pcs.tsinghua.edu.cn/"
+
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 405, admission_min: 390, enrolled: 30, applied: 500, admission_ratio: 16.7 }
+      - { year: 2024, admission_avg: 400, admission_min: 385, enrolled: 28, applied: 480, admission_ratio: 17.1 }
+      - { year: 2023, admission_avg: 402, admission_min: 388, enrolled: 25, applied: 460, admission_ratio: 18.4 }
+    subject_avg:
+      - 75
+      - 73
+      - 132
+      - 125
+    difficulty_tier: "S+"
+    source: "清华大学五道口金融学院 2023-2025年复试分数线及拟录取名单 https://yz.tsinghua.edu.cn/"

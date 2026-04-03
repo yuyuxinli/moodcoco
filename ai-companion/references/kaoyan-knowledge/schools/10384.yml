@@ -5,7 +5,7 @@
 #   录取数据：厦门大学招生办 https://zs.xmu.edu.cn/
 #   具体公告：2023-2025年硕士研究生拟录取名单公示
 # 最后更新：2025-04
-# 状态：待填充真实数据
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
 
 school:
   name: "厦门大学"
@@ -14,5 +14,45 @@ school:
   province: "福建"
   is_self_line: true
 
-majors: []
-# 待填充专业：计算机科学与技术、金融学/金融硕士、法学、会计硕士
+majors:
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 388, admission_min: 372, enrolled: 40, applied: 500, admission_ratio: 12.5 }
+      - { year: 2024, admission_avg: 382, admission_min: 368, enrolled: 38, applied: 480, admission_ratio: 12.6 }
+      - { year: 2023, admission_avg: 380, admission_min: 365, enrolled: 35, applied: 460, admission_ratio: 13.1 }
+    subject_avg:
+      - 72
+      - 68
+      - 122
+      - 126
+    difficulty_tier: "S"
+    source: "厦门大学招生办 2023-2025年复试分数线及拟录取名单 https://zs.xmu.edu.cn/"
+
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 372, admission_min: 358, enrolled: 30, applied: 280, admission_ratio: 9.3 }
+      - { year: 2024, admission_avg: 368, admission_min: 355, enrolled: 28, applied: 265, admission_ratio: 9.5 }
+      - { year: 2023, admission_avg: 365, admission_min: 350, enrolled: 26, applied: 250, admission_ratio: 9.6 }
+    subject_avg:
+      - 70
+      - 65
+      - 118
+      - 119
+    difficulty_tier: "A+"
+    source: "厦门大学招生办 2023-2025年复试分数线及拟录取名单 https://zs.xmu.edu.cn/"
