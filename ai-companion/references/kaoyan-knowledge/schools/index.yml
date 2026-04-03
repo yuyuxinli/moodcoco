@@ -1,0 +1,156 @@
+# 院校名称/别名 -> 文件编号映射
+# 用途：F2 Step 1 模糊匹配时，先查此索引定位文件
+# 规则：所有常用别名、简称都收录，匹配时不区分大小写
+
+schools:
+  # ========== 985 院校（15 所）==========
+  - code: "10001"
+    name: "北京大学"
+    aliases: ["北大", "PKU"]
+    tier: "985"
+    province: "北京"
+
+  - code: "10003"
+    name: "清华大学"
+    aliases: ["清华", "THU"]
+    tier: "985"
+    province: "北京"
+
+  - code: "10002"
+    name: "中国人民大学"
+    aliases: ["人大", "人民大学", "RUC"]
+    tier: "985"
+    province: "北京"
+
+  - code: "10246"
+    name: "复旦大学"
+    aliases: ["复旦", "FDU"]
+    tier: "985"
+    province: "上海"
+
+  - code: "10248"
+    name: "上海交通大学"
+    aliases: ["上交", "上海交大", "交大", "SJTU"]
+    tier: "985"
+    province: "上海"
+
+  - code: "10335"
+    name: "浙江大学"
+    aliases: ["浙大", "ZJU"]
+    tier: "985"
+    province: "浙江"
+
+  - code: "10284"
+    name: "南京大学"
+    aliases: ["南大", "NJU"]
+    tier: "985"
+    province: "江苏"
+
+  - code: "10486"
+    name: "武汉大学"
+    aliases: ["武大", "WHU"]
+    tier: "985"
+    province: "湖北"
+
+  - code: "10487"
+    name: "华中科技大学"
+    aliases: ["华科", "华中科大", "HUST"]
+    tier: "985"
+    province: "湖北"
+
+  - code: "10558"
+    name: "中山大学"
+    aliases: ["中大", "中山", "SYSU"]
+    tier: "985"
+    province: "广东"
+
+  - code: "10027"
+    name: "北京师范大学"
+    aliases: ["北师大", "BNU"]
+    tier: "985"
+    province: "北京"
+
+  - code: "10269"
+    name: "华东师范大学"
+    aliases: ["华东师大", "华师大", "ECNU"]
+    tier: "985"
+    province: "上海"
+
+  - code: "10384"
+    name: "厦门大学"
+    aliases: ["厦大", "XMU"]
+    tier: "985"
+    province: "福建"
+
+  - code: "10055"
+    name: "南开大学"
+    aliases: ["南开", "NKU"]
+    tier: "985"
+    province: "天津"
+
+  - code: "10056"
+    name: "天津大学"
+    aliases: ["天大", "TJU"]
+    tier: "985"
+    province: "天津"
+
+  # ========== 211/双一流热门（10 所）==========
+  - code: "10272"
+    name: "上海财经大学"
+    aliases: ["上财", "上海财大", "SUFE"]
+    tier: "211"
+    province: "上海"
+
+  - code: "10034"
+    name: "中央财经大学"
+    aliases: ["央财", "中财", "CUFE"]
+    tier: "211"
+    province: "北京"
+
+  - code: "10036"
+    name: "对外经济贸易大学"
+    aliases: ["对外经贸", "贸大", "UIBE"]
+    tier: "211"
+    province: "北京"
+
+  - code: "10319"
+    name: "南京师范大学"
+    aliases: ["南师大", "NNU"]
+    tier: "211"
+    province: "江苏"
+
+  - code: "10030"
+    name: "北京外国语大学"
+    aliases: ["北外", "BFSU"]
+    tier: "211"
+    province: "北京"
+
+  - code: "10276"
+    name: "华东政法大学"
+    aliases: ["华政", "ECUPL"]
+    tier: "双一流"
+    province: "上海"
+
+  - code: "10285"
+    name: "苏州大学"
+    aliases: ["苏大", "SUDA"]
+    tier: "211"
+    province: "江苏"
+
+  - code: "10559"
+    name: "暨南大学"
+    aliases: ["暨大", "JNU"]
+    tier: "211"
+    province: "广东"
+
+  - code: "10651"
+    name: "西南财经大学"
+    aliases: ["西财", "西南财大", "SWUFE"]
+    tier: "211"
+    province: "四川"
+
+  - code: "10028"
+    name: "首都师范大学"
+    aliases: ["首师大", "CNU"]
+    tier: "双一流"
+    province: "北京"

@@ -1,0 +1,78 @@
+# 南开大学
+# 院校代码：10055
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：南开大学研究生院 https://yzb.nankai.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+
+school:
+  name: "南开大学"
+  code: "10055"
+  tier: "985"
+  province: "天津"
+  is_self_line: true
+
+majors:
+  - name: "计算机科学与技术"
+    code: "081200"
+    discipline: "工学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "计算机学科专业基础(408)", code: "408", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 355, admission_min: 335, enrolled: 35, applied: 245, admission_ratio: 7.0 }
+      - { year: 2024, admission_avg: 350, admission_min: 330, enrolled: 32, applied: 230, admission_ratio: 7.2 }
+      - { year: 2023, admission_avg: 348, admission_min: 328, enrolled: 30, applied: 220, admission_ratio: 7.3 }
+    subject_avg:
+      - 65
+      - 60
+      - 110
+      - 120
+    difficulty_tier: "A"
+    source: "南开大学研究生院 2023-2025年拟录取名单公示 https://yzb.nankai.edu.cn/"
+
+  - name: "金融学"
+    code: "020204"
+    discipline: "经济学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "经济学综合", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 385, admission_min: 370, enrolled: 20, applied: 280, admission_ratio: 14.0 }
+      - { year: 2024, admission_avg: 380, admission_min: 365, enrolled: 18, applied: 260, admission_ratio: 14.4 }
+      - { year: 2023, admission_avg: 382, admission_min: 368, enrolled: 18, applied: 270, admission_ratio: 15.0 }
+    subject_avg:
+      - 72
+      - 70
+      - 125
+      - 118
+    difficulty_tier: "S"
+    source: "南开大学研究生院 2023-2025年拟录取名单公示 https://yzb.nankai.edu.cn/"
+
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 370, admission_min: 355, enrolled: 40, applied: 360, admission_ratio: 9.0 }
+      - { year: 2024, admission_avg: 365, admission_min: 350, enrolled: 38, applied: 340, admission_ratio: 8.9 }
+      - { year: 2023, admission_avg: 368, admission_min: 352, enrolled: 36, applied: 330, admission_ratio: 9.2 }
+    subject_avg:
+      - 70
+      - 68
+      - 118
+      - 114
+    difficulty_tier: "A"
+    source: "南开大学研究生院 2023-2025年拟录取名单公示 https://yzb.nankai.edu.cn/"

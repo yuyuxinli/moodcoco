@@ -1,0 +1,206 @@
+# 考研国家线数据
+# 数据来源：教育部《全国硕士研究生招生考试考生进入复试的初试成绩基本要求》
+# 字段说明：
+#   total: 总分线
+#   single_100: 满分=100 分科目的单科线（政治、英语等）
+#   single_gt_100: 满分>100 分科目的单科线（数学 150、专业课 150/300、管综 200 等）
+#   注意：不同学科的 single_gt_100 对应不同满分的科目，具体满分以 subjects[].full_score 为准
+# 更新时间：每年 2-3 月教育部公布后手动更新
+
+# ============================================================
+# 2025 年
+# 来源：教育部 2025-02-24 发布
+# URL: https://yz.chsi.com.cn/kyzx/kp/202502/20250224/2293352975.html
+# ============================================================
+2025:
+  # ---------- 学术学位类（统一划线） ----------
+  academic:
+    A:
+      哲学:       { total: 321, single_100: 39, single_gt_100: 59 }
+      经济学:     { total: 323, single_100: 40, single_gt_100: 60 }
+      法学:       { total: 323, single_100: 40, single_gt_100: 60 }
+      教育学:     { total: 341, single_100: 45, single_gt_100: 135 }  # 不含体育学
+      文学:       { total: 351, single_100: 47, single_gt_100: 71 }
+      历史学:     { total: 336, single_100: 43, single_gt_100: 129 }
+      理学:       { total: 274, single_100: 34, single_gt_100: 51 }
+      工学:       { total: 260, single_100: 34, single_gt_100: 51 }   # 不含照顾专业
+      农学:       { total: 245, single_100: 33, single_gt_100: 50 }
+      医学:       { total: 293, single_100: 36, single_gt_100: 108 }  # 不含中医类照顾专业
+      军事学:     { total: 260, single_100: 34, single_gt_100: 51 }
+      管理学:     { total: 333, single_100: 41, single_gt_100: 62 }
+      艺术学:     { total: 351, single_100: 37, single_gt_100: 56 }
+      交叉学科:   { total: 266, single_100: 34, single_gt_100: 51 }
+    B:
+      哲学:       { total: 311, single_100: 36, single_gt_100: 54 }
+      经济学:     { total: 313, single_100: 37, single_gt_100: 56 }
+      法学:       { total: 313, single_100: 37, single_gt_100: 56 }
+      教育学:     { total: 331, single_100: 42, single_gt_100: 126 }
+      文学:       { total: 341, single_100: 44, single_gt_100: 66 }
+      历史学:     { total: 326, single_100: 40, single_gt_100: 120 }
+      理学:       { total: 264, single_100: 31, single_gt_100: 47 }
+      工学:       { total: 250, single_100: 31, single_gt_100: 47 }
+      农学:       { total: 235, single_100: 30, single_gt_100: 45 }
+      医学:       { total: 283, single_100: 33, single_gt_100: 99 }
+      军事学:     { total: 250, single_100: 31, single_gt_100: 47 }
+      管理学:     { total: 323, single_100: 38, single_gt_100: 57 }
+      艺术学:     { total: 341, single_100: 34, single_gt_100: 51 }
+      交叉学科:   { total: 256, single_100: 31, single_gt_100: 47 }
+
+  # ---------- 单独划线子类（学术 + 专业学位） ----------
+  separate:
+    A:
+      # --- 教育学门类子类 ---
+      体育学_体育:                    { total: 304, single_100: 36, single_gt_100: 108 }  # 学术0403 + 专硕0452
+      教育_国际中文教育:              { total: 341, single_100: 45, single_gt_100: 68 }   # 专硕0451 + 0453，注意 single_gt_100=68 而非135
+      # 应用心理[0454]：跟随教育学统一线（total=341, single_100=45, single_gt_100=135）
+
+      # --- 工学门类子类 ---
+      工学照顾专业:                   { total: 251, single_100: 33, single_gt_100: 50 }
+
+      # --- 医学门类子类 ---
+      中医学_中西医结合_中医:         { total: 293, single_100: 36, single_gt_100: 108 }  # 学术1005/1006 + 专硕1057
+
+      # --- 管理类专业学位（满分300=管综200+英语100） ---
+      工商管理_旅游管理:              { total: 151, single_100: 35, single_gt_100: 70, exam_total: 300 }   # MBA[1251]/MTA[1254]
+      公共管理:                       { total: 164, single_100: 38, single_gt_100: 76, exam_total: 300 }   # MPA[1252]
+      会计:                           { total: 194, single_100: 48, single_gt_100: 96, exam_total: 300 }   # MPAcc[1253]
+      审计:                           { total: 194, single_100: 48, single_gt_100: 96, exam_total: 300 }   # MAud[1257]
+      图书情报:                       { total: 191, single_100: 48, single_gt_100: 96, exam_total: 300 }   # MLIS[1255]
+      工程管理:                       { total: 162, single_100: 38, single_gt_100: 76, exam_total: 300 }   # MEM[1256]
+
+    B:
+      体育学_体育:                    { total: 294, single_100: 33, single_gt_100: 99 }
+      教育_国际中文教育:              { total: 331, single_100: 42, single_gt_100: 63 }
+      工学照顾专业:                   { total: 241, single_100: 30, single_gt_100: 45 }
+      中医学_中西医结合_中医:         { total: 283, single_100: 33, single_gt_100: 99 }
+      工商管理_旅游管理:              { total: 141, single_100: 30, single_gt_100: 60, exam_total: 300 }
+      公共管理:                       { total: 154, single_100: 33, single_gt_100: 66, exam_total: 300 }
+      会计:                           { total: 184, single_100: 43, single_gt_100: 86, exam_total: 300 }
+      审计:                           { total: 184, single_100: 43, single_gt_100: 86, exam_total: 300 }
+      图书情报:                       { total: 181, single_100: 43, single_gt_100: 86, exam_total: 300 }
+      工程管理:                       { total: 152, single_100: 33, single_gt_100: 66, exam_total: 300 }
+
+# ============================================================
+# 2024 年
+# 来源：教育部 2024-03-12 发布
+# URL: https://yz.chsi.com.cn/kyzx/kp/202403/20240312/2293269492.html
+# ============================================================
+2024:
+  academic:
+    A:
+      哲学:       { total: 333, single_100: 47, single_gt_100: 71 }
+      经济学:     { total: 338, single_100: 47, single_gt_100: 71 }
+      法学:       { total: 331, single_100: 47, single_gt_100: 71 }
+      教育学:     { total: 350, single_100: 51, single_gt_100: 153 }
+      文学:       { total: 365, single_100: 55, single_gt_100: 83 }
+      历史学:     { total: 345, single_100: 49, single_gt_100: 147 }
+      理学:       { total: 288, single_100: 41, single_gt_100: 62 }
+      工学:       { total: 273, single_100: 37, single_gt_100: 56 }
+      农学:       { total: 251, single_100: 33, single_gt_100: 50 }
+      医学:       { total: 304, single_100: 42, single_gt_100: 126 }
+      军事学:     { total: 260, single_100: 35, single_gt_100: 53 }
+      管理学:     { total: 347, single_100: 49, single_gt_100: 74 }
+      艺术学:     { total: 362, single_100: 40, single_gt_100: 60 }
+      交叉学科:   { total: 275, single_100: 39, single_gt_100: 59 }
+    B:
+      哲学:       { total: 323, single_100: 44, single_gt_100: 66 }
+      经济学:     { total: 328, single_100: 44, single_gt_100: 66 }
+      法学:       { total: 321, single_100: 44, single_gt_100: 66 }
+      教育学:     { total: 340, single_100: 48, single_gt_100: 144 }
+      文学:       { total: 355, single_100: 52, single_gt_100: 78 }
+      历史学:     { total: 335, single_100: 46, single_gt_100: 138 }
+      理学:       { total: 278, single_100: 38, single_gt_100: 57 }
+      工学:       { total: 263, single_100: 34, single_gt_100: 51 }
+      农学:       { total: 241, single_100: 30, single_gt_100: 45 }
+      医学:       { total: 294, single_100: 39, single_gt_100: 117 }
+      军事学:     { total: 250, single_100: 32, single_gt_100: 48 }
+      管理学:     { total: 337, single_100: 46, single_gt_100: 69 }
+      艺术学:     { total: 352, single_100: 37, single_gt_100: 56 }
+      交叉学科:   { total: 265, single_100: 36, single_gt_100: 54 }
+
+  separate:
+    A:
+      体育学_体育:                    { total: 313, single_100: 41, single_gt_100: 123 }
+      教育_国际中文教育:              { total: 350, single_100: 51, single_gt_100: 77 }
+      工学照顾专业:                   { total: 260, single_100: 35, single_gt_100: 53 }
+      中医学_中西医结合_中医:         { total: 303, single_100: 42, single_gt_100: 126 }
+      工商管理_旅游管理:              { total: 162, single_100: 39, single_gt_100: 78, exam_total: 300 }
+      公共管理:                       { total: 173, single_100: 43, single_gt_100: 86, exam_total: 300 }
+      会计:                           { total: 201, single_100: 52, single_gt_100: 104, exam_total: 300 }
+      审计:                           { total: 201, single_100: 52, single_gt_100: 104, exam_total: 300 }
+      图书情报:                       { total: 198, single_100: 51, single_gt_100: 102, exam_total: 300 }
+      工程管理:                       { total: 176, single_100: 43, single_gt_100: 86, exam_total: 300 }
+    B:
+      体育学_体育:                    { total: 303, single_100: 38, single_gt_100: 114 }
+      教育_国际中文教育:              { total: 340, single_100: 48, single_gt_100: 72 }
+      工学照顾专业:                   { total: 250, single_100: 32, single_gt_100: 48 }
+      中医学_中西医结合_中医:         { total: 293, single_100: 39, single_gt_100: 117 }
+      工商管理_旅游管理:              { total: 152, single_100: 34, single_gt_100: 68, exam_total: 300 }
+      公共管理:                       { total: 163, single_100: 38, single_gt_100: 76, exam_total: 300 }
+      会计:                           { total: 191, single_100: 47, single_gt_100: 94, exam_total: 300 }
+      审计:                           { total: 191, single_100: 47, single_gt_100: 94, exam_total: 300 }
+      图书情报:                       { total: 188, single_100: 46, single_gt_100: 92, exam_total: 300 }
+      工程管理:                       { total: 166, single_100: 38, single_gt_100: 76, exam_total: 300 }
+
+# ============================================================
+# 2023 年
+# 来源：教育部 2023-03-10 发布
+# URL: https://yz.chsi.com.cn/kyzx/kp/202303/20230310/2265487759.html（学术学位类）
+# 专业学位类来源：https://yz.chsi.com.cn/kyzx/kp/202303/20230310/2265487779.html（研招网官方）
+# ============================================================
+2023:
+  academic:
+    A:
+      哲学:       { total: 323, single_100: 45, single_gt_100: 68 }
+      经济学:     { total: 346, single_100: 48, single_gt_100: 72 }
+      法学:       { total: 326, single_100: 45, single_gt_100: 68 }
+      教育学:     { total: 350, single_100: 51, single_gt_100: 153 }
+      文学:       { total: 363, single_100: 54, single_gt_100: 81 }
+      历史学:     { total: 336, single_100: 46, single_gt_100: 138 }
+      理学:       { total: 279, single_100: 38, single_gt_100: 57 }
+      工学:       { total: 273, single_100: 38, single_gt_100: 57 }
+      农学:       { total: 251, single_100: 33, single_gt_100: 50 }
+      医学:       { total: 296, single_100: 39, single_gt_100: 117 }
+      军事学:     { total: 260, single_100: 35, single_gt_100: 53 }
+      管理学:     { total: 340, single_100: 47, single_gt_100: 71 }
+      艺术学:     { total: 362, single_100: 40, single_gt_100: 60 }
+      交叉学科:   { total: 265, single_100: 36, single_gt_100: 54 }
+    B:
+      哲学:       { total: 313, single_100: 42, single_gt_100: 63 }
+      经济学:     { total: 336, single_100: 45, single_gt_100: 68 }
+      法学:       { total: 316, single_100: 42, single_gt_100: 63 }
+      教育学:     { total: 340, single_100: 48, single_gt_100: 144 }
+      文学:       { total: 353, single_100: 51, single_gt_100: 77 }
+      历史学:     { total: 326, single_100: 43, single_gt_100: 129 }
+      理学:       { total: 269, single_100: 35, single_gt_100: 53 }
+      工学:       { total: 263, single_100: 35, single_gt_100: 53 }
+      农学:       { total: 241, single_100: 30, single_gt_100: 45 }
+      医学:       { total: 286, single_100: 36, single_gt_100: 108 }
+      军事学:     { total: 250, single_100: 32, single_gt_100: 48 }
+      管理学:     { total: 330, single_100: 44, single_gt_100: 66 }
+      艺术学:     { total: 352, single_100: 37, single_gt_100: 56 }
+      交叉学科:   { total: 255, single_100: 33, single_gt_100: 50 }
+
+  separate:
+    A:
+      体育学_体育:                    { total: 305, single_100: 39, single_gt_100: 117 }
+      教育_汉语国际教育:              { total: 350, single_100: 51, single_gt_100: 77 }  # 2023年用"汉语国际教育"，2024起改"国际中文教育"
+      工学照顾专业:                   { total: 260, single_100: 35, single_gt_100: 53 }
+      中医学_中西医结合_中医:         { total: 295, single_100: 39, single_gt_100: 117 }
+      工商管理_旅游管理:              { total: 167, single_100: 41, single_gt_100: 82, exam_total: 300 }
+      公共管理:                       { total: 175, single_100: 44, single_gt_100: 88, exam_total: 300 }
+      会计:                           { total: 197, single_100: 51, single_gt_100: 102, exam_total: 300 }
+      审计:                           { total: 197, single_100: 51, single_gt_100: 102, exam_total: 300 }
+      图书情报:                       { total: 198, single_100: 52, single_gt_100: 104, exam_total: 300 }
+      工程管理:                       { total: 178, single_100: 44, single_gt_100: 88, exam_total: 300 }
+    B:
+      体育学_体育:                    { total: 295, single_100: 36, single_gt_100: 108 }
+      教育_汉语国际教育:              { total: 340, single_100: 48, single_gt_100: 72 }
+      工学照顾专业:                   { total: 250, single_100: 32, single_gt_100: 48 }
+      中医学_中西医结合_中医:         { total: 285, single_100: 36, single_gt_100: 108 }
+      工商管理_旅游管理:              { total: 157, single_100: 36, single_gt_100: 72, exam_total: 300 }
+      公共管理:                       { total: 165, single_100: 39, single_gt_100: 78, exam_total: 300 }
+      会计:                           { total: 187, single_100: 46, single_gt_100: 92, exam_total: 300 }
+      审计:                           { total: 187, single_100: 46, single_gt_100: 92, exam_total: 300 }
+      图书情报:                       { total: 188, single_100: 47, single_gt_100: 94, exam_total: 300 }
+      工程管理:                       { total: 168, single_100: 39, single_gt_100: 78, exam_total: 300 }
