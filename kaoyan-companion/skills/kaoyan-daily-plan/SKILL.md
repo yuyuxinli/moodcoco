@@ -277,15 +277,21 @@ Step 6: 写入 USER.md kaoyan_target_scores + kaoyan_target_achievable + kaoyan_
 
 ## 输出格式（严格遵守）
 
-**所有输出必须是纯自然语言。** 禁止在回复中出现以下任何内容：
-- `ai_message(...)` 或 `ai_message(messages=[...])` 等函数/工具调用语法
-- `messages=[...]` 等数组/列表结构
-- 任何代码格式（花括号、方括号、等号赋值、函数调用）
-- 任何 SKILL 内部术语（见"内部术语不暴露"章节）
+> **红线规则：直接说人话，不要包装成任何函数或数据结构。**
+>
+> 你的输出就是用户在微信里看到的消息原文。直接写中文句子，不要用任何包装。
+>
+> **绝对禁止出现的格式（无论哪个路径——计划生成、状态差异、反馈响应、阶段切换，全部适用）：**
+> - `ai_message(...)`、`ai_message(messages=[...])`、`messages=[...]`
+> - 任何函数调用语法、数组/列表结构、花括号、方括号、等号赋值
+> - 任何 SKILL 内部术语（见"内部术语不暴露"章节）
+>
+> **正确做法：** 直接输出中文文字。第 1 条消息说完，换行空一行，再说第 2 条。就这样。
+> **错误做法：** 把消息塞进 `ai_message(messages=["第1条","第2条"])` —— 这会让用户看到代码。
 
-如果你发现自己正在输出类似 `ai_message(messages=["...","..."])` 的内容，**停下来**，把方括号里的内容提取出来，作为普通文字直接发送。
+**推送分 2 段发送。** 每段就是一段普通中文，中间用空行分隔。不要用任何代码标记、函数包装或数组结构。
 
-**推送分 2 条消息发送，不合成一条。** 每条消息就是一段普通中文文字，不包含任何代码或结构化标记。
+**再次提醒：以下模板中的内容直接作为纯文字输出，不要包进 ai_message() 或任何函数/数组。**
 
 ### 第 1 条消息：开场 + 状态感知
 
@@ -605,7 +611,7 @@ F6 崩溃 ──crisis_log──→ 锁定期判断
 ## 内部术语不暴露
 
 以下术语仅用于 SKILL 内部逻辑，**绝不出现在推送给用户的消息中**：
-- 函数/工具语法：ai_message、messages=、messages=[...]、tool_call、function_call
+- 函数/工具语法：ai_message、ai_message()、ai_message(messages=[...])、messages=、messages=[...]、tool_call、function_call —— 这些是内部调度格式，绝不能出现在用户可见的输出中
 - 状态机名称：normal、momentum、easy、minimal、dormant
 - 技术字段名：plan_history、tracker、crisis_log、plan_adjustment、ROI、phase_weight
 - Skill 名称：F3、F4、F5、F6、SKILL.md、RULE-ZERO
