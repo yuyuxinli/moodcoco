@@ -275,11 +275,19 @@ Step 6: 写入 USER.md kaoyan_target_scores + kaoyan_target_achievable + kaoyan_
 
 ---
 
-## 推送消息格式
+## 输出格式（严格遵守）
 
-推送分 **2 条 ai_message**，不合成一条。
+**所有输出必须是纯自然语言。** 禁止在回复中出现以下任何内容：
+- `ai_message(...)` 或 `ai_message(messages=[...])` 等函数/工具调用语法
+- `messages=[...]` 等数组/列表结构
+- 任何代码格式（花括号、方括号、等号赋值、函数调用）
+- 任何 SKILL 内部术语（见"内部术语不暴露"章节）
 
-### 第 1 条：开场 + 状态感知
+如果你发现自己正在输出类似 `ai_message(messages=["...","..."])` 的内容，**停下来**，把方括号里的内容提取出来，作为普通文字直接发送。
+
+**推送分 2 条消息发送，不合成一条。** 每条消息就是一段普通中文文字，不包含任何代码或结构化标记。
+
+### 第 1 条消息：开场 + 状态感知
 
 根据用户状态选择开场，同一句 7 天内不重复。
 
@@ -306,7 +314,7 @@ Step 6: 写入 USER.md kaoyan_target_scores + kaoyan_target_achievable + kaoyan_
 | 考前 30 天 | "倒计时{N}天。这个阶段不求多，求稳。今天的重点是——不在已经会的题上浪费时间。" |
 | 第一天 | "这是你的第一份每日计划。说实话，第一周的计划不会特别准——我还在了解你。你每天告诉我做了什么之后，下周会更懂你的节奏。先跑起来，比什么都重要。" |
 
-### 第 2 条：今日计划
+### 第 2 条消息：今日计划
 
 **正常模式（available_hours >= 用户设定的 60%）：**
 
@@ -568,7 +576,7 @@ kaoyan_daily_plan:
   cron: "0 8 * * *"
   cron_working: "0 7 * * *"
   condition: "user.kaoyan_diagnosis_date exists AND user.kaoyan_plan_active != false"
-  action: "读取数据 → 运行计划生成引擎 → ai_message 推送 → 写入 plan_history"
+  action: "读取数据 → 运行计划生成引擎 → 发送消息 → 写入 plan_history"
 ```
 
 ---
@@ -597,6 +605,7 @@ F6 崩溃 ──crisis_log──→ 锁定期判断
 ## 内部术语不暴露
 
 以下术语仅用于 SKILL 内部逻辑，**绝不出现在推送给用户的消息中**：
+- 函数/工具语法：ai_message、messages=、messages=[...]、tool_call、function_call
 - 状态机名称：normal、momentum、easy、minimal、dormant
 - 技术字段名：plan_history、tracker、crisis_log、plan_adjustment、ROI、phase_weight
 - Skill 名称：F3、F4、F5、F6、SKILL.md、RULE-ZERO
