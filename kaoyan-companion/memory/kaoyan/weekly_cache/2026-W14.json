@@ -1,0 +1,51 @@
+{
+  "week": "2026-W14",
+  "date_range": "2026-03-30 ~ 2026-04-05",
+  "week_number": 1,
+  "summary": {
+    "active_days": 5,
+    "complete_days": 2,
+    "bad_days": 0,
+    "subjects": {
+      "数学": {
+        "plan_count": 5,
+        "done_count": 4,
+        "completion_rate": 80,
+        "estimated_minutes": 300,
+        "stuck_topics": {
+          "导数-隐函数求导": 1,
+          "导数-复合函数": 1
+        }
+      },
+      "英语": {
+        "plan_count": 4,
+        "done_count": 3,
+        "completion_rate": 75,
+        "estimated_minutes": 195,
+        "stuck_topics": {
+          "完形填空": 1
+        }
+      },
+      "政治": {
+        "plan_count": 3,
+        "done_count": 3,
+        "completion_rate": 100,
+        "estimated_minutes": 90,
+        "stuck_topics": {}
+      }
+    }
+  },
+  "progress_signals": [
+    { "type": "first_week" },
+    { "type": "weakness_resolved", "topic": "导数-复合函数" }
+  ],
+  "weaknesses": [
+    { "type": "recurring_stuck", "topic": "导数相关知识点", "count": 2 }
+  ],
+  "recommendations": {
+    "math_focus": "导数专项巩固，隐函数求导和复合函数链式法则多练",
+    "english_adjustment": "完形填空逻辑推断题加练",
+    "politics_minimum": "保持每天30min，节奏很好",
+    "plan_intensity": "normal"
+  }
+}

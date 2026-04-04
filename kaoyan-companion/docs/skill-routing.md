@@ -25,13 +25,28 @@
 │  SOUL.md  USER.md  MEMORY.md  ← 三个 agent 共享       │
 │                                                        │
 │  skills/                                               │
+│  ├── breathing-ground/   ← coco 专属                   │
+│  ├── chat/               ← coco 专属                   │
+│  ├── check-in/           ← coco 专属                   │
+│  ├── course-dialogue/    ← coco 专属                   │
+│  ├── decision-cooling/   ← coco 专属                   │
+│  ├── diary/              ← coco 专属                   │
+│  ├── farewell/           ← coco 专属                   │
+│  ├── growth-story/       ← coco 专属                   │
+│  ├── mbti-game/          ← coco 专属                   │
+│  ├── mood-flow/          ← coco 专属                   │
+│  ├── motivation-guide/   ← coco 专属                   │
+│  ├── onboarding/         ← coco 专属                   │
+│  ├── pattern-mirror/     ← coco 专属                   │
+│  ├── personality-analysis/ ← coco 专属                 │
+│  ├── relationship-guide/ ← coco 专属                   │
+│  ├── weekly-reflection/  ← coco 专属                   │
 │  ├── kaoyan-tracker/     ← kaoyan 专属                 │
 │  ├── kaoyan-daily-plan/  ← kaoyan 专属                 │
 │  ├── kaoyan-weekly/      ← kaoyan 专属                 │
 │  ├── kaoyan-diagnosis/   ← kaoyan 专属                 │
 │  ├── kaoyan-crisis/      ← kaoyan 专属                 │
 │  ├── kaoyan-quiz/        ← kaoyan 专属                 │
-│  ├── coco-*/             ← coco 专属（待建）            │
 │  └── selfhelp-*/         ← selfhelp 专属（待建）        │
 │                                                        │
 │  hooks/agent-bootstrap/  ← Layer 1: 注入入口标识        │
@@ -121,9 +136,26 @@ agentId: selfhelp
 ```typescript
 const SKILL_ROUTES: Record<string, string[]> = {
   coco: [
-    // 心情可可：情绪陪伴相关 skills
+    // 心情可可：情绪陪伴相关 skills（16 个）
+    "breathing-ground",
+    "chat",
+    "check-in",
+    "course-dialogue",
+    "decision-cooling",
+    "diary",
+    "farewell",
+    "growth-story",
+    "mbti-game",
+    "mood-flow",
+    "motivation-guide",
+    "onboarding",
+    "pattern-mirror",
+    "personality-analysis",
+    "relationship-guide",
+    "weekly-reflection",
   ],
   kaoyan: [
+    // 考研伴侣：考研备考相关 skills（6 个）
     "kaoyan-tracker",
     "kaoyan-daily-plan",
     "kaoyan-weekly",

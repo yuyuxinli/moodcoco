@@ -15,7 +15,22 @@
 const SKILL_ROUTES: Record<string, string[]> = {
   coco: [
     // 心情可可：情绪陪伴相关 skills
-    // 当前无专属 skill，后续添加到这里
+    "breathing-ground",
+    "chat",
+    "check-in",
+    "course-dialogue",
+    "decision-cooling",
+    "diary",
+    "farewell",
+    "growth-story",
+    "mbti-game",
+    "mood-flow",
+    "motivation-guide",
+    "onboarding",
+    "pattern-mirror",
+    "personality-analysis",
+    "relationship-guide",
+    "weekly-reflection",
   ],
   kaoyan: [
     // 考研伴侣：考研备考相关 skills
