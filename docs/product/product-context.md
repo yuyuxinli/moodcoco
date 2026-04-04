@@ -33,8 +33,10 @@
 ## 技术配置
 
 - **模型**: minimax-m2.7（via OpenRouter）+ thinking high
-- **Workspace**: ai-companion/（SOUL.md + AGENTS.md + HEARTBEAT.md + IDENTITY.md + 10 skills）
-- **记忆**: USER.md 用户档案 + diary/ 日记 + people/ 人物档案
+- **Workspace**: kaoyan-companion/（统一底座，SOUL.md + AGENTS.md + HEARTBEAT.md + IDENTITY.md + 22 skills）
+- **多入口**: coco（情绪陪伴 16 skills）/ kaoyan（考研伴侣 6 skills）/ selfhelp（自助课，待建）— 三层 skill 路由隔离，共享身份
+- **记忆（本地测试）**: USER.md + memory/ + people/（OpenClaw 单租户）
+- **记忆（线上）**: psychologists 后端 DB，按 user_id 隔离，6 种 MemoryCategory，L3 Context 层注入
 - **评估**: Evolve 循环（5维度 × 15场景 × 4模拟用户）
 
 ## 差异化

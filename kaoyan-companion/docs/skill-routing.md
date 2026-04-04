@@ -242,6 +242,30 @@ Layer 3: before_tool_call 触发
 
 **命名约定：** 建议用业务前缀（`kaoyan-`、`coco-`、`selfhelp-`），方便识别归属。但路由靠的是 `SKILL_ROUTES` 配置，不是前缀。
 
+---
+
+## 备注
+
+### 多租户说明
+
+本 workspace 是**模板**，不是数据存储。线上多租户由 `psychologists` 后端实现：
+
+- 后端通过 JWT → `user_id` (UUID) 隔离所有用户数据（session、memory、people 等全部在 DB 中按 user_id 外键隔离）
+- 记忆系统：`MemoryItem` + `MemoryCategory` 表，6 种类型（profile/relationships/events/behavior/goals/knowledge），通过 L3 Context 层注入 LLM prompt
+- workspace 中的 `USER.md`、`memory/`、`people/` 仅用于 OpenClaw 本地单租户测试
+- 详见 `docs/technical/配置/session-isolation.md`
+
+### Selfhelp 自助课入口（待建）
+
+`SKILL_ROUTES.selfhelp` 当前为空数组。路由基础设施（三层隔离）已就绪，待设计和开发 selfhelp 专属 skills。
+
+需要做的：
+1. 设计 selfhelp 课程内容和 skill 列表
+2. 在 `skills/` 下创建 `selfhelp-*` 系列 skill 目录
+3. 在 `SKILL_ROUTES.selfhelp` 中注册
+4. 在 `hooks/agent-bootstrap/handler.ts` 中添加 selfhelp 的中文名映射
+5. 在 AGENTS.md 中添加 selfhelp 入口的路由决策树
+
 ### 添加新业务入口
 
 1. 在 `SKILL_ROUTES` 中添加新的 key（如 `career: [...]`）
