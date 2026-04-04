@@ -22,11 +22,9 @@ const SKILL_ROUTES: Record<string, string[]> = {
     "diary",
     "farewell",
     "growth-story",
-    "mbti-game",
     "mood-flow",
     "onboarding",
     "pattern-mirror",
-    "personality-analysis",
     "relationship-guide",
     "weekly-reflection",
   ],
@@ -40,9 +38,11 @@ const SKILL_ROUTES: Record<string, string[]> = {
     "kaoyan-quiz",
   ],
   selfhelp: [
-    // 自助课（growth 成长入口）：自助心理课程相关 skills
+    // 自助课（growth 成长入口）：课程 + 趣味测试
     "course-dialogue",
     "motivation-guide",
+    "mbti-game",
+    "personality-analysis",
   ],
 };
 

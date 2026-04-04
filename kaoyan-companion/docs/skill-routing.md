@@ -33,12 +33,12 @@
 │  ├── diary/              ← coco 专属                   │
 │  ├── farewell/           ← coco 专属                   │
 │  ├── growth-story/       ← coco 专属                   │
-│  ├── mbti-game/          ← coco 专属                   │
+│  ├── mbti-game/          ← selfhelp 专属               │
 │  ├── mood-flow/          ← coco 专属                   │
 │  ├── motivation-guide/   ← selfhelp 专属               │
 │  ├── onboarding/         ← coco 专属                   │
 │  ├── pattern-mirror/     ← coco 专属                   │
-│  ├── personality-analysis/ ← coco 专属                 │
+│  ├── personality-analysis/ ← selfhelp 专属             │
 │  ├── relationship-guide/ ← coco 专属                   │
 │  ├── weekly-reflection/  ← coco 专属                   │
 │  ├── kaoyan-tracker/     ← kaoyan 专属                 │
@@ -136,7 +136,7 @@ agentId: selfhelp
 ```typescript
 const SKILL_ROUTES: Record<string, string[]> = {
   coco: [
-    // 心情可可：核心 AI 陪伴 skills（14 个）
+    // 心情可可：核心 AI 陪伴 skills（12 个）
     "breathing-ground",
     "chat",
     "check-in",
@@ -259,9 +259,11 @@ Layer 3: before_tool_call 触发
 
 ### Selfhelp 自助课入口
 
-`SKILL_ROUTES.selfhelp` 包含 2 个 skill（从 coco 迁移而来）：
+`SKILL_ROUTES.selfhelp` 包含 4 个 skill（从 coco 迁移而来）：
 - `course-dialogue`：学练聊三阶段课程流程
 - `motivation-guide`：课程生成引导对话
+- `mbti-game`：MBTI 对话式人格测试
+- `personality-analysis`：MBTI 测试完成后生成人格解析报告
 
 课程内容数据存放在 `skills/course-dialogue/references/courses/`，从 psychologists 后端 DB 导出。
 当前 3 门完整课程：春节返乡焦虑、热闹里的孤独、深夜的思念。

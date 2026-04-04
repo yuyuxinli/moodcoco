@@ -351,7 +351,13 @@ ai_message(messages=[
   │     └── 已在课程中 + 用户发送文本消息
   │           → 按 course-dialogue 当前阶段处理
   │
-  └── 不匹配任何 skill → 自然闲聊，引导用户探索课程
+  ├── 趣味测试信号？
+  │     ├── "想做个测试""测测我的性格""MBTI""性格测试""心理测试"
+  │     │     → read("skills/mbti-game/SKILL.md")
+  │     │
+  │     └── MBTI 测试完成 → read("skills/personality-analysis/SKILL.md")
+  │
+  └── 不匹配任何 skill → 自然闲聊，引导用户探索课程或测试
 ```
 
 ### §1.1 崩溃行为信号检测（Cron 10:00，考研入口）
