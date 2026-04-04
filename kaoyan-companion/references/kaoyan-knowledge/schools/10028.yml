@@ -1,0 +1,53 @@
+# 首都师范大学
+# 院校代码：10028
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：首都师范大学研究生院 https://grad.cnu.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+
+school:
+  name: "首都师范大学"
+  code: "10028"
+  tier: "双一流"
+  province: "北京"
+  is_self_line: false
+
+majors:
+  - name: "教育学"
+    code: "040100"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "教育学专业基础", code: "311", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 345, admission_min: 341, enrolled: 60, applied: 300, admission_ratio: 5.0 }
+      - { year: 2024, admission_avg: 355, admission_min: 350, enrolled: 55, applied: 310, admission_ratio: 5.6 }
+      - { year: 2023, admission_avg: 358, admission_min: 350, enrolled: 52, applied: 290, admission_ratio: 5.6 }
+    subject_avg:
+      - 68
+      - 58
+      - 219
+    difficulty_tier: "B"
+    source: "首都师范大学研究生院 2023-2025年拟录取名单公示 https://grad.cnu.edu.cn/"
+
+  - name: "心理学"
+    code: "040200"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "心理学专业基础", code: "312", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 355, admission_min: 341, enrolled: 25, applied: 175, admission_ratio: 7.0 }
+      - { year: 2024, admission_avg: 360, admission_min: 350, enrolled: 22, applied: 165, admission_ratio: 7.5 }
+      - { year: 2023, admission_avg: 358, admission_min: 350, enrolled: 20, applied: 160, admission_ratio: 8.0 }
+    subject_avg:
+      - 70
+      - 60
+      - 225
+    difficulty_tier: "B"
+    source: "首都师范大学研究生院 2023-2025年拟录取名单公示 https://grad.cnu.edu.cn/"

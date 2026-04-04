@@ -1,0 +1,54 @@
+# 南京师范大学
+# 院校代码：10319
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：南京师范大学研究生院 http://grad.njnu.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "南京师范大学"
+  code: "10319"
+  tier: "211"
+  province: "江苏"
+  is_self_line: false
+
+majors:
+  - name: "教育学"
+    code: "040100"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "教育学专业基础", code: "311", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 360, admission_min: 345, enrolled: 45, applied: 400, admission_ratio: 8.9 }
+      - { year: 2024, admission_avg: 355, admission_min: 340, enrolled: 42, applied: 380, admission_ratio: 9.0 }
+      - { year: 2023, admission_avg: 352, admission_min: 338, enrolled: 40, applied: 360, admission_ratio: 9.0 }
+    subject_avg:
+      - 68
+      - 60
+      - 232
+    difficulty_tier: "A"
+    source: "南京师范大学研究生院 2023-2025年复试分数线及拟录取名单 http://grad.njnu.edu.cn/"
+
+  - name: "应用心理"
+    code: "045400"
+    discipline: "教育学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "心理学专业综合", code: "347", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 365, admission_min: 350, enrolled: 35, applied: 350, admission_ratio: 10.0 }
+      - { year: 2024, admission_avg: 360, admission_min: 345, enrolled: 32, applied: 330, admission_ratio: 10.3 }
+      - { year: 2023, admission_avg: 358, admission_min: 342, enrolled: 30, applied: 310, admission_ratio: 10.3 }
+    subject_avg:
+      - 68
+      - 62
+      - 235
+    difficulty_tier: "A"
+    source: "南京师范大学研究生院 2023-2025年复试分数线及拟录取名单 http://grad.njnu.edu.cn/"

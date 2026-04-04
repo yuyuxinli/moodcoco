@@ -1,0 +1,58 @@
+# 对外经济贸易大学
+# 院校代码：10036
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：对外经济贸易大学研究生院 http://yjsy.uibe.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "对外经济贸易大学"
+  code: "10036"
+  tier: "211"
+  province: "北京"
+  is_self_line: false
+
+majors:
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 375, admission_min: 360, enrolled: 65, applied: 720, admission_ratio: 11.1 }
+      - { year: 2024, admission_avg: 370, admission_min: 355, enrolled: 60, applied: 700, admission_ratio: 11.7 }
+      - { year: 2023, admission_avg: 372, admission_min: 358, enrolled: 58, applied: 680, admission_ratio: 11.7 }
+    subject_avg:
+      - 68
+      - 70
+      - 118
+      - 119
+    difficulty_tier: "A+"
+    source: "对外经济贸易大学研究生院 2023-2025年复试分数线及拟录取名单 http://yjsy.uibe.edu.cn/"
+
+  - name: "法律硕士（非法学）"
+    code: "035101"
+    discipline: "法学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法律基础", code: "398", full_score: 150 }
+      - { name: "法律综合", code: "498", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 365, admission_min: 350, enrolled: 50, applied: 450, admission_ratio: 9.0 }
+      - { year: 2024, admission_avg: 360, admission_min: 345, enrolled: 48, applied: 430, admission_ratio: 9.0 }
+      - { year: 2023, admission_avg: 358, admission_min: 342, enrolled: 45, applied: 410, admission_ratio: 9.1 }
+    subject_avg:
+      - 68
+      - 65
+      - 115
+      - 117
+    difficulty_tier: "A"
+    source: "对外经济贸易大学研究生院 2023-2025年复试分数线及拟录取名单 http://yjsy.uibe.edu.cn/"

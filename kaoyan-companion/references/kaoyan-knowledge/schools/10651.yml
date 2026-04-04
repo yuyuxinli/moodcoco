@@ -1,0 +1,54 @@
+# 西南财经大学
+# 院校代码：10651
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：西南财经大学研究生院 https://yz.swufe.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "西南财经大学"
+  code: "10651"
+  tier: "211"
+  province: "四川"
+  is_self_line: false
+
+majors:
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 372, admission_min: 358, enrolled: 90, applied: 800, admission_ratio: 8.9 }
+      - { year: 2024, admission_avg: 368, admission_min: 355, enrolled: 85, applied: 780, admission_ratio: 9.2 }
+      - { year: 2023, admission_avg: 365, admission_min: 350, enrolled: 80, applied: 750, admission_ratio: 9.4 }
+    subject_avg:
+      - 68
+      - 66
+      - 118
+      - 120
+    difficulty_tier: "A"
+    source: "西南财经大学研究生院 2023-2025年复试分数线及拟录取名单 https://yz.swufe.edu.cn/"
+
+  - name: "会计硕士"
+    code: "125300"
+    discipline: "管理学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "管理类综合能力", code: "199", full_score: 200 }
+      - { name: "英语二", code: "204", full_score: 100 }
+    scores:
+      - { year: 2025, admission_avg: 242, admission_min: 230, enrolled: 70, applied: 650, admission_ratio: 9.3 }
+      - { year: 2024, admission_avg: 238, admission_min: 226, enrolled: 65, applied: 620, admission_ratio: 9.5 }
+      - { year: 2023, admission_avg: 235, admission_min: 224, enrolled: 60, applied: 600, admission_ratio: 10.0 }
+    subject_avg:
+      - 162
+      - 78
+    difficulty_tier: "A"
+    source: "西南财经大学研究生院 2023-2025年复试分数线及拟录取名单 https://yz.swufe.edu.cn/"
