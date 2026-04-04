@@ -28,14 +28,14 @@
 │  ├── breathing-ground/   ← coco 专属                   │
 │  ├── chat/               ← coco 专属                   │
 │  ├── check-in/           ← coco 专属                   │
-│  ├── course-dialogue/    ← coco 专属                   │
+│  ├── course-dialogue/    ← selfhelp 专属               │
 │  ├── decision-cooling/   ← coco 专属                   │
 │  ├── diary/              ← coco 专属                   │
 │  ├── farewell/           ← coco 专属                   │
 │  ├── growth-story/       ← coco 专属                   │
 │  ├── mbti-game/          ← coco 专属                   │
 │  ├── mood-flow/          ← coco 专属                   │
-│  ├── motivation-guide/   ← coco 专属                   │
+│  ├── motivation-guide/   ← selfhelp 专属               │
 │  ├── onboarding/         ← coco 专属                   │
 │  ├── pattern-mirror/     ← coco 专属                   │
 │  ├── personality-analysis/ ← coco 专属                 │
@@ -47,7 +47,7 @@
 │  ├── kaoyan-diagnosis/   ← kaoyan 专属                 │
 │  ├── kaoyan-crisis/      ← kaoyan 专属                 │
 │  ├── kaoyan-quiz/        ← kaoyan 专属                 │
-│  └── selfhelp-*/         ← selfhelp 专属（待建）        │
+│  └── (selfhelp 使用 course-dialogue + motivation-guide) │
 │                                                        │
 │  hooks/agent-bootstrap/  ← Layer 1: 注入入口标识        │
 │  plugins/skill-router/   ← Layer 2+3: 过滤 + 拦截      │
@@ -136,7 +136,7 @@ agentId: selfhelp
 ```typescript
 const SKILL_ROUTES: Record<string, string[]> = {
   coco: [
-    // 心情可可：情绪陪伴相关 skills（16 个）
+    // 心情可可：核心 AI 陪伴 skills（14 个）
     "breathing-ground",
     "chat",
     "check-in",
@@ -164,7 +164,9 @@ const SKILL_ROUTES: Record<string, string[]> = {
     "kaoyan-quiz",
   ],
   selfhelp: [
-    // 自助课：自助心理课程相关 skills
+    // 自助课（growth 成长入口）：自助心理课程相关 skills
+    "course-dialogue",
+    "motivation-guide",
   ],
 };
 
@@ -255,16 +257,16 @@ Layer 3: before_tool_call 触发
 - workspace 中的 `USER.md`、`memory/`、`people/` 仅用于 OpenClaw 本地单租户测试
 - 详见 `docs/technical/配置/session-isolation.md`
 
-### Selfhelp 自助课入口（待建）
+### Selfhelp 自助课入口
 
-`SKILL_ROUTES.selfhelp` 当前为空数组。路由基础设施（三层隔离）已就绪，待设计和开发 selfhelp 专属 skills。
+`SKILL_ROUTES.selfhelp` 包含 2 个 skill（从 coco 迁移而来）：
+- `course-dialogue`：学练聊三阶段课程流程
+- `motivation-guide`：课程生成引导对话
 
-需要做的：
-1. 设计 selfhelp 课程内容和 skill 列表
-2. 在 `skills/` 下创建 `selfhelp-*` 系列 skill 目录
-3. 在 `SKILL_ROUTES.selfhelp` 中注册
-4. 在 `hooks/agent-bootstrap/handler.ts` 中添加 selfhelp 的中文名映射
-5. 在 AGENTS.md 中添加 selfhelp 入口的路由决策树
+课程内容数据存放在 `skills/course-dialogue/references/courses/`，从 psychologists 后端 DB 导出。
+当前 3 门完整课程：春节返乡焦虑、热闹里的孤独、深夜的思念。
+
+**产品层级**：moodcoco = coco（核心陪伴）+ growth（成长），growth = selfhelp + kaoyan + ...
 
 ### 添加新业务入口
 

@@ -14,18 +14,16 @@
 // ============================================================
 const SKILL_ROUTES: Record<string, string[]> = {
   coco: [
-    // 心情可可：情绪陪伴相关 skills
+    // 心情可可：核心 AI 陪伴 skills
     "breathing-ground",
     "chat",
     "check-in",
-    "course-dialogue",
     "decision-cooling",
     "diary",
     "farewell",
     "growth-story",
     "mbti-game",
     "mood-flow",
-    "motivation-guide",
     "onboarding",
     "pattern-mirror",
     "personality-analysis",
@@ -42,8 +40,9 @@ const SKILL_ROUTES: Record<string, string[]> = {
     "kaoyan-quiz",
   ],
   selfhelp: [
-    // 自助课：自助心理课程相关 skills
-    // 当前无专属 skill，后续添加到这里
+    // 自助课（growth 成长入口）：自助心理课程相关 skills
+    "course-dialogue",
+    "motivation-guide",
   ],
 };
 

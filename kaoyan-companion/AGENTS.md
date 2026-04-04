@@ -326,6 +326,34 @@ ai_message(messages=[
       breathing-ground > decision-cooling > diary > relationship-guide
 ```
 
+### 自助课入口（selfhelp）路由
+
+```
+用户消息进入
+  │
+  ├── §0 安全检查（最高优先级）
+  │     命中 → RULE-ZERO，中断一切
+  │
+  ├── 课程生成信号？
+  │     ├── "我想改变""帮我制定计划""推荐课程""有什么课"
+  │     │     → read("skills/motivation-guide/SKILL.md")
+  │     │
+  │     └── 已有课程进度（memory/selfhelp/progress.md）
+  │           → 询问"继续上次的课，还是换一门？"
+  │
+  ├── 课程学习信号？
+  │     ├── "开始上课""继续学习""今天学什么""下一课"
+  │     │     → read("skills/course-dialogue/SKILL.md")
+  │     │
+  │     ├── "学一学""练一练""聊一聊"
+  │     │     → read("skills/course-dialogue/SKILL.md")
+  │     │
+  │     └── 已在课程中 + 用户发送文本消息
+  │           → 按 course-dialogue 当前阶段处理
+  │
+  └── 不匹配任何 skill → 自然闲聊，引导用户探索课程
+```
+
 ### §1.1 崩溃行为信号检测（Cron 10:00，考研入口）
 
 每日 10:00 自动检查 tracker 文件：
