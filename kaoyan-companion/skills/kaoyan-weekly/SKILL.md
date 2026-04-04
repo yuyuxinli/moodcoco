@@ -78,7 +78,7 @@ read memory/kaoyan/crisis_log.md → 本周是否有崩溃事件
   plan_count = count(plan[] where subject == 该科)
   done_count = count(completed[] where done==true 且对应 plan 的 subject == 该科)
   completion_rate = done_count / plan_count * 100
-  last_week_rate = 从 weekly_cache 读取（首周无数据标"首周"）
+  last_week_rate = 从 weekly_cache.summary.subjects[科目名].completion_rate 读取（首周无数据标"首周"）
 
 各科计划时长:
   estimated_minutes = sum(plan[].estimated_minutes where subject == 该科)
@@ -117,7 +117,9 @@ def detect_progress(this_week, last_week):
     
     # 6. 薄弱点减少
     for topic in last_week.stuck_topics:
-        if this_week.stuck_count[topic] < last_week.stuck_count[topic]:
+        if topic not in this_week.stuck_count or this_week.stuck_count[topic] == 0:
+            signals.append(type="weakness_resolved", topic)
+        elif this_week.stuck_count[topic] < last_week.stuck_count[topic]:
             signals.append(type="weakness_improving", topic)
     
     return signals
@@ -163,18 +165,19 @@ consecutive_skip 计算：遍历本周 tracker（按日期正序），该科 tas
 **永远至少找到一个正面信号。** 正面框架——同一组数据，强调好的那一面。
 
 进步信号优先级（从上到下选第一个可用的）：
-1. 完成率提升 → "{科目}任务完成率从上周的{last}%涨到了{this}%（+{delta}%），你在{topic}上的功夫没白费"
-2. 学习量提升 → "这周完成了{n}个{科目}任务，比上周多了{delta}个。量在上来"
-3. 连续性提升 → "这周打卡{n}天，比上周多了{delta}天。节奏在变好"
-4. 坚韧信号 → "这周有{bad_days}天状态不好，但你还是学了{active_days}天。这种韧性比什么都重要"
-5. 首周保底 → "第一周就打了{n}天卡，说明你是认真的。下周我就能帮你看出更多了"
+1. 完成率提升 → "{科目}任务完成率从上周的{last}%涨到了{this}%（+{delta}%）"
+2. 薄弱点攻克 → "上周卡住的{topic}，这周没再出现"
+3. 学习量提升 → "这周完成了{n}个{科目}任务，比上周多了{delta}个"
+4. 连续性提升 → "这周打卡{n}天，比上周多了{delta}天"
+5. 坚韧信号 → "这周有{bad_days}天状态不好，但你还是学了{active_days}天"
+6. 首周保底 → "第一周就打了{n}天卡。下周我就能帮你看出更多了"
 
 多个进步信号时全部展示：
 ```
 "看看这周的变化——
 · 数学：6 个任务完成了 5 个（83%），比上周多完成了 2 个
-· 英语：4 个任务完成了 3 个（75%），阅读节奏在稳定
-· 政治：马原读到了第 4 章，进度正常"
+· 英语：4 个任务完成了 3 个（75%）
+· 政治：马原读到了第 4 章，3 个任务全部完成"
 ```
 
 ### Part 3：薄弱点 + 行动指引
@@ -202,7 +205,7 @@ consecutive_skip 计算：遍历本周 tracker（按日期正序），该科 tas
 | 类型 | 错误 | 正确 |
 |------|------|------|
 | 低完成率 | "你英语只完成40%，太低了" | "英语任务完成率还在爬坡（40%），下周帮你拆小一点" |
-| 高频卡住 | "你极限又卡住了3次" | "极限的洛必达法则这周卡了3次——攻下来后面会顺很多" |
+| 高频卡住 | "你极限又卡住了3次" | "极限的洛必达法则这周卡了3次，下周计划里加几道专项练习" |
 | 科目缺勤 | "你这周政治完全没学" | "政治这周没顾上，下周哪怕每天15分钟也行，别断太久" |
 
 **行动指引规则（具体 + 可执行）：**
@@ -216,7 +219,7 @@ consecutive_skip 计算：遍历本周 tracker（按日期正序），该科 tas
 ```
 标准: "下周的计划会根据这周的数据调整。加油，我盯着呢。"
 状态差: "这周不容易，但你没放弃。下周我们轻一点来。"
-特别好: "这周的节奏特别好。保持住，下周见。"
+特别好: "这周完成率都挺高的。下周见。"
 ```
 
 Poll：
@@ -292,30 +295,32 @@ def get_report_depth(week_number):
     "active_days": 6,
     "complete_days": 4,
     "bad_days": 0,
-    "math": {
-      "plan_count": 6,
-      "done_count": 5,
-      "completion_rate": 83,
-      "estimated_minutes": 540,
-      "stuck_topics": { "极限-洛必达法则": 2, "极限-夹逼准则": 1 }
-    },
-    "english": {
-      "plan_count": 4,
-      "done_count": 3,
-      "completion_rate": 75,
-      "estimated_minutes": 240,
-      "stuck_topics": { "阅读理解": 1 }
-    },
-    "politics": {
-      "plan_count": 3,
-      "done_count": 3,
-      "completion_rate": 100,
-      "estimated_minutes": 180,
-      "stuck_topics": {}
+    "subjects": {
+      "数学": {
+        "plan_count": 6,
+        "done_count": 5,
+        "completion_rate": 83,
+        "estimated_minutes": 540,
+        "stuck_topics": { "极限-洛必达法则": 2, "极限-夹逼准则": 1 }
+      },
+      "英语": {
+        "plan_count": 4,
+        "done_count": 3,
+        "completion_rate": 75,
+        "estimated_minutes": 240,
+        "stuck_topics": { "阅读理解": 1 }
+      },
+      "政治": {
+        "plan_count": 3,
+        "done_count": 3,
+        "completion_rate": 100,
+        "estimated_minutes": 180,
+        "stuck_topics": {}
+      }
     }
   },
   "progress_signals": [
-    {"type": "completion_up", "subject": "math", "delta": 23},
+    {"type": "completion_up", "subject": "数学", "delta": 23},
     {"type": "consistency_up", "this_week": 6, "last_week": 5}
   ],
   "weaknesses": [
@@ -330,12 +335,30 @@ def get_report_depth(week_number):
 }
 ```
 
+**`progress_signals[].type` 枚举值：** `completion_up` | `weakness_resolved` | `weakness_improving` | `volume_up` | `consistency_up` | `resilience` | `first_week`
+
 **字段说明：**
+- `summary.subjects` 使用中文科目名作为 key（"数学"/"英语"/"政治"），与 tracker 的 `plan[].subject` 一致
 - `plan_count`/`done_count`/`completion_rate`：tracker 文件 plan[]+completed[] 聚合
 - `estimated_minutes`：plan[].estimated_minutes 汇总
 - `stuck_topics`：stuck_points[].normalized_topic 按出现次数聚合
+- `progress_signals[].subject` 使用中文科目名（与 `summary.subjects` key 一致）
 - **不含 accuracy/correct/error_types**——F4 不采集题目级正确率
 - `recommendations`：JSON 格式，供 F3 机器消费。话术中以对话语气呈现同样内容
+
+**运行时对象 → weekly_cache JSON 路径映射：**
+
+| 运行时属性 | JSON 路径 |
+|-----------|----------|
+| `this_week.active_days` | `summary.active_days` |
+| `this_week.complete_days` | `summary.complete_days` |
+| `this_week.bad_days` | `summary.bad_days` |
+| `this_week.subjects` | `summary.subjects` |
+| `this_week[科目名].completion_rate` | `summary.subjects[科目名].completion_rate` |
+| `this_week[科目名].plan_count` | `summary.subjects[科目名].plan_count` |
+| `this_week[科目名].done_count` | `summary.subjects[科目名].done_count` |
+| `this_week.stuck_topic_counts` | `summary.subjects[科目名].stuck_topics` |
+| `last_week.*` | 上周 weekly_cache 同路径 |
 
 **缓存保留：** 最近 8 周，超过的自动清理。
 
@@ -356,8 +379,12 @@ F3 每日计划生成时读取最新 `weekly_cache/YYYY-WNN.json` 的 `recommend
 | 全部 done_none/bad_day | 不发周报。走关怀 |
 | 首周无缓存 | 首周模板，不做对比 |
 | 上周/本周维度不一致 | 仅对比有双周数据的科目 |
-| 周报中情绪崩溃 | 停止周报，走 RULE-ZERO |
+| 用户回复命中 RULE-ZERO P0/P1 精确关键词 | 立即中断周报，按 AGENTS.md §安全协议执行 RULE-ZERO 流程 |
 | 用户反感 | 停止，标记 preference |
+| tracker YAML 缺少必填字段（无 `status`、无 `plan`） | 跳过该天，视为 missing_day |
+| `completed[].task_id` 找不到对应 `plan[].id` | 忽略该条 completed 记录 |
+| `weekly_cache` JSON 格式损坏或缺字段 | 视为无上周数据，走首周逻辑 |
+| `mood` 值不在枚举范围内 | 视为 `normal` |
 
 ---
 
@@ -371,8 +398,9 @@ F3 每日计划生成时读取最新 `weekly_cache/YYYY-WNN.json` 的 `recommend
 6. **对话语气**——不是报表，是可可在聊
 7. **数据必须有基线**——"73%"没用，"比上周涨了8%"有用
 8. **不为周报而周报**——数据不够就不发
-9. **安全优先**——检测到危机信号 → F6 接管，不发周报
+9. **安全优先**——tracker 的 note 或用户回复中命中 RULE-ZERO P0/P1 精确关键词（见 AGENTS.md §安全协议）→ 立即中断周报，按 RULE-ZERO 流程处理
 10. **recommendations 必须写入 memory**——周报不是终点，是 F3 下周的输入
+11. **只陈述数据变化，不推因果、不预测结果**——"完成率从60%涨到83%"可以，"功夫没白费""后面会顺很多""完成率会更好"禁止
 
 ---
 
