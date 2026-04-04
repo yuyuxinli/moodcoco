@@ -33,12 +33,12 @@
 │  ├── diary/              ← coco 专属                   │
 │  ├── farewell/           ← coco 专属                   │
 │  ├── growth-story/       ← coco 专属                   │
-│  ├── mbti-game/          ← selfhelp 专属               │
+│  ├── mbti-game/          ← funtest 专属                │
 │  ├── mood-flow/          ← coco 专属                   │
 │  ├── motivation-guide/   ← selfhelp 专属               │
 │  ├── onboarding/         ← coco 专属                   │
 │  ├── pattern-mirror/     ← coco 专属                   │
-│  ├── personality-analysis/ ← selfhelp 专属             │
+│  ├── personality-analysis/ ← funtest 专属              │
 │  ├── relationship-guide/ ← coco 专属                   │
 │  ├── weekly-reflection/  ← coco 专属                   │
 │  ├── kaoyan-tracker/     ← kaoyan 专属                 │
@@ -55,8 +55,8 @@
 
         ▲              ▲              ▲
         │              │              │
-   agent: coco    agent: kaoyan   agent: selfhelp
-   (agentId=coco) (agentId=kaoyan) (agentId=selfhelp)
+   agent: coco    agent: kaoyan   agent: selfhelp  agent: funtest
+   (agentId=coco) (agentId=kaoyan) (agentId=selfhelp) (agentId=funtest)
 ```
 
 三个 agent 指向同一个 workspace，通过 `agentId` 区分入口。
@@ -259,9 +259,13 @@ Layer 3: before_tool_call 触发
 
 ### Selfhelp 自助课入口
 
-`SKILL_ROUTES.selfhelp` 包含 4 个 skill（从 coco 迁移而来）：
+`SKILL_ROUTES.selfhelp` 包含 2 个 skill（从 coco 迁移）：
 - `course-dialogue`：学练聊三阶段课程流程
 - `motivation-guide`：课程生成引导对话
+
+### Funtest 趣味测试入口
+
+`SKILL_ROUTES.funtest` 包含 2 个 skill（从 coco 迁移）：
 - `mbti-game`：MBTI 对话式人格测试
 - `personality-analysis`：MBTI 测试完成后生成人格解析报告
 

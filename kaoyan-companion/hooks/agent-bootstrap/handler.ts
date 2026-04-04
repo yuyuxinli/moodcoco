@@ -8,6 +8,7 @@ export default async function handler(event: any) {
     coco: "心情可可",
     kaoyan: "考研伴侣",
     selfhelp: "自助课",
+    funtest: "趣味测试",
   };
 
   const entryName = ENTRY_NAMES[agentId] || agentId;

@@ -38,9 +38,12 @@ const SKILL_ROUTES: Record<string, string[]> = {
     "kaoyan-quiz",
   ],
   selfhelp: [
-    // 自助课（growth 成长入口）：课程 + 趣味测试
+    // 自助课（growth 成长入口）：课程相关 skills
     "course-dialogue",
     "motivation-guide",
+  ],
+  funtest: [
+    // 趣味测试（growth 成长入口）：心理测试相关 skills
     "mbti-game",
     "personality-analysis",
   ],
