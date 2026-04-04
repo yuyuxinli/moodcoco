@@ -11,7 +11,7 @@ description: 每日学习打勾追踪——1次点击记录今日学习情况，
 
 | 触发方式 | 条件 |
 |---------|------|
-| Cron 22:00 | 用户有考研身份（`kaoyan_target_school` 存在）且 `kaoyan_tracker_preference != "dislike"` |
+| Cron 22:00 | 用户有考研身份（`kaoyan_target_school` 存在）且 `kaoyan_tracker_preference != "dislike"` 且 `kaoyan_plan_state != "dormant"` 且不在崩溃锁定期（`last_crisis_date` 距今 > 3 天）且当天非周日（周日 20:00 周报已含打勾） |
 | 用户主动 | 消息匹配关键词：打勾/打卡/做完了/学完了/今天搞定了 且用户有考研身份 |
 
 **与通用 check-in 的关系：** 考研用户的每日 check-in 统一由本 skill 在 22:00 处理，不再走通用 check-in 的 21:30 Cron。AGENTS.md 路由规则：`kaoyan_target_school` 存在 → 跳过 21:30 通用 check-in。考研用户只有 22:00 一个入口。
@@ -61,13 +61,15 @@ ai_options(
 
 ## 回应分支
 
-每个分支回应必须满足：(1) 先肯定，不评判 (2) 每天不同
+每个分支回应必须满足：(1) 先肯定，不评判 (2) 每天不同 (3) 所有面向用户的消息必须使用中文（工具调用确认也用中文描述）
+
+**内部逻辑不可暴露：** 所有分支处理逻辑、变量名、状态转换描述仅用于 AI 内部推理，绝不输出给用户。用户看到的消息必须是自然语言，不包含任何系统术语（如 bad_day、Phase 1、SKILL、done_none、done_all、tracker、streak、plan[] 等）。
 
 ### 分支 A：全部搞定（done_all）
 
 **回应规则：**
 - 肯定完成，语气真诚不夸张
-- 引用今日计划中的具体内容（如"极限那 10 道题都做了，厉害"）
+- **必须引用 plan[] 中至少 1 个具体任务（科目+描述）**，让用户感觉被看见（如"极限那 10 道题都做了，厉害"）。如果 plan[] 为空（F3 当天未推送），则引用用户自己说的学习内容
 - 连续 3 天全部完成 → 额外加进度感知（"连续三天全勾了，这周稳了"）
 
 **追问：** 进入错题追问（可选）
@@ -75,8 +77,9 @@ ai_options(
 ### 分支 B：做了大部分（done_most）
 
 **回应规则：**
-- 肯定已完成的部分，不提未完成的
+- 肯定已完成的部分，**引用今日计划中的具体内容**（如"三个里面做了大部分，不错"），不提未完成的
 - 问一句哪个没做（为 F3 计划调整提供数据）
+- 连续 2 天 done_most → 可加一句"连着两天都做了大部分，节奏很稳"
 
 ```
 ai_message(messages=["做了大部分就很好了。哪个没来得及做？"])
@@ -123,6 +126,28 @@ ai_options(
 
 **不追问错题。** done_some 的用户今天已经很勉强了，不增加负担。
 
+### done_most 多选落库逻辑
+
+用户选择"哪个没做"时的 `completed[]` 写入规则：
+
+| 用户选择 | completed[] 处理 |
+|---------|-----------------|
+| 选择 1 个或多个具体任务 | 被选中的任务 `done: false`，其余 `done: true` |
+| 选择"好几个都没做完"（multiple） | 所有任务 `done: false`（保守估计） |
+| 同时选具体任务 + multiple | **以 multiple 为准**，所有任务 `done: false`（multiple 覆盖具体选择） |
+
+**规则：** `multiple` 与具体任务选项**不互斥**（用户可以同时勾选），但 `multiple` 一旦被选中，优先级最高，覆盖所有具体任务选择。理由：用户选了 multiple 说明实际完成情况比勾选的更差，保守估计。
+
+### done_some 多选落库逻辑
+
+用户选择"做了什么"时的 `completed[]` 写入规则：
+
+| 用户选择 | completed[] 处理 |
+|---------|-----------------|
+| 选择 1 个或多个具体任务 | 被选中的任务 `done: true`，其余 `done: false` |
+| 选择"做了点别的"（other） | 所有任务 `done: false`，`note` 字段记录用户说的"别的" |
+| 同时选具体任务 + other | 被选中的具体任务 `done: true`，其余 `done: false`，`note` 记录"别的" |
+
 ### done_most/done_some 追问跳过时 completed[] 补齐规则
 
 用户跳过追问（不选具体任务/不回复/选"不想说了"）时自动补齐：
@@ -163,7 +188,26 @@ ai_message(messages=["怎么了？想说说吗？"])
 → 进入 kaoyan-crisis Phase 1
 ```
 
-数据记录：`status: bad_day`，由 F6 接管后续。
+数据记录：`status: bad_day`，`mood: "bad"`，由 F6 接管后续。
+
+### P0 安全信号中断规则
+
+**仅当用户消息包含 Layer-2 §2.2 定义的 P0/P1 精确关键词时触发。** 使用精确子串匹配，不依赖 AI 判断。
+
+P0 关键词（立即中断打勾 → RULE-ZERO）：不想活了、想死、去死、自杀、结束生命、活着没意思、不如死了、死了算了、没有我更好、考不上就去死、考不上就不想活了、考不上活着没意义、活着好累不如算了、割自己、伤害自己、想伤害自己、打自己、撞墙、想割腕、想从高处跳下去
+
+P1 关键词（进入安全确认流程）：活着好累、不想醒来、消失就好了、世界没有我、如果我不在了、彻底崩溃、完全失控、撑不住了
+
+**以下不是安全信号，不触发中断**：什么都不想做、不想学了、好烦、好累、不想考了、我是个废物、状态很差。这些走 bad_day 或正常打勾流程。
+
+触发 P0 时：
+1. 写入当前 tracker：`status: "bad_day"`, `mood: "bad"`
+2. 路由到 kaoyan-crisis RULE-ZERO
+3. 不继续追问学习情况、不追问错题
+
+触发 P1 时：
+1. 进入安全确认流程（"你现在有没有想伤害自己的念头？"）
+2. 根据回复决定走 RULE-ZERO 还是恢复打勾
 
 ---
 
@@ -290,7 +334,7 @@ stuck_points:
     description: "极限洛必达那块"
     normalized_topic: "极限-洛必达法则"
 
-mood: "normal"  # normal | tired | bad
+mood: "normal"  # normal | tired | bad（写入规则见下方 mood 产出规则）
 note: ""
 
 streak:
@@ -299,6 +343,19 @@ streak:
   consecutive_none: 0
 ---
 ```
+
+### mood 产出规则
+
+| 打勾分支 | mood 值 | 触发条件 |
+|---------|---------|---------|
+| bad_day | `"bad"` | 用户选择"状态不好" |
+| done_none | `"normal"` | 默认值。done_none ≠ mood:bad（没学不代表心情差） |
+| done_none + 疲惫表达 | `"tired"` | 用户在 done_none 后自由输入中包含疲惫类关键词（"累""好困""没力气""太疲了""撑不住"） |
+| done_some + 疲惫表达 | `"tired"` | 用户在 done_some 追问回复中包含疲惫类关键词 |
+| done_most / done_all | `"normal"` | 默认值 |
+| 任何分支 + 崩溃信号 | `"bad"` | 触发 P0 安全信号中断规则，转 bad_day |
+
+**关键：** `tired` 不由 AI 推断，只在用户**主动表达**疲惫时写入。未表达疲惫时一律写 `"normal"`。F3 依赖 `mood == "tired"` 做次日降级 20%。
 
 ### 字段用途
 
@@ -355,6 +412,13 @@ F5 周报生成时（周日 20:00）读取本周 7 天：
 - F6 行为信号检测：连续 2 天无 tracker 文件 → 轻量探测；连续 3 天 done_none → 崩溃接住
 - 两个计数器独立，不叠加
 
+**missing_day 下游消费约定：**
+- missing_day = 该日期不存在 tracker 文件（`memory/kaoyan/tracker/{date}.md` 不存在）
+- **F3（计划生成）：** 读不到昨日 tracker → 按 `done_some` 保守估计，不降级也不加量
+- **F5（周报）：** 无文件的天不计入打卡天数（`active_days` 不+1）
+- **F6（崩溃检测）：** missing_day 不计入 `consecutive_none`（用户可能只是忘了回复，不等于崩溃）
+- **streak 计算：** missing_day 中断 `consecutive_days`（连续有 tracker 文件的天数归零重数）
+
 ---
 
 ## 边界场景
@@ -362,7 +426,8 @@ F5 周报生成时（周日 20:00）读取本周 7 天：
 | 场景 | 处理 |
 |------|------|
 | 用户超时不回复（missing_day） | 不补推，不追问。该天不创建 tracker |
-| 凌晨回复（00:00-06:00） | 记到昨天的 tracker（date 取推送日期） |
+| 凌晨回复 Cron 推送（00:00-06:00） | 记到昨天的 tracker（date 取推送日期） |
+| 凌晨主动打勾（00:00-06:00） | 同样记到昨天（date 取昨天日期）。理由：凌晨的学习汇报大概率是对"今天"（昨日）的总结 |
 | F3 当天未推送计划 | 打勾正常触发，plan[] 和 completed[] 为空，仅记 status+mood+note |
 | 用户说"别每天问我" | 立即停止 Cron。写入 USER.md：`kaoyan_tracker_preference: "dislike"`。后续仅接受主动打勾 |
 
@@ -373,12 +438,18 @@ F5 周报生成时（周日 20:00）读取本周 7 天：
 ```yaml
 kaoyan_tracker:
   cron: "0 22 * * *"
-  condition: "user.kaoyan_target_school exists AND user.kaoyan_tracker_preference != 'dislike'"
+  condition: >
+    user.kaoyan_target_school exists
+    AND user.kaoyan_tracker_preference != 'dislike'
+    AND user.kaoyan_plan_state != 'dormant'
+    AND (today is NOT Sunday OR 周报未发送)
+  suppress: "user.last_crisis_date 距今 <= 3 天 → 不推送（崩溃锁定期）"
   action: "trigger kaoyan-tracker check-in flow"
   note: "替代通用 check-in 的 21:30 Cron（考研用户只走这一个入口）"
 
 # 同时更新通用 check-in:
 general_check_in:
+  cron: "30 21 * * *"
   condition_add: "user.kaoyan_target_school NOT exists"
 ```
 
