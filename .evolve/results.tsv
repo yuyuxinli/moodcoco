@@ -24,3 +24,4 @@ b406656	eval	F09	4.5/4.0/4.0	4.17	pass	PASS: 完整性4.5(4阶段流程+IFS/ACT/
 91d2977	build	F11	-	-	keep	onboarding SKILL.md 对接 memU：建档改为 USER.md(write) + memU memorize()，不再写 people/*.md/diary/*.md/memory/*.md；skill 引用更新为 v3 名称(calm-body/crisis)；新增 3 条质量检查项
 827256c	build	F14	-	-	keep	proactive-trigger SKILL.md: 4种触发行为(模式洞察推送/事件跟进/成长提醒/关系总结), 情绪安全pre-check(5项检查+稳定信号判断), 频率保护总表(48h冷却+周/月上限), 触发优先级5级, memU数据依赖表, 与see-pattern/face-decision/listen/diary/crisis联动, 安全边界6条
 7dd7df3	build	F15	-	-	keep	scene-router SKILL.md: 15场景路由表(恋爱→listen+untangle+see-pattern, SOS→crisis等), 5级路由优先级(SOS一票否决→关键词→memU推断→列表→默认listen), 推荐演化3阶段(冷启动15预设→热启动memU高频Top3+未完结Top2→深度个性化全替代), 多场景重叠消歧, 禁止清单7条, 选择架构+认知负荷心理学依据
+9c8db2a	build	F13	-	-	keep	check-in+weekly-reflection SKILL.md 合并重写对接 memU：签到3轮+周回顾memU retrieve替代weekly_review.py/emotion_count/growth_track，存储切memU memorize()+USER.md，零引用旧脚本/旧文件，情绪语义分组+降频规则+成长种子保留
