@@ -1,24 +1,33 @@
 # Strategy
 
 ## Current Feature
-F1: eval_s1 — S1 专属评分标准
+F01: memU 记忆引擎集成
 
 ## Status: New（首次构建）
 
 ## Execution Order
-1. F1 eval_s1（评分标准）
-2. F2 test-infra（测试脚本）
-3. F3 l1-format（格式控制）
-4. F4 tool-types（Tool 类型）
+Group A — 地基层：
+1. F01 memU 记忆引擎集成
+2. F02 base-communication
+3. F03 listen
+4. F04 untangle
+5. F05 crisis
+6. F06 calm-body
+
+Group B — 高级引擎 + 运维：
+7. F07 see-pattern
+8. F08 face-decision
+9. F09 know-myself
+10. F10 diary
+11. F11 onboarding
+12. F12 farewell
+
+Group C — 交互层 + 场景：
+13. F13 check-in + weekly-reflection
+14. F14 程序主动触发
+15. F15 场景路由 + 推荐
+16. F16 15 个场景 reference
+17. F17 AGENTS.md 总重构
 
 ## Decision Log
-
-### 2026-04-01 — 新 evolve 任务启动
-
-基于 S1 v1-v9 的 9 轮迭代分析，确认问题是系统性的：
-- 评分标准与测试场景不匹配
-- 双轨系统互不兼容
-- 永久约束未从评分移除
-- 确定性评判概率性行为
-
-决策：重建评估框架 + 统一对话链路基础设施。
+（空，等待 C agent 写入）
