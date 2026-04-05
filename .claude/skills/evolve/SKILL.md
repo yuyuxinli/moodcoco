@@ -120,6 +120,15 @@ dimensions:
 
 Show to user: "Here's your program.md. Want to adjust?"
 
+Also generate `.evolve/spec.md` (context injection for B and C agents):
+1. Scan project for existing design/spec/requirements documents (e.g. `docs/`, `specs/`, `*.spec.md`, PRDs)
+2. Ask user: "Found these documents. Which ones should B and C agents see every round?"
+3. Concatenate selected documents into `.evolve/spec.md`
+4. This file is loaded as **Full text** by B and C every round (see loop.md reading list #2)
+5. If no documents found, ask user if they want to write requirements inline or skip
+
+**Why this matters:** Without spec.md, B agent must find and read source documents each round, wasting context and risking missed context. spec.md ensures both B and C always have the full product requirements and design in their context window.
+
 Also generate `.evolve/adapter.py`:
 1. Read `adapters/base.py` for interface definition
 2. Read `adapters/web_app.py` or `adapters/teaching.py` as reference
