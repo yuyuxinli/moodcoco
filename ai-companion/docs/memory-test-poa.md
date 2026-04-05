@@ -201,16 +201,7 @@
 | T21 | 趣味测试入口 | MBTI 等测试是否独立运行 | 第四入口正常跳转 | |
 | T22 | course-dialogue 数据 | 课程对话中提到的内容 → 检查是否写入 | 数据落库（确认写到哪张表） | |
 
-#### F. 考研 6 个 Skill（才学重点）
-
-| # | 测试案例 | 操作步骤 | 预期结果 | 实际结果 |
-|---|---------|---------|---------|---------|
-| T23 | kaoyan-diagnosis | 运行考研诊断 | 输出诊断结果，数据落库 | |
-| T24 | kaoyan-daily-plan | 生成每日计划 | 计划格式正确，可追踪 | |
-| T25 | kaoyan-tracker | 打勾追踪 | 勾选状态持久化 | |
-| T26 | kaoyan-weekly | 周报生成 | 基于本周数据生成，引用正确 | |
-| T27 | kaoyan-quiz | 考研时间回溯 | 知识库数据引用正确（院校 yml） | |
-| T28 | kaoyan-crisis | 崩溃接住 | 安全干预流程完整触发 | |
+#### F. 考研 6 个 Skill — 🚫 不在本期需求中，暂不测试
 
 ### 5.3 全员交叉：跨 Tab 验证
 
@@ -416,7 +407,65 @@
 
 ---
 
-## 十、交付物
+## 十、覆盖度分析：已有自动化测试 vs POA 用例
+
+psychologists 仓库已有 **100+ 个自动化测试文件**，分布在后端和前端。以下对照 POA 67 个用例，标注哪些已被覆盖、哪些需要手动测。
+
+### 已有自动化测试覆盖的模块
+
+| 模块 | 已有测试文件 | 覆盖的 POA 用例 | 说明 |
+|------|------------|----------------|------|
+| **记忆系统** | `test_memorize_service.py` `test_memory_loader.py` `test_hotword_service.py` `test_boundary_cases.py` `test_daily_memorize_task.py` `test_integration.py` `test_migration_complete.py` | T1-T5（部分） | 记忆写入/读取的单元测试已有，但**跨 session 连续性**（T1 用户第二次来能接上）需手动测 |
+| **成长课程** | `test_course_dialogue_agent.py` `test_micro_lesson_agent.py` `test_quiz_practice_agent.py` `test_micro_lesson_progress_api.py` `test_practice_init_api.py` 等 20+ 个 | T19（部分）、T22 | 课程三环节的 API 和 Agent 有测试，但**端到端 5 天完整流程**需手动测 |
+| **情绪/心情** | `test_mood_agent.py` `test_mood_socketio_flow.py` `test_mood_tool_tts_edgecases.py` `test_mood_session_transaction.py` | — | mood-flow 有覆盖，POA 中未单列 |
+| **成长页面** | `test_growth_home_api.py` `test_growth_progress_api.py` `test_graduation_service.py` `test_growth_home_service.py` | T20（部分） | 成长首页和进度 API 有测试 |
+| **Tool 架构** | `test_tool_architecture.py` `test_tool_migration.py` `test_tool_monitoring.py` `test_tool_metadata.py` | Q1（部分） | Service Tool 迁移的架构测试已有 |
+| **前端** | 30+ 个前端测试（growth/micro-lesson/practice/chat） | T19-T22（前端部分） | 卡片渲染、流式解析、导航布局等 |
+
+### ⚠️ 未被自动化覆盖、需要手动测的（重点）
+
+| 用例范围 | 为什么不能自动化 | 手动测试建议 |
+|---------|----------------|------------|
+| **T1-T5 跨 session 记忆** | 需要真实的多轮对话+关闭+重开 | 真机测试：聊一轮→关小程序→重开→看可可是否记得 |
+| **T6-T9 模式识别** | 需要积累 3+ 次同类对话，LLM 行为不确定 | 模拟 3 轮"跟妈妈因为成绩吵架"→观察第 3 次可可是否主动洞察 |
+| **T10-T13 告别写入** | 需要验证 LLM 输出顺序（先 tool call 后文字） | 真机测试，用抓包工具看 WebSocket 消息顺序 |
+| **T29-T33 跨 Tab** | 需要在两个 Tab 之间切换并验证数据共享 | 真机：成长课聊内容→切聊天 Tab→看可可是否知道 |
+| **T34-T36 待回访双写** | 涉及 Heartbeat 定时触发 + 数据清理 | 手动触发 decision-cooling→等 Heartbeat→检查两处数据 |
+| **T37-T39 模式日志格式** | 需要对比三处写入的格式是否一致 | 触发 pattern-mirror / E-branch / farewell 各一次→对比日志 |
+| **T40-T41 优先级冲突** | 需要同时满足 pattern-mirror 和 growth-story 条件 | 构造高密度数据（≥30天+≥2关系+≥5对话+IM）→观察路由 |
+| **T42-T44 深夜模式** | 需要在 23:00 后测试 | 手动：深夜发退出信号→次日看是否补呈现 |
+| **T45-T48 告别链路失败** | 需要模拟 Service Tool 失败 | 可写自动化：mock Service Tool 返回错误→检查 Agent 行为 |
+| **T56-T58 日记展示** | 需要验证前端渲染效果 | 真机：看日记页面六元组是否正确显示 |
+| **T59-T61 人物列表** | 缺 person_list 接口 | 先确认前端替代方案，再验证 |
+| **T62-T63 周回顾** | 需要 Heartbeat 定时触发 | 手动触发或等周日 20:00 |
+| **T66-T67 patch 幂等性** | 关键数据安全测试 | **可写自动化**：连续 patch→读→断言 |
+
+### 建议：可以补写自动化测试的用例
+
+以下用例值得投入时间写成自动化测试（一次写好反复用）：
+
+| 用例 | 测试类型 | 建议文件位置 |
+|------|---------|------------|
+| **T14/T67 patch 幂等性** | 单元测试 | `backend/tests/unit/test_user_profile_patch.py` |
+| **T15 person 新建格式** | 单元测试 | `backend/tests/unit/test_person_create_format.py` |
+| **T45-T48 告别链路失败** | 集成测试（mock） | `backend/tests/integration/test_farewell_error_handling.py` |
+| **T34-T36 待回访一致性** | 集成测试 | `backend/tests/integration/test_pending_followup_consistency.py` |
+| **T50-T51 skill 文件存在性** | CI 检查 | `backend/tests/unit/test_skill_files_exist.py` |
+
+### 不能自动化、只能手动的
+
+| 用例 | 为什么只能手动 |
+|------|-------------|
+| T1-T5 跨 session 记忆 | 需要真实 LLM 对话 + session 生命周期 |
+| T6-T9 模式识别 | 需要多轮真实对话积累，LLM 行为不确定 |
+| T29-T33 跨 Tab | 需要小程序两个 Tab 切换 |
+| T40-T41 优先级冲突 | 需要精心构造的高密度用户数据 |
+| T42-T44 深夜模式 | 需要在特定时间测试 |
+| T56-T61 我的页面展示 | 需要真机验证 UI 渲染效果 |
+
+---
+
+## 十一、交付物
 
 毅卓团队完成测试后，需要交付：
 
