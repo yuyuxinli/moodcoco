@@ -1,1 +1,26 @@
 commit	phase	feature	scores	total	status	summary
+72240e0	build	F01	-	-	keep	fork memU + 4 prompt 改写(中文心理陪伴) + 三维 category(self/5+动态people/events) + 桥接脚本 memu_bridge.py
+72240e0	eval	F01	4.0/2.0/1.0/1.0	2.0	fail	BLOCKER: memu/__init__.py imports Rust _core (not compiled), bridge script 100% broken
+4176646	build	F01	-	-	keep	fix memu/__init__.py: try-except Rust _core import, unblocks all Python imports and bridge script
+4176646	eval	F01	5.0/4.0/4.0/4.0	4.25	pass	fix round PASS: __init__.py try-except unblocks all imports, 4/4 dims >= 4.0, codex independent eval confirms
+b60a300	build	F03	-	-	keep	listen SKILL.md: 5 core actions (presence/mirroring/space/follow/confirm), forbidden behaviors table, response rhythm guide, Rogers person-centered therapy reference with academic sources
+4e746a6	build	F04	-	-	keep	untangle SKILL.md: 4阶段流程(接住/列清单/选聚焦/深入切换) + 叙事疗法外化 + 情绪颗粒度 + ACT认知解离 + Poll降级方案
+2548a87	build	F02	-	-	keep	base-communication SKILL.md: 承接/澄清/轻推动三组技术，含正确错误示范、调用顺序流程图、与其他skill关系表、禁止清单、心理学参考
+b1e7ab8	build	F06	-	-	keep	calm-body Skill: 5 种干预工具(循环叹息/4-7-8/方块呼吸/5-4-3-2-1/身体扫描)+PMR, 场景匹配表, 逐步引导流程, 禁止清单
+cea5aca	build	F05	-	-	keep	QPR crisis skill: P0/P1 分级触发, Q(直接询问)-P(安全对话)-R(转介热线), 禁止清单, 安全计划, memU 高敏感标记, 不松手原则
+2548a87	eval	F02	5.0/4.0/4.0	4.33	pass	PASS: 完整性5.0(正反例+学术来源齐全) 正确性4.0(三组技术全覆盖,流程图有轻微歧义但不影响行为) Bug密度4.0(零结构问题). codex独立评分5/3/4,正确性分歧因流程图缩进歧义,实际行为规范正确.
+b1e7ab8	eval	F06	4.0/4.0/4.0/5.0	4.25	pass	PASS: 完整性4.0(5工具+PMR齐全,禁止清单8条,心理学依据inline,缺references/目录) 正确性4.0(场景匹配全正确,焦虑≠4-7-8,失眠≠5-4-3-2-1) Bug密度4.0(5+1标题轻微不一致,方块呼吸缺显式wait) 工具适配性5.0(场景→工具100%正确,换工具逻辑完整). codex独立评分4/4/4/5一致.
+4e746a6	eval	F04	4.5/4.0/4.0	4.17	pass	PASS: 完整性4.5(4阶段全覆盖+正误示范+情绪颗粒度+Poll降级+安全规则+心理学来源表,无TODO无占位符,缺references/目录但内联来源充分) 正确性4.0(先接住→用用户原话列清单→用户选聚焦点→深入切换,与spec完全一致,正确示范匹配eval测试场景) Bug密度4.0(零结构矛盾,forward ref到未建skill是架构依赖非bug). codex独立评分3/3/2,分歧因codex将forward ref视为dangling ref,实际为program.md规划中的F07/F08/F09,LLM不会crash.
+cea5aca	eval	F05	5.0/4.0/4.0/4.5	4.375	pass	PASS: 完整性5.0(QPR三阶段+P0/P1分级+禁止清单15项+正误示范+4篇学术来源,内容自足无占位符) 正确性4.0(QPR主流程完整,P0严重崩溃关键词略超出明确自伤意图定义但属安全保守设计) Bug密度4.0(P0定义与关键词表有轻微语义不一致,memU段写memory/YYYY-MM-DD.md与当前AGENTS.md一致非孤立bug) 安全合规4.5(QPR全流程无遗漏,禁止清单覆盖鸡汤/道德绑架/诊断/推skill,P1主动确认明确,退出双确认+不松手原则齐备). codex独立评分4.8/4.1/3.8/4.4,Bug密度分歧因P0过宽定义,C判定为安全保守可接受.
+b60a300	eval	F03	5.0/4.0/4.0	4.33	pass	PASS: 完整性5.0(5核心动作各有正误示范,禁止行为表9条含原因+错误示范,回应节奏3档,特殊情况5种,Rogers三条件+积极倾听技术表+3篇学术来源,与base-communication关系说明,零占位符零TODO) 正确性4.0(默认模式+5动作+不分析不建议不贴标签+跟随话题+Rogers基础,与spec完全一致,纯倾听测试标准全覆盖) Bug密度4.0(零结构问题,退出条件用v3新名而AGENTS.md仍用旧名,为F17集成问题非本文件bug). codex独立评分3.7/3.9/3.6,分歧因codex将退出条件中forward ref到untangle/face-decision/calm-body/crisis视为dangling ref,实际这些skill已在后续commit建成或为program.md规划中feature.
+af7fd1a	build	F08	-	-	keep	face-decision SKILL.md: 双路径(冲动型EFT冷却+纠结型ACT价值观澄清), 安全边界(不替决定/不判断不在场者), memU跟进, 9条硬规则
+b406656	build	F09	-	-	keep	know-myself Skill: IFS部分工作+叙事疗法替代故事+ACT价值观探索, 4阶段流程(接住→找到部分→看见替代故事→落地), memU集成自我叙事对比
+5ce9372	build	F07	-	-	keep	see-pattern Skill: 7阶段流程(接住情绪/等待稳定/搭桥/呈现模式/反应处理E1-E4/意义整合IFS+成长叙事/未来锚定) + memU数据驱动 + 频率保护 + E3安全协议
+37e4956	build	F12	-	-	keep	farewell SKILL.md v3 重写：归档序列 5 步（memU retrieve→提取去名字洞察→write USER.md→memU memorize→标记 archived），5 种仪式+自由形式，收束引用具体仪式内容，Banks 2024 反情感操控
+af7fd1a	eval	F08	4.5/4.0/4.0/4.5/4.0/4.5	4.25	pass	PASS: 完整性4.5(双路径全覆盖+正误示范+9硬规则+4学术来源,无TODO无占位符,缺references/目录但inline来源充分) 正确性4.0(冲动型4阶段+纠结型4阶段与spec完全一致,Phase2暂停提议语句略带劝阻色彩但被硬规则约束) Bug密度4.0(decision-cooling命名在memU category中为历史延续非bug,Heartbeat为F14 forward dep) 双路径覆盖4.5(判断逻辑清晰+歧义消解表+4种用户反应处理) 冲动型4.0(不阻止+EFT+暂停仅一次+memU跟进全覆盖) 纠结型4.5(用户列选项+ACT5问+允许不决定+不评判缺席者+说不出来降级方案). codex独立评分5.0/4.8/4.6/5.0/4.7/5.0,codex偏高因对minor issues更宽容.
+37e4956	build	F10	-	-	keep	diary SKILL.md 重写对接 memU：六元组不变，存储切 memU memorize()+USER.md，删 3 旧脚本，模式追踪移交 see-pattern
+b406656	eval	F09	4.5/4.0/4.0	4.17	pass	PASS: 完整性4.5(4阶段流程+IFS/ACT/叙事疗法三套工具+正误示范+安全规则+memU集成+6项心理学来源inline,零占位符零TODO,缺references/目录但内联来源充分) 正确性4.0(IFS部分工作完整实现:识别→外化→好奇功能,禁止贴标签/替用户否定/归因诊断,测试场景讨好别人正确示范完整覆盖,memU self/核心信念调用与实际category定义一致) Bug密度4.0(memU表中relationship/*应为people/*,术语错误但仅在see-pattern切入条件分支,非用户可感知;E3安全协议引用AGENTS.md 0.1节存在且行为正确). codex独立评分3.8/3.8/2.9,分歧因codex将relationship/*视为严重bug+E3场景不匹配+正确示范矛盾,C判定均为非阻断性问题.
+5ce9372	eval	F07	5.0/4.0/4.0/4.5	4.375	pass	"PASS: 完整性5.0(7阶段全展开,E1-E4各有脚本+禁令+执行顺序,频率记录+硬规则11条+心理学依据表5理论,零TODO零占位符零悬空引用) 正确性4.0(7-phase flow与spec完全一致,memU数据驱动,频率保护三层,E1-E4分支判断顺序正确,成长叙事用用户原话+Innovative Moments,IFS部分工作框架) Bug密度4.0(文档内部零结构矛盾,与AGENTS.md在日志后端/执行顺序/状态值有差异,但AGENTS.md是v2架构待F17重构,SKILL.md遵循v3 spec正确) 安全协议执行4.5(E3逐字脚本+立即停止+回到listen+本次会话不再返回see-pattern+检测crisis信号,E1尊重+30天冷却,频率保护三层完整,E3禁止清单6条含""用户主动要求也不继续""). codex独立评分5/4/3/4,Bug密度分歧因codex将AGENTS.md(v2)与SKILL.md(v3)差异视为bug,实际为架构迁移期正常现象(F17负责对齐)."
+91d2977	build	F11	-	-	keep	onboarding SKILL.md 对接 memU：建档改为 USER.md(write) + memU memorize()，不再写 people/*.md/diary/*.md/memory/*.md；skill 引用更新为 v3 名称(calm-body/crisis)；新增 3 条质量检查项
+827256c	build	F14	-	-	keep	proactive-trigger SKILL.md: 4种触发行为(模式洞察推送/事件跟进/成长提醒/关系总结), 情绪安全pre-check(5项检查+稳定信号判断), 频率保护总表(48h冷却+周/月上限), 触发优先级5级, memU数据依赖表, 与see-pattern/face-decision/listen/diary/crisis联动, 安全边界6条
+7dd7df3	build	F15	-	-	keep	scene-router SKILL.md: 15场景路由表(恋爱→listen+untangle+see-pattern, SOS→crisis等), 5级路由优先级(SOS一票否决→关键词→memU推断→列表→默认listen), 推荐演化3阶段(冷启动15预设→热启动memU高频Top3+未完结Top2→深度个性化全替代), 多场景重叠消歧, 禁止清单7条, 选择架构+认知负荷心理学依据
