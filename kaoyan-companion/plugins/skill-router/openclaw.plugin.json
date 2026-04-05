@@ -1,0 +1,6 @@
+{
+  "id": "skill-router",
+  "name": "Skill Router",
+  "kind": "non-capability",
+  "description": "按入口路由可用 skills：三层隔离（身份共享 + 能力隔离）"
+}

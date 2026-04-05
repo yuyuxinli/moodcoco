@@ -1,0 +1,1172 @@
+{
+  "feature": "S1",
+  "timestamp": "2026-04-01T05:42:55.361422+00:00",
+  "user_id": "1b213957-26cc-43a8-8f51-be0a05791733",
+  "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxYjIxMzk1Ny0yNmNjLTQzYTgtOGY1MS1iZTBhMDU3OTE3MzMiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyNjk3NSwiaWF0IjoxNzc1MDIyMTc1fQ.WF_oiJuHj7t8YlCR8DY4V3FAQRYEx70We3an80bLrxw",
+  "session_id": "995b4614-dd23-474d-a892-b1d6024ccdd2",
+  "conversations": [
+    {
+      "turn": 1,
+      "user": "我刚跟男朋友吵了一架，好烦",
+      "ai_response": "{\n  \"messages\": [\n    \"抱抱你😔，吵架后的烦躁和委屈一定特别不好受吧\",\n    \"其实不同MBTI人格的人，吵架时的表达和需求天差地别呢\",\n    \"要不要通过小游戏拆解下你们的相处模式？也许能找到更舒服的沟通方式～\"\n  ],\n  \"options\": [\n    \"分析他为什么总get不到我的点\",\n    \"想知道我吵架时的反应属于哪种人格\",\n    \"学习怎么和不同性格的人好好吵架\"\n  ]\n}"
+    },
+    {
+      "turn": 2,
+      "user": "他说我太敏感了，每次都这样说我",
+      "ai_response": "{\n  \"messages\": [\n    \"听到他这么说，你心里肯定特别委屈吧？\",\n    \"其实“敏感”背后，藏着的是你对情绪的细腻感知力，这未必是缺点哦。\",\n    \"不同MBTI类型的人，对情绪信号的捕捉能力本就不同，比如F型人天生更在意情感连接，而T型人可能更习惯用理性视角看问题。\",\n    \"要不要一起看看你们的人格类型，找到让彼此都舒服的沟通方式？\"\n  ],\n  \"options\": [\n    \"测测我的人格类型，了解自己的情绪特点\",\n    \"分析他的人格类型，理解他的说话方式\",\n    \"直接问怎么缓解当下的难过情绪\"\n  ]\n}"
+    },
+    {
+      "turn": "3_5",
+      "user": [
+        "我真的很生气",
+        "他每次都这样",
+        "我不知道该怎么办"
+      ],
+      "ai_responses": [
+        "{\n  \"messages\": [\n    \"我完全能感受到你的愤怒和委屈，被最亲近的人这样说，换谁都会难过的😔\",\n    \"其实很多时候，情侣间的矛盾不是谁对谁错，而是不同人格类型的人，表达和接收情绪的方式太不一样了。\",\n    \"要不要通过这个MBTI小游戏，看看你们的人格在情感需求上的差异？说不定能找到解开你们矛盾的小钥匙🔑\"\n  ],\n  \"options\": [\n    \"分析我和他的人格差异\",\n    \"学习如何表达我的情绪\",\n    \"了解他为什么会这么说\"\n  ]\n}{\n  \"messages\": [\n    \"我懂这种无力感，好像每次都卡在同一个死胡同里，特别累对吧😔\",\n    \"其实很多时候，不是你不好，而是你们俩的「情绪语言」根本不一样。\",\n    \"比如有的人格习惯用「理性道理」表达关心，有的却只接收到「被指责」的信号。\",\n    \"要不要试试用MBTI拆解你们的相处模式？找到属于你们的沟通密码？\"\n  ],\n  \"options\": [\n    \"分析他的行为背后的心理需求\",\n    \"看看我这种人格怎么应对更有效\",\n    \"直接学习和他沟通的话术\"\n  ]\n}"
+      ],
+      "event_processing_end_count": 2,
+      "rapid_fire_merged": true,
+      "note": "发送3条，收到 2 个 event_processing_end"
+    },
+    {
+      "turn": 6,
+      "user": "小白就是这样，从来不考虑我的感受",
+      "ai_response": "{\n  \"messages\": [\n    \"被忽视感受的滋味真的太难受了，我特别懂这种委屈😔\",\n    \"其实很多时候不是他故意不在意，而是不同MBTI人格的「情感雷达」灵敏度完全不同。\",\n    \"比如有些类型天生对“情绪需求”不敏感，不是不想考虑，是根本没接收到你的信号。\",\n    \"要不要一起测测你们的MBTI类型？说不定能找到让他get到你感受的小方法～\"\n  ],\n  \"options\": [\n    \"想知道他为啥总“读不懂”我\",\n    \"想学习怎么让他在意我的感受\",\n    \"想看看我们的人格到底合不合\"\n  ]\n}"
+    },
+    {
+      "turn": 7,
+      "user": "好了我好一点了，谢谢你",
+      "ai_response": "{\n  \"messages\": [\n    \"😊能慢慢好起来真的太好了！\",\n    \"你其实特别勇敢，愿意直面自己的情绪，这已经很棒啦～\",\n    \"如果之后还想聊聊相处的小困惑，或者想探索自己和对方的人格特点，随时来找我呀！\"\n  ],\n  \"options\": [\n    \"想探索自己的情感需求\",\n    \"想了解对方的行为逻辑\",\n    \"只是想随便聊聊\"\n  ]\n}"
+    }
+  ],
+  "api_responses": {
+    "auth": {
+      "status": 200,
+      "body": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxYjIxMzk1Ny0yNmNjLTQzYTgtOGY1MS1iZTBhMDU3OTE3MzMiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyNjk3NSwiaWF0IjoxNzc1MDIyMTc1fQ.WF_oiJuHj7t8YlCR8DY4V3FAQRYEx70We3an80bLrxw",
+        "token_type": "bearer",
+        "user_id": "1b213957-26cc-43a8-8f51-be0a05791733",
+        "is_guest": true,
+        "expires_at": "2026-04-08T05:42:55.372691+00:00",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMWIyMTM5NTctMjZjYy00M2E4LThmNTEtYmUwYTA1NzkxNzMzIiwiaXNfZ3Vlc3QiOnRydWUsInRva2VuX3R5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzc3NjE0MTc1LCJpYXQiOjE3NzUwMjIxNzV9.1ZVjdYlG7rtvLiiaBhuRnmYPBaXI9J6njbmnczTPf5g",
+        "refresh_token_expires_at": "2026-05-01T05:42:55.372952+00:00"
+      }
+    },
+    "socket_events": [
+      {
+        "event": "event_processing_start",
+        "ts": 1775022177.399779
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.740247,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "{"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.836378,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.8383229,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.8400488,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.9035919,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "messages"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.904864,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\":"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.9060102,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " ["
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.907121,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.99296,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.994761,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.9970078,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "抱抱"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022178.9994051,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "你"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.089261,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "😔"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.091824,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "，"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.09243,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "吵架"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.09357,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "后的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.224691,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "烦躁"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.226838,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "和"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.22842,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "委屈"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.2300951,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "一定"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.360756,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "特别"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.3630688,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "不好"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.365219,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "受"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.3670888,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "吧"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.5038989,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\","
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.505727,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.507489,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.509294,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.638261,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "其实"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.6401641,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "不同"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.641951,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "MB"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.643538,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "TI"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.729223,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "人格"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.7310662,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.733034,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "人"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.735146,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "，"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.8823931,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "吵架"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.884181,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "时"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.885489,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.887213,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "表达"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.967317,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "和"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.9685252,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "需求"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.9699242,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "天"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022179.971232,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "差"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.0430121,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "地"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.044747,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "别"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.046318,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "呢"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.048171,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\","
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.128464,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.1297169,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.1309361,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.1323469,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "要不要"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.259197,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "通过"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.26099,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "小游戏"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.262947,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "拆解"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.265685,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "下"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.4083252,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "你们"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.410437,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.4175072,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "相处"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.418862,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "模式"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.45226,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "？"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.454495,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "也许"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.456843,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "能"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.458891,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "找到"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.55773,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "更"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.559508,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "舒服"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.561562,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.5631459,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "沟通"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.684941,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "方式"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.686847,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "～"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.689022,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.690285,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.7694552,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.77035,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " ],"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.771304,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.772272,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.9284558,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.928861,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "options"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.9293282,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\":"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.929748,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " ["
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.941601,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.9420009,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.942369,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022180.942762,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "分析"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.0313978,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "他"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.0319529,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "为什么"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.032547,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "总"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.033113,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "get"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.1614091,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "不到"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.1626,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "我的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.1634738,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "点"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.164429,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\","
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.336163,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.337929,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.34005,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.342272,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "想"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.354177,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "知道"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.3558242,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "我"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.3575308,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "吵架"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.358987,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "时"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.496632,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.499029,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "反应"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.5008042,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "属于"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.502416,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "哪种"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.5360892,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "人格"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.5381582,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\","
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.539949,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.542043,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.6379242,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.6398568,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "学习"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.6420438,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "怎么"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.643799,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "和"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.728464,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "不同"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.731062,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "性格"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.7331252,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "的"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.734994,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "人"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.844799,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "好好"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.847135,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "吵架"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.848415,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.849652,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.9805171,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.983114,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": " ]"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.9848409,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022181.986913,
+        "stream_id": "stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc",
+        "has_data": true,
+        "data_preview": "}"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775022182.041868,
+        "count": 1,
+        "data": "{'stream_id': 'stream_9e3c71af-01c7-41ff-a4ff-5355732b67cc', 'timestamp': '2026-04-01T13:43:02.03944"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775022184.047622
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022184.89913,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "{"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022184.996201,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022184.997277,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": " "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022184.998438,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.127347,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "messages"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.129697,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "\":"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.131244,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": " ["
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.132586,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "\n"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.142317,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "   "
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.146605,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": " \""
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.148808,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "听到"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.149475,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "他"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.2273228,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "这么"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.229526,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "说"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.232224,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "，"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.234078,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "你"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.296638,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "心里"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.298804,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "肯定"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.3007,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "特别"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.302451,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "委屈"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.370092,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "吧"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.373004,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "？"
+      },
+      {
+        "event": "event_response",
+        "ts": 1775022185.376267,
+        "stream_id": "stream_124062f9-7f6a-4e23-9e70-e5b953ec8b65",
+        "has_data": true,
+        "data_preview": "\","
+      }
+    ],
+    "about_self": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "sections": {
+            "my_now": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_future": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_story": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_core": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            }
+          },
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "relations": []
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations_xiaobo": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "name": "小白",
+          "text": "暂无相关记忆。",
+          "memory_ids": [],
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    }
+  },
+  "functional_checks": {
+    "auth_200": true,
+    "socket_connected": true,
+    "ai_reply_received": true,
+    "about_self_200": true,
+    "about_relations_200": true,
+    "xiaobo_profile_found": true,
+    "xiaobo_relation_type_correct": false,
+    "rapid_fire_merged": true
+  },
+  "passed_checks": 7,
+  "total_checks": 8,
+  "errors": [
+    "Session create failed: 201 {'session_id': '51d40825-9217-42be-a9fc-044980d60bc2', 'title': 'S1 首次接触测试', 'summary': 'S1 首次接触测试', 'session_type': 'CHAT', 'thinking_mode': False, 'is_archived': False, 'created_at': '2026-04-01T05:42:55.378493Z', 'updated_at': '2026-04-01T05:42:55.378493Z', 'last_message': None, 'session_metadata': None, 'tags': None}, using random UUID"
+  ],
+  "steps_completed": 10,
+  "steps_total": 10
+}

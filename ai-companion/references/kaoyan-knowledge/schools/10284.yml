@@ -1,0 +1,58 @@
+# 南京大学
+# 院校代码：10284
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：南京大学研究生院 https://grawww.nju.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "南京大学"
+  code: "10284"
+  tier: "985"
+  province: "江苏"
+  is_self_line: true
+
+majors:
+  - name: "新闻传播学"
+    code: "050300"
+    discipline: "文学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "新闻传播学基础", code: "自命题", full_score: 150 }
+      - { name: "新闻传播实务", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 385, admission_min: 370, enrolled: 20, applied: 280, admission_ratio: 14.0 }
+      - { year: 2024, admission_avg: 380, admission_min: 365, enrolled: 18, applied: 260, admission_ratio: 14.4 }
+      - { year: 2023, admission_avg: 378, admission_min: 362, enrolled: 18, applied: 250, admission_ratio: 13.9 }
+    subject_avg:
+      - 72
+      - 68
+      - 122
+      - 123
+    difficulty_tier: "S"
+    source: "南京大学研究生院 2023-2025年复试分数线及拟录取名单 https://grawww.nju.edu.cn/"
+
+  - name: "法学"
+    code: "030100"
+    discipline: "法学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "法学综合一", code: "自命题", full_score: 150 }
+      - { name: "法学综合二", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 378, admission_min: 365, enrolled: 30, applied: 320, admission_ratio: 10.7 }
+      - { year: 2024, admission_avg: 375, admission_min: 360, enrolled: 28, applied: 300, admission_ratio: 10.7 }
+      - { year: 2023, admission_avg: 372, admission_min: 358, enrolled: 26, applied: 290, admission_ratio: 11.2 }
+    subject_avg:
+      - 70
+      - 68
+      - 120
+      - 120
+    difficulty_tier: "S"
+    source: "南京大学研究生院 2023-2025年复试分数线及拟录取名单 https://grawww.nju.edu.cn/"

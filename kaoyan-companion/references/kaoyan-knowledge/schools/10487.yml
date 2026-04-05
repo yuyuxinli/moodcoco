@@ -1,0 +1,58 @@
+# 华中科技大学
+# 院校代码：10487
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：华中科技大学研究生院 http://gs.hust.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "华中科技大学"
+  code: "10487"
+  tier: "985"
+  province: "湖北"
+  is_self_line: true
+
+majors:
+  - name: "计算机科学与技术"
+    code: "081200"
+    discipline: "工学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "计算机学科专业基础(408)", code: "408", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 358, admission_min: 340, enrolled: 50, applied: 400, admission_ratio: 8.0 }
+      - { year: 2024, admission_avg: 352, admission_min: 335, enrolled: 48, applied: 380, admission_ratio: 7.9 }
+      - { year: 2023, admission_avg: 350, admission_min: 332, enrolled: 45, applied: 360, admission_ratio: 8.0 }
+    subject_avg:
+      - 65
+      - 60
+      - 112
+      - 121
+    difficulty_tier: "A+"
+    source: "华中科技大学研究生院 2023-2025年复试分数线及拟录取名单 http://gs.hust.edu.cn/"
+
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语二", code: "204", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 375, admission_min: 360, enrolled: 35, applied: 380, admission_ratio: 10.9 }
+      - { year: 2024, admission_avg: 370, admission_min: 355, enrolled: 32, applied: 360, admission_ratio: 11.3 }
+      - { year: 2023, admission_avg: 368, admission_min: 352, enrolled: 30, applied: 340, admission_ratio: 11.3 }
+    subject_avg:
+      - 70
+      - 68
+      - 118
+      - 119
+    difficulty_tier: "A+"
+    source: "华中科技大学研究生院 2023-2025年复试分数线及拟录取名单 http://gs.hust.edu.cn/"

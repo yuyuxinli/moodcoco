@@ -1,0 +1,313 @@
+{
+  "feature": "S1",
+  "version": "v4",
+  "timestamp": "2026-04-01T06:20:29.769767+00:00",
+  "user_id": "4c829ebf-18b8-420a-8717-33df6edb765b",
+  "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzgyOWViZi0xOGI4LTQyMGEtODcxNy0zM2RmNmVkYjc2NWIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyOTIyOSwiaWF0IjoxNzc1MDI0NDI5fQ.T34iF8gqGx4QQHklsOWuAHEBA_wFxERz38SLU41RN3I",
+  "session_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+  "conversations": [
+    {
+      "turn": 1,
+      "user": "我刚跟男朋友吵了一架，好烦",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+    },
+    {
+      "turn": 2,
+      "user": "他说我太敏感了，每次都这样说我",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+    },
+    {
+      "turn": "3_5",
+      "user": [
+        "我真的很生气",
+        "他每次都这样",
+        "我不知道该怎么办"
+      ],
+      "ai_responses": [
+        "ChatProxy unexpected error: Illegal header value b'Bearer 'ChatProxy unexpected error: Illegal header value b'Bearer 'ChatProxy unexpected error: Illegal header value b'Bearer '"
+      ],
+      "event_processing_end_count": 3,
+      "rapid_fire_merged": false,
+      "note": "发送3条，收到 3 个 event_processing_end"
+    },
+    {
+      "turn": 6,
+      "user": "小白就是这样，从来不考虑我的感受",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+    },
+    {
+      "turn": 7,
+      "user": "好了我好一点了，谢谢你",
+      "ai_response": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+    }
+  ],
+  "api_responses": {
+    "auth": {
+      "status": 200,
+      "body": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YzgyOWViZi0xOGI4LTQyMGEtODcxNy0zM2RmNmVkYjc2NWIiLCJpc19ndWVzdCI6dHJ1ZSwicGVybWlzc2lvbnMiOlsiYmFzaWNfcmVhZCIsImxpbWl0ZWRfY3JlYXRlIl0sImV4cCI6MTc3NTYyOTIyOSwiaWF0IjoxNzc1MDI0NDI5fQ.T34iF8gqGx4QQHklsOWuAHEBA_wFxERz38SLU41RN3I",
+        "token_type": "bearer",
+        "user_id": "4c829ebf-18b8-420a-8717-33df6edb765b",
+        "is_guest": true,
+        "expires_at": "2026-04-08T06:20:29.786168+00:00",
+        "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiNGM4MjllYmYtMThiOC00MjBhLTg3MTctMzNkZjZlZGI3NjViIiwiaXNfZ3Vlc3QiOnRydWUsInRva2VuX3R5cGUiOiJyZWZyZXNoIiwiZXhwIjoxNzc3NjE2NDI5LCJpYXQiOjE3NzUwMjQ0Mjl9.Sc6Fhx37Lxdrvtln54rEMUg3MqcT-QE58c0xhf133NQ",
+        "refresh_token_expires_at": "2026-05-01T06:20:29.791957+00:00"
+      }
+    },
+    "socket_events": [
+      {
+        "event": "UNKNOWN:connection_established",
+        "ts": 1775024429.823791,
+        "data": "{'client_id': '49361309-0c9c-4b3a-bc70-251a730723d7', 'connection_id': '4c829ebf-18b8-420a-8717-33df6edb765b_a6d8ab41-dada-47d2-98b9-595a23063e5f_4936"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024432.816693,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024432.818322
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024432.842996,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024432.8431811,
+        "count": 1,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:32.842934', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024434.846616,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024434.84693
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024434.874944,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024434.8751302,
+        "count": 2,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:34.874749', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024434.8765922,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024434.876868
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024434.8936698,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024434.893755,
+        "count": 3,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:34.893577', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024435.179874,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024435.180177
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024435.20477,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024435.204986,
+        "count": 4,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:35.204724', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024435.4843159,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024435.4845319
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024435.5085142,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024435.5086222,
+        "count": 5,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:20:35.508387', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024496.787574,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024496.787731
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024496.804266,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024496.80434,
+        "count": 6,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:21:36.804172', 'ch"
+      },
+      {
+        "event": "UNKNOWN:message_received",
+        "ts": 1775024497.809056,
+        "data": "{'event_type': 'user_message'}"
+      },
+      {
+        "event": "event_processing_start",
+        "ts": 1775024497.8099132
+      },
+      {
+        "event": "event_response",
+        "ts": 1775024497.837219,
+        "stream_id": "a6d8ab41-dada-47d2-98b9-595a23063e5f",
+        "stream_type": "error",
+        "has_data": true,
+        "data_preview": "ChatProxy unexpected error: Illegal header value b'Bearer '"
+      },
+      {
+        "event": "event_processing_end",
+        "ts": 1775024497.837331,
+        "count": 7,
+        "data": "{'stream_id': 'a6d8ab41-dada-47d2-98b9-595a23063e5f', 'timestamp': '2026-04-01T14:21:37.837072', 'ch"
+      }
+    ],
+    "about_self": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "sections": {
+            "my_now": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_future": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_story": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            },
+            "my_core": {
+              "text": "暂无相关记忆。",
+              "memory_ids": []
+            }
+          },
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "relations": []
+        },
+        "cache_hit": true
+      }
+    },
+    "about_relations_xiaobo": {
+      "status": 200,
+      "body": {
+        "status": "success",
+        "data": {
+          "name": "小白",
+          "text": "暂无相关记忆。",
+          "memory_ids": [],
+          "generated_at": null,
+          "source": null
+        },
+        "cache_hit": true
+      }
+    }
+  },
+  "functional_checks": {
+    "auth_200": true,
+    "socket_connected": true,
+    "ai_reply_received": true,
+    "about_self_200": true,
+    "about_relations_200": true,
+    "xiaobo_profile_found": true,
+    "xiaobo_relation_type_correct": false,
+    "rapid_fire_merged": false
+  },
+  "passed_checks": 6,
+  "total_checks": 8,
+  "errors": [],
+  "steps_completed": 10,
+  "steps_total": 10,
+  "p1_mbti_in_reply": [
+    {
+      "turn": "T1",
+      "mbti": false
+    },
+    {
+      "turn": "T2",
+      "mbti": false
+    },
+    {
+      "turn": "T6",
+      "mbti": false
+    },
+    {
+      "turn": "T7",
+      "mbti": false
+    }
+  ],
+  "p1_summary": "0/4 轮回复含 MBTI 引导"
+}

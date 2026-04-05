@@ -68,3 +68,21 @@ agent:coco:openclaw-weixin:group:{groupId}
 两层隔离共同工作：
 - `dmScope: per-channel-peer` → 对话历史隔离
 - `sandbox.scope: per-sender` → 文件数据隔离（含 memory_search 搜索范围）
+
+---
+
+## ⚠️ 重要澄清：线上多租户由后端实现，非 OpenClaw
+
+**本文档描述的是 OpenClaw 本地测试场景的隔离方案。**
+
+线上环境的多租户隔离由 `psychologists` 后端项目（FastAPI）实现，不依赖 OpenClaw sandbox：
+
+| 关注点 | 线上方案（psychologists 后端） | 本地测试（OpenClaw） |
+|--------|-------------------------------|---------------------|
+| 用户隔离 | JWT → `user_id` (UUID)，所有表都有 `user_id` 外键 | `dmScope: per-channel-peer`（单租户测试足够） |
+| 记忆存储 | `MemoryItem` + `MemoryCategory` 表，按 user_id 隔离 | `memory/` 目录（本地文件，仅测试用） |
+| 用户档案 | DB `User.profile_data` + `MemoryCategory(type=profile)` | `USER.md`（本地文件，仅测试用） |
+| 人物档案 | `MemoryItem(entity_name, entity_type, entity_relation)` | `people/*.md`（本地文件，仅测试用） |
+| Context 注入 | L3 层：`MemoryLoader.load_user_memory(user_id)` → Markdown → system prompt | `memory_search` 工具读本地文件 |
+
+**结论：** moodcoco workspace 是**模板**（SOUL.md、AGENTS.md、Skills），不是数据存储。线上用户数据全部走 DB，按 `user_id` 天然隔离。`sandbox.scope: per-sender` 在 OpenClaw 中实际不是合法值（仅支持 session/agent/shared），本地测试单租户即可。

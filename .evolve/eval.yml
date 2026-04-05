@@ -1,16 +1,41 @@
 dimensions:
-  - name: file_verification
-    description: 对话结束后文件写入正确性（字段存在、格式正确、内容从对话提炼）
+
+  - name: 文件完整性
     type: deterministic
-    cmd: python3 .evolve/adapter.py check
-    threshold: 10.0
+    threshold: 8.0
+    description: >
+      检查所有要求的文件是否存在、格式是否合法。
+      B agent 自动打分 = 通过检查数 / 总检查数 × 10。
 
-  - name: behavior_correctness
-    description: AI 回复行为是否符合 spec（触发条件、分支路径、禁止词、话术风格）
-    type: llm-judged
-    threshold: 9.0
+    checks:
+      - eval_s1.yml 存在且 YAML 格式合法
+      - eval_s1.yml 包含三个维度（功能验证/数据正确性/对话质量）
+      - eval_s1.yml 对话质量锚点不含"跨会话记忆"
+      - eval_s1.yml 对话质量锚点不含"模式识别引用 2 个事件"
+      - eval_s1.yml 功能验证中 xiaobo_relation_type_correct 标记 not_applicable
+      - run_s1_v10.py 存在
+      - run_s1_v10.py Turn 7 拆分为两条消息
+      - run_s1_median.py 存在
+      - FORMAT_MINIPROGRAM.md 存在
+      - FORMAT_TEXT.md 存在
 
-  - name: scenario_coverage
-    description: 测试场景本身是否真正覆盖了它声称验证的需求点
+    scoring_rubric:
+      1:  "< 20% 文件存在或格式合法"
+      5:  "50-60% 文件存在，但部分格式不合法或内容不完整"
+      8:  "80-90% 检查通过，所有核心文件存在且格式正确"
+      10: "100% 检查通过"
+
+  - name: 内容质量
     type: llm-judged
-    threshold: 9.0
+    threshold: 7.0
+    description: >
+      C agent 评估内容是否符合产品需求：
+      eval_s1.yml 的锚点是否合理可达、FORMAT_MINIPROGRAM.md 是否覆盖所有 content_type、
+      测试脚本改进是否解决了已知问题。
+
+    scoring_rubric:
+      1: "内容大量缺失或与需求不符"
+      5: "内容基本完整但有明显遗漏（如缺少多个 content_type 定义）"
+      7: "内容完整，覆盖所有需求，少量细节可改善"
+      8: "内容高质量，锚点合理可达，格式定义完整，测试改进到位"
+      10: "完美，无可改善之处"

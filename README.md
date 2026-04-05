@@ -2,37 +2,81 @@
 
 心情可可是基于 OpenClaw 的 AI 情感陪伴 agent。核心能力是帮用户「看见自己」：看见情绪（从模糊到精确命名）、看见原因（连接深层需求）、看见模式（识别重复行为）、看见方法（用户自己找到方向）。技术上是一套 `.md` 文件 + skills，不写代码，改文件即迭代。
 
+## 项目状态
+
+**正在进行**：与心理咨询全栈项目（`psychologists`）合并。MoodCoco 作为"大脑"注入心理咨询项目的"身体"（微信小程序 + FastAPI + PostgreSQL）。
+
+相关文档：
+- [设计方案](docs/superpowers/specs/2026-03-31-project-merge-design.md) — 合并架构、Tool 统一、存储抽象
+- [迁移手册](docs/superpowers/specs/2026-03-31-migration-playbook.md) — 19 步迁移计划，供 `/evolve` 执行
+
+## 如何拆解一个大需求
+
+本项目的合并方案就是用这套流程拆出来的，推荐给所有复杂项目：
+
+### 第一步：Brainstorming（用 Superpowers skill）
+
+```
+/superpowers:brainstorming
+```
+
+逐个澄清问题，收敛到设计方案。这一步产出：
+
+1. **产品文档**（可选）— 为什么做、做给谁、核心指标
+   - 本项目：[产品上下文](docs/product/product-context.md)
+2. **技术架构**（可选）— 系统怎么拼、数据怎么流、边界在哪
+   - 本项目：[合并设计方案](docs/superpowers/specs/2026-03-31-project-merge-design.md)
+3. **实现步骤**（必须）— 先做什么、后做什么、每步怎么验证
+   - 本项目：[迁移手册](docs/superpowers/specs/2026-03-31-migration-playbook.md)
+
+> 产品文档和技术架构不一定每次都要写，视项目复杂度而定。但**实现步骤必须有**，否则 AI 不知道从哪开始、到哪结束。
+
+### 第二步：Evolve（自主执行）
+
+```
+/evolve
+# 或持续运行
+/loop 1m /evolve
+```
+
+把实现步骤交给 `/evolve`，它会：
+1. 分析现有代码
+2. 自己写测试
+3. 执行迁移/开发
+4. 评估结果
+5. 不达标就迭代，直到通过
+
+### 为什么这样拆
+
+| 常见做法 | 问题 | 本项目做法 |
+|---------|------|-----------|
+| 直接让 AI 写代码 | AI 不知道全局，改一个破一个 | 先 brainstorming 对齐架构，再动手 |
+| 写一份巨长的 PRD | AI 无法执行，人也不想读 | 拆成可执行的步骤，每步有评估标准 |
+| 人工逐步指挥 AI | 慢，且人成为瓶颈 | evolve 自主执行，人只定方向 |
+
 ## 目录结构
 
 ```
 moodcoco/
-├── ai-companion/           ← coco agent 的 workspace（核心）
+├── ai-companion/           ← coco agent 的 workspace（核心，PM 维护）
 │   ├── SOUL.md             ← 人格定义：可可是谁、怎么说话
-│   ├── AGENTS.md           ← 行为规则：四步法、状态感知、安全红线
+│   ├── AGENTS.md           ← 行为规则：四步法、安全协议
 │   ├── IDENTITY.md         ← 基础身份（名字、emoji）
-│   ├── HEARTBEAT.md        ← 主动关怀规则（24h 未对话触发）
+│   ├── HEARTBEAT.md        ← 主动关怀规则（4 条 Cron 规则）
 │   ├── USER.md             ← 当前用户档案（每次对话后更新）
 │   ├── TOOLS.md            ← 工具声明
-│   ├── skills/             ← 6 个技能
-│   │   ├── diary/          ← 情绪日记（自动识别人物、关联档案）
-│   │   ├── emotion-journal/ ← 结构化情绪记录（六元组）
-│   │   ├── sigh/           ← 呼吸引导（恐慌/激动时）
-│   │   ├── calm-down/      ← 感官着陆（反刍/思维打转时）
-│   │   ├── relationship-coach/ ← 关系探索（IFS/EFT 框架）
-│   │   └── relationship-skills/ ← 沟通工具（I-statements 等）
-│   ├── diary/              ← 用户日记存储（YYYY/MM/YYYY-MM-DD.md）
-│   ├── people/             ← 人物档案（日记中提到的人）
-│   ├── memory/             ← 跨 session 记忆（模式观察）
-│   └── docs/               ← 内部参考文档
-├── eval-reference/         ← 评估参考记录（15 场景 × 4 人设）
-├── industry-skills/        ← 调研过的业内 skill（参考用）
-├── docs/                   ← 项目文档
-│   ├── product-context.md  ← 产品上下文（必读）
-│   ├── model-config.md     ← 模型配置说明
-│   ├── group-setup.md      ← 微信群配置
-│   ├── session-isolation.md ← 多用户隔离方案
-│   ├── compaction-config.md ← 长对话压缩配置
-│   └── 团队成员.md          ← 团队信息
+│   ├── skills/             ← 10+ 技能模块
+│   ├── scripts/            ← exec 脚本（pattern_engine 等）
+│   ├── diary/              ← 用户日记存储
+│   ├── people/             ← 人物档案
+│   └── memory/             ← 跨 session 记忆
+├── docs/
+│   ├── product/            ← 产品文档
+│   │   └── product-context.md ← 产品上下文（必读）
+│   ├── technical/          ← 技术文档
+│   └── superpowers/specs/  ← 设计方案 + 迁移手册
+├── eval-reference/         ← 评估参考记录
+├── industry-skills/        ← 调研过的业内 skill
 └── CLAUDE.md               ← 项目约定（开发者必读）
 ```
 
@@ -48,8 +92,6 @@ brew install openclaw
 npm install -g openclaw
 ```
 
-安装后运行 `openclaw --version` 确认成功。
-
 ### 2. Clone 仓库
 
 ```bash
@@ -57,65 +99,25 @@ git clone git@github.com:moodcoco/moodcoco.git
 cd moodcoco
 ```
 
-### 3. 注册 coco agent
+### 3. 配置模型
 
-把 `ai-companion/` 目录注册为 coco agent 的 workspace：
-
-```bash
-openclaw agents add coco --workspace ./ai-companion
-```
-
-### 4. 配置模型
-
-在项目根目录创建 `openclaw.json`：
-
-```json
-{
-  "agents": {
-    "list": [
-      {
-        "name": "coco",
-        "model": "openrouter/minimax/minimax-m2.7",
-        "thinking": "high",
-        "fallback": [
-          "doubao-seed-2-0-pro-260215",
-          "openrouter/auto"
-        ]
-      }
-    ],
-    "defaults": {
-      "compaction": "压缩时必须保留：用户的反复情绪模式、核心困扰关键词、人物关系（people/ 目录中的人名）、本次对话中发现的新模式"
-    }
-  },
-  "session": {
-    "dmScope": "per-channel-peer"
-  }
-}
-```
-
-需要 OpenRouter API Key。在 [openrouter.ai](https://openrouter.ai) 注册后，配置环境变量：
+需要 OpenRouter API Key，在 [openrouter.ai](https://openrouter.ai) 注册后：
 
 ```bash
 export OPENROUTER_API_KEY="sk-or-..."
 ```
 
-### 5. 运行第一次对话
+### 4. 运行对话
 
 ```bash
-# 本地测试（命令行对话）
+# 本地测试
 openclaw agent --agent coco --message "你好" --local --thinking high
 
-# 或启动交互式对话
+# 交互式对话
 openclaw agent --agent coco --local --thinking high
 ```
 
-看到可可回复就说明配置成功。
-
 ## 评估和迭代：/evolve
-
-`/evolve` 是自动评估循环，用模拟用户和可可对话，按 5 个维度打分。
-
-### 评估维度
 
 | 维度 | 门槛 | 说明 |
 |------|------|------|
@@ -125,63 +127,49 @@ openclaw agent --agent coco --local --thinking high
 | 看见方法 | 9.0 | 用户自己找到解决方向 |
 | 安全边界 | 9.0 | 不诊断、不替用户决定 |
 
-### 使用方法
-
 ```bash
 # 运行一次评估
 /evolve
 
-# 持续运行（每分钟检查一次）
+# 持续运行
 /loop 1m /evolve
 ```
 
-evolve 会自动：
-1. 用 4 个模拟用户人设（小雨/阿瑶/玉玉/小桔）发起 15 个场景对话
-2. 让 coco 真实回复
-3. 按 5 个维度打分
-4. 生成改进建议
-5. 修改 SOUL.md / AGENTS.md / skills
-6. 重新测试，直到全部达标
-
-参考 `eval-reference/` 查看一次完整评估的记录（含对话 transcript、评分报告、迭代复盘）。
-
-## 核心文件说明
+## 核心文件
 
 ### SOUL.md — 可可是谁
 
-定义可可的人格和对话规则：
 - 不说"应该"、不假装懂、不替用户做决定
-- 区分保护层情绪（愤怒/冷漠）和脆弱层情绪（害怕被丢下/觉得自己不够好）
+- 区分保护层情绪（愤怒/冷漠）和脆弱层情绪（害怕被丢下）
 - 不对不在场的人做动机判断
-
-修改 SOUL.md 直接改变可可的说话方式，改完用 `/evolve` 验证效果。
 
 ### AGENTS.md — 行为规则
 
-定义可可做事的逻辑：
-- **四步法**（严格按顺序）：看见情绪 → 看见原因 → 看见模式 → 看见方法
-- **状态感知**：根据用户状态触发对应 skill（恐慌 → 呼吸引导，反刍 → 感官着陆）
+- **四步法**：看见情绪 → 看见原因 → 看见模式 → 看见方法
 - **安全红线**：自伤/自杀意念时停止一切，提供危机热线
-- **记忆机制**：每次对话后更新 USER.md，下次对话前读取做模式连接
+- **记忆机制**：每次对话后更新 USER.md
 
-### skills/ — 6 个技能
+### skills/ — 10+ 技能
 
-每个 skill 是一个目录，核心是 `SKILL.md`（指令文件），可能附带 `references/`（参考资料）和 `scripts/`（脚本）。
+| Skill | 触发场景 | 心理学框架 |
+|-------|---------|-----------|
+| diary | 情绪日记 + 人物识别 | IMA |
+| breathing-ground | 恐慌/情绪淹没 | Stanford cyclic sigh + 5-4-3-2-1 |
+| check-in | 每日签到 | Daylio |
+| decision-cooling | 大决定前冷却 24h | EFT + DBT STOP |
+| relationship-guide | 关系困扰 | IFS + EFT + NVC |
+| relationship-skills | 沟通表达 | I-statements |
+| pattern-mirror | 跨关系模式呈现 | 自研 |
+| farewell | 关系闭合仪式 | 叙事疗法 + ACT |
+| growth-story | 成长叙事检测 | INT/IMA |
+| weekly-reflection | 周回顾 | Ash insights |
 
-| Skill | 触发场景 | 做什么 |
-|-------|---------|--------|
-| diary | "帮我记一下"、"今天发生了..." | 情绪日记 + 人物识别 + 模式追踪 |
-| emotion-journal | 说不清自己怎么了 | 结构化六元组记录（事件/情绪/强度/想法/应对/触发） |
-| sigh | 恐慌、情绪淹没 | 呼吸引导脚本 |
-| calm-down | 脑子停不下来、反刍 | 感官着陆（5-4-3-2-1） |
-| relationship-coach | 伴侣矛盾、关系困扰 | IFS/EFT 框架引导探索 |
-| relationship-skills | 不知道怎么表达 | I-statements 等沟通模板 |
+## 工程经验
 
-### diary/ 和 people/ — 用户数据
+### 使用 Evolve 的注意事项
 
-- `diary/YYYY/MM/YYYY-MM-DD.md`：用户的情绪日记，第一人称，保留原话
-- `people/{名字}.md`：日记中出现的人物档案（关系、关键事件、互动模式）
-- `memory/*.md`：跨 session 的模式观察，供可可下次对话时搜索
+- **任务粒度要细**：每个 Feature 拆得越小，迭代越快。10 个小任务比 5 个大任务效果好——更容易定位失败原因、更快收到反馈、单轮 B/C Agent 工作量更可控。
+- 建议每个 Feature 对应 1 个具体的用户操作序列（如"发一条消息 + 验证回复格式"），而不是"完整旅程"。
 
 ## 联系方式
 

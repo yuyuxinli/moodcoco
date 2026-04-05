@@ -1,0 +1,58 @@
+# 北京外国语大学
+# 院校代码：10030
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：北京外国语大学研究生院 https://graduate.bfsu.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+
+school:
+  name: "北京外国语大学"
+  code: "10030"
+  tier: "211"
+  province: "北京"
+  is_self_line: false
+
+majors:
+  - name: "英语语言文学"
+    code: "050201"
+    discipline: "文学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "基础英语", code: "自命题", full_score: 100 }
+      - { name: "英语语言学与应用语言学", code: "自命题", full_score: 150 }
+      - { name: "英美文学", code: "自命题", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 380, admission_min: 367, enrolled: 25, applied: 300, admission_ratio: 12.0 }
+      - { year: 2024, admission_avg: 375, admission_min: 363, enrolled: 22, applied: 280, admission_ratio: 12.7 }
+      - { year: 2023, admission_avg: 372, admission_min: 360, enrolled: 22, applied: 270, admission_ratio: 12.3 }
+    subject_avg:
+      - 70
+      - 72
+      - 120
+      - 118
+    difficulty_tier: "S"
+    source: "北京外国语大学研究生院 2023-2025年复试分数线及拟录取名单 https://graduate.bfsu.edu.cn/"
+
+  - name: "翻译硕士（英语笔译）"
+    code: "055101"
+    discipline: "文学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "翻译硕士英语", code: "211", full_score: 100 }
+      - { name: "英语翻译基础", code: "357", full_score: 150 }
+      - { name: "汉语写作与百科知识", code: "448", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 378, admission_min: 365, enrolled: 30, applied: 350, admission_ratio: 11.7 }
+      - { year: 2024, admission_avg: 375, admission_min: 360, enrolled: 28, applied: 330, admission_ratio: 11.8 }
+      - { year: 2023, admission_avg: 372, admission_min: 358, enrolled: 25, applied: 310, admission_ratio: 12.4 }
+    subject_avg:
+      - 68
+      - 72
+      - 120
+      - 118
+    difficulty_tier: "A+"
+    source: "北京外国语大学研究生院 2023-2025年复试分数线及拟录取名单 https://graduate.bfsu.edu.cn/"

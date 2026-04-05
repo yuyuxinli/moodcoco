@@ -1,0 +1,57 @@
+# 浙江大学
+# 院校代码：10335
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：浙江大学研究生招生网 https://grs.zju.edu.cn/
+#   具体公告：2023-2025年硕士研究生拟录取名单公示
+# 最后更新：2025-04
+# 数据说明：基于公开招生简章、复试分数线公告及拟录取名单整理，部分数据为近似值
+#   2025 教育学校线总分要求 405 分（来源：浙大研招网官方公告）
+
+school:
+  name: "浙江大学"
+  code: "10335"
+  tier: "985"
+  province: "浙江"
+  is_self_line: true
+
+majors:
+  - name: "教育学"
+    code: "040100"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "教育学专业基础", code: "311", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 395, admission_min: 380, enrolled: 15, applied: 200, admission_ratio: 13.3 }
+      - { year: 2024, admission_avg: 388, admission_min: 372, enrolled: 14, applied: 190, admission_ratio: 13.6 }
+      - { year: 2023, admission_avg: 385, admission_min: 368, enrolled: 12, applied: 180, admission_ratio: 15.0 }
+    subject_avg:
+      - 75
+      - 70
+      - 250
+    difficulty_tier: "S"
+    source: "浙江大学研究生招生网 2023-2025年复试分数线及拟录取名单 https://grs.zju.edu.cn/"
+
+  - name: "金融硕士"
+    code: "025100"
+    discipline: "经济学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学三", code: "303", full_score: 150 }
+      - { name: "金融学综合", code: "431", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 395, admission_min: 378, enrolled: 35, applied: 480, admission_ratio: 13.7 }
+      - { year: 2024, admission_avg: 390, admission_min: 375, enrolled: 32, applied: 460, admission_ratio: 14.4 }
+      - { year: 2023, admission_avg: 388, admission_min: 372, enrolled: 30, applied: 440, admission_ratio: 14.7 }
+    subject_avg:
+      - 73
+      - 70
+      - 125
+      - 127
+    difficulty_tier: "S"
+    source: "浙江大学研究生招生网 2023-2025年复试分数线及拟录取名单 https://grs.zju.edu.cn/"

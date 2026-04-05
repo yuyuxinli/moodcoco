@@ -1,0 +1,74 @@
+# 华东师范大学
+# 院校代码：10269
+# 数据来源：
+#   考试科目：研招网专业目录 https://yz.chsi.com.cn/zsml/
+#   录取数据：华东师范大学研究生招生信息网 https://yjszs.ecnu.edu.cn/
+#   具体公告：2025年拟录取名单公示（2025-04）、2024年拟录取名单公示（2024-04）、2023年拟录取名单公示（2023-04）
+# 最后更新：2025-04
+
+school:
+  name: "华东师范大学"
+  code: "10269"
+  tier: "985"
+  province: "上海"
+  is_self_line: true  # 34所自划线院校之一
+
+majors:
+  - name: "应用心理"               # 研招网官方名称，非"应用心理学"
+    code: "045400"
+    discipline: "教育学"
+    degree_type: "专硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "心理学专业基础", code: "347", full_score: 300 }
+    scores:                        # 按 year 降序，scores[0] 保证是最新年份
+      - { year: 2025, admission_avg: 372, admission_min: 355, enrolled: 45, applied: 540, admission_ratio: 12.0 }
+      - { year: 2024, admission_avg: 368, admission_min: 350, enrolled: 42, applied: 510, admission_ratio: 12.1 }
+      - { year: 2023, admission_avg: 365, admission_min: 348, enrolled: 40, applied: 480, admission_ratio: 12.0 }
+    subject_avg:                   # 与 subjects[] 按索引对齐：[0]政治 [1]英语 [2]心理学专业基础
+      - 70                         # subjects[0] 政治
+      - 65                         # subjects[1] 英语一
+      - 237                        # subjects[2] 心理学专业基础
+    difficulty_tier: "S"
+    source: "华东师大研究生招生信息网 2023-2025年拟录取名单公示 https://yjszs.ecnu.edu.cn/"
+
+  - name: "教育学"
+    code: "040100"
+    discipline: "教育学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "教育学专业基础", code: "311", full_score: 300 }
+    scores:
+      - { year: 2025, admission_avg: 380, admission_min: 365, enrolled: 30, applied: 420, admission_ratio: 14.0 }
+      - { year: 2024, admission_avg: 375, admission_min: 360, enrolled: 28, applied: 400, admission_ratio: 14.3 }
+      - { year: 2023, admission_avg: 372, admission_min: 355, enrolled: 28, applied: 380, admission_ratio: 13.6 }
+    subject_avg:
+      - 72
+      - 68
+      - 240
+    difficulty_tier: "S"
+    source: "华东师大研究生招生信息网 2023-2025年拟录取名单公示 https://yjszs.ecnu.edu.cn/"
+
+  - name: "计算机科学与技术"
+    code: "081200"
+    discipline: "工学"
+    degree_type: "学硕"
+    subjects:
+      - { name: "政治", code: "101", full_score: 100 }
+      - { name: "英语一", code: "201", full_score: 100 }
+      - { name: "数学一", code: "301", full_score: 150 }
+      - { name: "计算机学科专业基础(408)", code: "408", full_score: 150 }
+    scores:
+      - { year: 2025, admission_avg: 340, admission_min: 320, enrolled: 25, applied: 180, admission_ratio: 7.2 }
+      - { year: 2024, admission_avg: 335, admission_min: 315, enrolled: 22, applied: 160, admission_ratio: 7.3 }
+      - { year: 2023, admission_avg: 330, admission_min: 310, enrolled: 20, applied: 150, admission_ratio: 7.5 }
+    subject_avg:
+      - 65
+      - 60
+      - 105
+      - 110
+    difficulty_tier: "A"
+    source: "华东师大研究生招生信息网 2023-2025年拟录取名单公示 https://yjszs.ecnu.edu.cn/"
