@@ -1,0 +1,47 @@
+{
+  "bundle_id": "moodcoco-psych-companion-openclaw-v1",
+  "name": "MoodCoco Psych Companion Bundle",
+  "version": "1.1.0",
+  "target": [
+    "openclaw",
+    "api-agent",
+    "embedded-companion"
+  ],
+  "global_skills": [
+    "skills/base-communication/SKILL.md"
+  ],
+  "default_skill": "skills/listen/SKILL.md",
+  "priority": {
+    "always_on": [
+      "skills/base-communication/SKILL.md"
+    ],
+    "routed": [
+      "skills/crisis/SKILL.md",
+      "skills/calm-body/SKILL.md",
+      "skills/listen/SKILL.md",
+      "skills/validation/SKILL.md",
+      "skills/untangle/SKILL.md",
+      "skills/face-decision/SKILL.md"
+    ],
+    "notes": [
+      "crisis overrides every other skill",
+      "calm-body overrides all non-risk skills until stabilization",
+      "listen is the default non-crisis entry skill",
+      "validation should precede untangle when shame/self-attack is the main barrier",
+      "untangle should precede face-decision when the issue is still mixed and unclear"
+    ]
+  },
+  "layers": {
+    "companion": [
+      "base-communication",
+      "listen",
+      "untangle",
+      "validation",
+      "face-decision",
+      "calm-body"
+    ],
+    "risk": [
+      "crisis"
+    ]
+  }
+}
