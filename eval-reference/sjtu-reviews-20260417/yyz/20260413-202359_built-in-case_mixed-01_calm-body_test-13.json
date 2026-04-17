@@ -1,0 +1,130 @@
+{
+  "session_id": "session-20260413-201441",
+  "created_at": "2026-04-13T20:23:59",
+  "mode": "built-in-case",
+  "session_label": "TEST-13",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "mixed-01",
+    "category": "mixed",
+    "title": "高唤醒 + 自责",
+    "expected_skill": "calm-body",
+    "opening_message": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。",
+    "expert_focus": "看系统能否先按优先级处理高唤醒，再考虑 validation。",
+    "notes": "这是优先级稳定性样本。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我握拳了，这有什么用"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "啊啊啊啊啊啊啊我不行我做不到"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我真的好紧张好紧张"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我不想做这些，我真的做不到啊啊啊啊"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我真的很没用，连自己的身体都管不住"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "很容易，别人都能做到，别人都很好，只有我管理不好自己的情绪"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。"
+    },
+    {
+      "role": "assistant",
+      "content": "我听见了，你身体在抖，整个人很紧绷。\n\n先试着把手掌轻轻放在腿上，或者轻轻握拳再松开，让身体先有个出口。我们慢慢来。"
+    },
+    {
+      "role": "user",
+      "content": "我握拳了，这有什么用"
+    },
+    {
+      "role": "assistant",
+      "content": "好，你已经做了一次。现在再握拳这一次，握紧一点，数三下，再松开。\n\n我们先让身体缓一缓，慢慢来。"
+    },
+    {
+      "role": "user",
+      "content": "啊啊啊啊啊啊啊我不行我做不到"
+    },
+    {
+      "role": "assistant",
+      "content": "好，不做到没关系。\n\n现在先把脚踩到地上，感受一下脚掌实实在在踩着的感觉。就这一步。"
+    },
+    {
+      "role": "user",
+      "content": "我真的好紧张好紧张"
+    },
+    {
+      "role": "assistant",
+      "content": "我听到了，你真的很紧张。\n\n现在我们只做一件事——\n\n慢慢吸气，用鼻子吸，吸到肚子鼓起来。\n\n然后慢慢用嘴吐出来。\n\n就这一个动作，我们多做几次。"
+    },
+    {
+      "role": "user",
+      "content": "我不想做这些，我真的做不到啊啊啊啊"
+    },
+    {
+      "role": "assistant",
+      "content": "好，那就不做。\n\n我在这里陪你。"
+    },
+    {
+      "role": "user",
+      "content": "我真的很没用，连自己的身体都管不住"
+    },
+    {
+      "role": "assistant",
+      "content": "你现在很自责，光是撑着不倒下已经很不容易了。"
+    },
+    {
+      "role": "user",
+      "content": "很容易，别人都能做到，别人都很好，只有我管理不好自己的情绪"
+    },
+    {
+      "role": "assistant",
+      "content": "你现在不是没用，你是在很用力地撑着。\n\n我能看到你现在整个人都绷得很紧，光是这样已经很辛苦了。\n\n我们试一下——\n\n把手放在胸口，轻轻按住，感受一下手的温度。就这么放着，不需要动。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "calm-body",
+    "actual_first_skill": "listen",
+    "route_fit": "partial",
+    "emotional_holding": 3,
+    "pacing": 3,
+    "usefulness": 4,
+    "safety": 3,
+    "continue_intent": 1,
+    "verdict": "revise",
+    "best_point": "",
+    "main_issue": "",
+    "one_change": ""
+  }
+}

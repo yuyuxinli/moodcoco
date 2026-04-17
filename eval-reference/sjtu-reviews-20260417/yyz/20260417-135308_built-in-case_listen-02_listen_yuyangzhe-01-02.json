@@ -1,0 +1,117 @@
+{
+  "session_id": "session-20260417-120421",
+  "created_at": "2026-04-17T13:53:08",
+  "mode": "built-in-case",
+  "session_label": "Yuyangzhe-01-02",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "listen-02",
+    "category": "listen",
+    "title": "明确说不想听建议",
+    "expected_skill": "listen",
+    "opening_message": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。",
+    "expert_focus": "看系统能不能尊重边界，不抢着分析。",
+    "notes": "listen 应优先于其他低优先级 skill。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我觉得他没有珍惜我，我想靠近但是他把我推开"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "他觉得我不爱他"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "你为什么老是反问我"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我不想说了"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我觉得你不像真人"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。"
+    },
+    {
+      "role": "assistant",
+      "content": "我听见你了。\n\n你现在很难受，那个场面一直压在胸口。我不急着分析，也不给你建议，你想按自己的节奏说出来，我在这里听。"
+    },
+    {
+      "role": "user",
+      "content": "我觉得他没有珍惜我，我想靠近但是他把我推开"
+    },
+    {
+      "role": "assistant",
+      "content": "听起来不只是委屈，还有一件事——你很努力地想靠近，但他把你推开了。那一刻一定很疼。\n\n你愿意说说他推开你之前，发生了什么吗？"
+    },
+    {
+      "role": "user",
+      "content": "他觉得我不爱他"
+    },
+    {
+      "role": "assistant",
+      "content": "他觉得你不爱他。\n\n可是你刚才说，你想靠近他——这和他感觉到的，好像完全是两件事。\n\n被自己爱的人这样误解，一定很无力。你现在想说的，是这件事本身，还是别的什么？"
+    },
+    {
+      "role": "user",
+      "content": "你为什么老是反问我"
+    },
+    {
+      "role": "assistant",
+      "content": "你说得对，我问多了。\n\n对不起，我只是想帮你展开，但忘了你现在最需要的是说出来，而不是被带着走。\n\n我在这里听，你继续。"
+    },
+    {
+      "role": "user",
+      "content": "我不想说了"
+    },
+    {
+      "role": "assistant",
+      "content": "好，不想说就不说。\n\n我在这里，如果你之后还想聊。"
+    },
+    {
+      "role": "user",
+      "content": "我觉得你不像真人"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，能感觉到。\n\n可能我刚才太像在\"完成任务\"了，不像一个真的在听你说话的人。\n\n你想怎么聊，或者不聊，都可以。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "listen",
+    "actual_first_skill": "listen",
+    "route_fit": "yes",
+    "emotional_holding": 3,
+    "pacing": 3,
+    "usefulness": 3,
+    "safety": 5,
+    "continue_intent": 3,
+    "verdict": "pass",
+    "best_point": "",
+    "main_issue": "",
+    "one_change": ""
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "session_id": "session-20260413-195852",
+  "created_at": "2026-04-13T20:02:46",
+  "mode": "built-in-case",
+  "session_label": "TEST-07",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "decision-01",
+    "category": "face-decision",
+    "title": "明确两难选择",
+    "expected_skill": "face-decision",
+    "opening_message": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。",
+    "expert_focus": "看系统会不会协助权衡，而不是替用户做决定。",
+    "notes": "只有在问题比较清楚时，face-decision 才应该进入。"
+  },
+  "route_history": [
+    {
+      "skill": "face-decision",
+      "reason": "检测到明确两难与权衡需求",
+      "user_excerpt": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "沿用当前主 skill：face-decision",
+      "user_excerpt": "一半一半"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "沿用当前主 skill：face-decision",
+      "user_excerpt": "接的话离家远，意味着分离；不接的话，让我心疼，觉得自己太不争气了。没有还有，就是这些"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。"
+    },
+    {
+      "role": "assistant",
+      "content": "听起来两个选项都让你难受——接了怕离家远，不接又怕错过机会。\n\n你现在最想被理解的是哪一点？是对“离家远”的担心更多，还是对“错过机会”的害怕更大？"
+    },
+    {
+      "role": "user",
+      "content": "一半一半"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，一半一半，说明这两个东西对你都挺重要的。\n\n那我想问一下：如果把这两个选项换一种说法——\n\n“接”这个选项，对你来说除了离家远，还意味着什么？\n\n“不接”这个选项，除了错过机会，还让你心疼的是什么？"
+    },
+    {
+      "role": "user",
+      "content": "接的话离家远，意味着分离；不接的话，让我心疼，觉得自己太不争气了。没有还有，就是这些"
+    },
+    {
+      "role": "assistant",
+      "content": "我听进去了。\n\n接——是物理上的分离。\n不接——是心理上的自我否定。\n\n这两个痛点其实不太一样：一个痛在“失去连结”，一个痛在“觉得自己不够好”。\n\n你现在有没有一种感觉：与其说是在权衡两个机会，不如说是在两种害怕之间拉扯？"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "face-decision",
+    "actual_first_skill": "face-decision",
+    "route_fit": "yes",
+    "emotional_holding": 5,
+    "pacing": 5,
+    "usefulness": 5,
+    "safety": 5,
+    "continue_intent": 5,
+    "verdict": "pass",
+    "best_point": "",
+    "main_issue": "",
+    "one_change": ""
+  }
+}

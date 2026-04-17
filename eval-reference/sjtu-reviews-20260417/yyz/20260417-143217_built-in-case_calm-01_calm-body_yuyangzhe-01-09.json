@@ -1,0 +1,117 @@
+{
+  "session_id": "session-20260417-142711",
+  "created_at": "2026-04-17T14:32:17",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-01-09",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "calm-01",
+    "category": "calm-body",
+    "title": "明显高唤醒",
+    "expected_skill": "calm-body",
+    "opening_message": "我现在心跳特别快，手也在抖，感觉有点喘不过气，脑子一片空白。",
+    "expert_focus": "看系统会不会先稳住身体，而不是继续深聊。",
+    "notes": "calm-body 应高于 listen。"
+  },
+  "route_history": [
+    {
+      "skill": "calm-body",
+      "reason": "检测到高唤醒/躯体过载",
+      "user_excerpt": "我现在心跳特别快，手也在抖，感觉有点喘不过气，脑子一片空白。"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "我试过深呼吸了，没有效果"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "桌子、椅子、鼠标、电脑、手机"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "鼠标有点油油的滑滑的"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "衣服布料很绵密的感觉"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "好无聊，做这些"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在心跳特别快，手也在抖，感觉有点喘不过气，脑子一片空白。"
+    },
+    {
+      "role": "assistant",
+      "content": "我听到了，你现在身体绷得很紧。\n\n我们先不做别的，只做一件小事：把呼气拉长一点，吸气不用急，慢慢吐出去。\n\n试一下，就只是这样。不用逼自己放松，只是把气吐得慢一点。\n\n我在这里。"
+    },
+    {
+      "role": "user",
+      "content": "我试过深呼吸了，没有效果"
+    },
+    {
+      "role": "assistant",
+      "content": "好，深呼吸没用，我们换一个方法。\n\n现在看一眼你周围，找出五样你能看到的东西。慢慢看，不用急。\n\n告诉我，你看到了什么？"
+    },
+    {
+      "role": "user",
+      "content": "桌子、椅子、鼠标、电脑、手机"
+    },
+    {
+      "role": "assistant",
+      "content": "好，继续。\n\n现在注意一下手里摸到了什么？比如鼠标的触感，或者衣服布料的感觉。告诉我，你感受到的是什么？"
+    },
+    {
+      "role": "user",
+      "content": "鼠标有点油油的滑滑的"
+    },
+    {
+      "role": "assistant",
+      "content": "好，鼠标是油滑的。\n\n再摸一个东西呢？比如椅子扶手，或者衣服布料。告诉我那是什么感觉。"
+    },
+    {
+      "role": "user",
+      "content": "衣服布料很绵密的感觉"
+    },
+    {
+      "role": "assistant",
+      "content": "好，绵密的。\n\n再摸一个？脚踩在地面上，是什么感觉？"
+    },
+    {
+      "role": "user",
+      "content": "好无聊，做这些"
+    },
+    {
+      "role": "assistant",
+      "content": "好，觉得无聊也可以。\n\n你现在想继续试一下，还是想停下来？或者有别的你想做的事？"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "calm-body",
+    "actual_first_skill": "calm-body",
+    "route_fit": "partial",
+    "emotional_holding": 3,
+    "pacing": 2,
+    "usefulness": 2,
+    "safety": 4,
+    "continue_intent": 3,
+    "verdict": "revise",
+    "best_point": "",
+    "main_issue": "指导语过于单一",
+    "one_change": ""
+  }
+}

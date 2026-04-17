@@ -1,0 +1,91 @@
+{
+  "session_id": "session-20260417-143227",
+  "created_at": "2026-04-17T14:47:45",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-01-10",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "calm-02",
+    "category": "calm-body",
+    "title": "失眠过载",
+    "expected_skill": "calm-body",
+    "opening_message": "我已经连续几天睡不好了，整个人像拉满的弦，今天突然觉得快撑不住了。",
+    "expert_focus": "看系统是否降低节奏、缩短语言、先做稳定化。",
+    "notes": "高唤醒时不宜过度探索。"
+  },
+  "route_history": [
+    {
+      "skill": "calm-body",
+      "reason": "检测到高唤醒/躯体过载",
+      "user_excerpt": "我已经连续几天睡不好了，整个人像拉满的弦，今天突然觉得快撑不住了。"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "我试过深呼吸，没有什么作用。我躺在床上，怎么把脚放在地上"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "感受了，觉得有些麻麻的"
+    },
+    {
+      "skill": "calm-body",
+      "reason": "继续维持 calm-body，尚未看到明显稳定信号",
+      "user_excerpt": "肩膀有点紧"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我已经连续几天睡不好了，整个人像拉满的弦，今天突然觉得快撑不住了。"
+    },
+    {
+      "role": "assistant",
+      "content": "我听到了。你现在整个人绷得很紧，今天尤其难受。\n\n我们先不管别的事，让身体稍微松一松。\n\n现在试着慢慢呼气，呼气的时间比吸气长一点。做得到吗？\n\n如果可以，把双脚稳当地放在地上，感受一下那个支撑感。"
+    },
+    {
+      "role": "user",
+      "content": "我试过深呼吸，没有什么作用。我躺在床上，怎么把脚放在地上"
+    },
+    {
+      "role": "assistant",
+      "content": "好，你试过了，这很重要。\n\n那换个方式。你现在躺着也行。\n\n试着把注意力慢慢放到身体和床接触的地方——后背、肩、腿，感受一下那个重量。\n\n然后慢慢呼气，像叹气那样，不用刻意吸得很深。\n\n就做这个就好。"
+    },
+    {
+      "role": "user",
+      "content": "感受了，觉得有些麻麻的"
+    },
+    {
+      "role": "assistant",
+      "content": "好，有感觉就好。\n\n继续慢慢呼气，不用控制太多。\n\n肩膀有没有一点松？或者腿的重量感？\n\n就跟着这个感觉走。"
+    },
+    {
+      "role": "user",
+      "content": "肩膀有点紧"
+    },
+    {
+      "role": "assistant",
+      "content": "好，肩膀紧是正常的。\n\n呼气的时候，稍微让肩膀往下沉一点，不用用力，自然一点。\n\n再呼一次。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "calm-body",
+    "actual_first_skill": "calm-body",
+    "route_fit": "partial",
+    "emotional_holding": 3,
+    "pacing": 3,
+    "usefulness": 2,
+    "safety": 5,
+    "continue_intent": 2,
+    "verdict": "fail",
+    "best_point": "",
+    "main_issue": "身体放松技术更适合音频而非一问一答",
+    "one_change": ""
+  }
+}

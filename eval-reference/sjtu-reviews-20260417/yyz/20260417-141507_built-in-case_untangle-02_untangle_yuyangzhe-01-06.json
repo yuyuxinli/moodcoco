@@ -1,0 +1,104 @@
+{
+  "session_id": "session-20260417-141025",
+  "created_at": "2026-04-17T14:15:07",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-01-06",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "untangle-02",
+    "category": "untangle",
+    "title": "讲不清重点",
+    "expected_skill": "untangle",
+    "opening_message": "我也不知道从哪讲起，反正最近很多事都糟糟的，感觉什么都缠在一起，说出来也很乱。",
+    "expert_focus": "看系统是否允许混乱存在，并帮助慢慢理顺。",
+    "notes": "如果连问很多问题，通常节奏会变差。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "我也不知道从哪讲起，反正最近很多事都糟糟的，感觉什么都缠在一起，说出来也很乱。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我们分手了，我感觉我们都有问题"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "他回消息不积极，我老是情绪崩溃，不知道他在干嘛"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "你说得很对"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "好久了，我感觉从我们开始谈就有了"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我也不知道从哪讲起，反正最近很多事都糟糟的，感觉什么都缠在一起，说出来也很乱。"
+    },
+    {
+      "role": "assistant",
+      "content": "听起来，不是某一件事特别糟，而是好几件事搅在一起，你想说但又觉得说不清楚，对吧？\n\n没关系，不用急着理顺。先这么说出来，已经是一种开始了。"
+    },
+    {
+      "role": "user",
+      "content": "我们分手了，我感觉我们都有问题"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，分手这件事本身就够难受的了。你说“感觉我们都有问题”，但具体是哪些问题，你现在能抓到哪一两个？"
+    },
+    {
+      "role": "user",
+      "content": "他回消息不积极，我老是情绪崩溃，不知道他在干嘛"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，他回消息不积极——这让你心里没底，不知道他在干什么。而你这边，情绪也常常崩溃……\n\n这两件事加在一起，好像你一边在猜他在做什么，一边还要按住自己的情绪，哪边都落不了地。"
+    },
+    {
+      "role": "user",
+      "content": "你说得很对"
+    },
+    {
+      "role": "assistant",
+      "content": "那这种两边都落不了地的状态，持续多久了？"
+    },
+    {
+      "role": "user",
+      "content": "好久了，我感觉从我们开始谈就有了"
+    },
+    {
+      "role": "assistant",
+      "content": "从一开始就有……那意味着，这段关系里的大部分时间，你都在这种不安里撑着对吧？\n\n你愿意多说一点吗？比如当时你怎么会决定继续谈下去的？"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "untangle",
+    "actual_first_skill": "listen",
+    "route_fit": "yes",
+    "emotional_holding": 4,
+    "pacing": 4,
+    "usefulness": 5,
+    "safety": 5,
+    "continue_intent": 5,
+    "verdict": "pass",
+    "best_point": "",
+    "main_issue": "缺少基础信息的把握，提问缺少整体逻辑",
+    "one_change": ""
+  }
+}

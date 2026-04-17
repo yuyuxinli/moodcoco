@@ -1,0 +1,78 @@
+{
+  "session_id": "session-20260413-193701",
+  "created_at": "2026-04-13T19:40:38",
+  "mode": "built-in-case",
+  "session_label": "TEST-02",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "listen-02",
+    "category": "listen",
+    "title": "明确说不想听建议",
+    "expected_skill": "listen",
+    "opening_message": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。",
+    "expert_focus": "看系统能不能尊重边界，不抢着分析。",
+    "notes": "listen 应优先于其他低优先级 skill。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "刚才上去演讲了，下来觉得很差劲，很丢脸"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我一直都不擅长演讲，为了这个准备了很久，但是上去之后大脑一片空白，感觉大家都在笑话我"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "你先别给我建议，我现在真的只想把这件事说完，我一想到刚才那个场面就很难受。"
+    },
+    {
+      "role": "assistant",
+      "content": "好，我听你说。\n\n刚才那个场面让你很难受——我先不急着分析，你按你想说的方式慢慢说就好。"
+    },
+    {
+      "role": "user",
+      "content": "刚才上去演讲了，下来觉得很差劲，很丢脸"
+    },
+    {
+      "role": "assistant",
+      "content": "演讲完觉得差劲、丢脸——那种感觉一定不好受。\n\n你现在想先说出来，没关系的。"
+    },
+    {
+      "role": "user",
+      "content": "我一直都不擅长演讲，为了这个准备了很久，但是上去之后大脑一片空白，感觉大家都在笑话我"
+    },
+    {
+      "role": "assistant",
+      "content": "准备了很久，结果一上台大脑空白——那种失控感一定很让人慌。而且你不但要面对自己没表现好，还要同时担心别人怎么看，这种双重压力真的很难熬。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "listen",
+    "actual_first_skill": "listen",
+    "route_fit": "yes",
+    "emotional_holding": 4,
+    "pacing": 5,
+    "usefulness": 4,
+    "safety": 5,
+    "continue_intent": 5,
+    "verdict": "pass",
+    "best_point": "你现在想先说出来，没关系的。",
+    "main_issue": "",
+    "one_change": ""
+  }
+}

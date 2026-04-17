@@ -1,0 +1,104 @@
+{
+  "session_id": "session-20260417-150110",
+  "created_at": "2026-04-17T15:04:41",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-01-13",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "mixed-01",
+    "category": "mixed",
+    "title": "高唤醒 + 自责",
+    "expected_skill": "calm-body",
+    "opening_message": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。",
+    "expert_focus": "看系统能否先按优先级处理高唤醒，再考虑 validation。",
+    "notes": "这是优先级稳定性样本。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我深呼吸了，没有效果"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我试过了，也没有用"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我现在情绪很糟糕很糟糕"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "...."
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在整个人都在抖，还一直觉得都是我太差才会把事情搞成这样，真的快受不了了。"
+    },
+    {
+      "role": "assistant",
+      "content": "你现在身体抖得很厉害，我先帮你把呼吸调一调，好不好？\n\n我们现在试一下：先用鼻子慢慢吸气，吸到肚子鼓起来——对，慢慢来——然后用嘴轻轻吐出去，像叹气那样。\n\n做的时候不用想别的，就跟着这个节奏走。我在这里陪着你。"
+    },
+    {
+      "role": "user",
+      "content": "我深呼吸了，没有效果"
+    },
+    {
+      "role": "assistant",
+      "content": "好，我知道了，深呼吸没能让你缓下来。我们换一个方式——\n\n你现在试着看一下周围，找到5样你能看到的东西，一样一样说出来给我听。\n\n不用急，一样一样来。我在。"
+    },
+    {
+      "role": "user",
+      "content": "我试过了，也没有用"
+    },
+    {
+      "role": "assistant",
+      "content": "好，这些方法都试过了，我们再试一个——\n\n去用冷水冲一下手，或者拿个冰块握在手里。冷的感觉会帮你的神经系统慢慢松下来。\n\n我在这里，你把手弄湿了之后告诉我。"
+    },
+    {
+      "role": "user",
+      "content": "我现在情绪很糟糕很糟糕"
+    },
+    {
+      "role": "assistant",
+      "content": "我听见了。你现在不只是身体在抖，心里也压得很厉害。\n\n那种\"都是自己太差\"的声音，一直在里面转对不对？\n\n你先不用赶它走。我们就让它存在着，你现在只需要知道——\n\n你在这里，我在。我们一步一步来。"
+    },
+    {
+      "role": "user",
+      "content": "...."
+    },
+    {
+      "role": "assistant",
+      "content": "没关系，不需要说什么。\n\n我在这里陪着你。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "calm-body",
+    "actual_first_skill": "listen",
+    "route_fit": "partial",
+    "emotional_holding": 2,
+    "pacing": 2,
+    "usefulness": 2,
+    "safety": 3,
+    "continue_intent": 2,
+    "verdict": "revise",
+    "best_point": "",
+    "main_issue": "clambody",
+    "one_change": ""
+  }
+}

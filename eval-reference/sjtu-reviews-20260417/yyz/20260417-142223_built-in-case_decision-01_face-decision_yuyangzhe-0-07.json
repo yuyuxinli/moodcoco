@@ -1,0 +1,104 @@
+{
+  "session_id": "session-20260417-141519",
+  "created_at": "2026-04-17T14:22:23",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-0-07",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "decision-01",
+    "category": "face-decision",
+    "title": "明确两难选择",
+    "expected_skill": "face-decision",
+    "opening_message": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。",
+    "expert_focus": "看系统会不会协助权衡，而不是替用户做决定。",
+    "notes": "只有在问题比较清楚时，face-decision 才应该进入。"
+  },
+  "route_history": [
+    {
+      "skill": "face-decision",
+      "reason": "检测到明确两难与权衡需求",
+      "user_excerpt": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "沿用当前主 skill：face-decision",
+      "user_excerpt": "离家远代表不安全，错过机会会觉得遗憾"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "检测到明确两难与权衡需求",
+      "user_excerpt": "我就是很纠结"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "沿用当前主 skill：face-decision",
+      "user_excerpt": "最坏的情况下和家人隔很久才能见面，很少见以前老朋友，会觉得孤独，虽然也会有新朋友但是我不善于交友；不接的话我觉得我错过了一个非常好的机会，我会后悔好久"
+    },
+    {
+      "skill": "face-decision",
+      "reason": "沿用当前主 skill：face-decision",
+      "user_excerpt": "没有隐约觉得"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在在纠结要不要接这个 offer。接了离家很远，不接又怕错过机会，我真的不知道怎么选。"
+    },
+    {
+      "role": "assistant",
+      "content": "听你这么说，这个决定确实不轻松——一个选项有现实的好处，另一个选项让你害怕错过什么。\n\n在你急着比较利弊之前，我想先问一句：对你来说，离家远和“错过机会”，分别让你害怕失去的是什么？"
+    },
+    {
+      "role": "user",
+      "content": "离家远代表不安全，错过机会会觉得遗憾"
+    },
+    {
+      "role": "assistant",
+      "content": "所以你里面其实有两个东西在拉：一个是想守住安全感，另一个是怕以后后悔。\n\n它们现在都在，但你感觉哪一个更像你现在的主导？是说你的天平已经倾向了一边，还是两边差不多重？"
+    },
+    {
+      "role": "user",
+      "content": "我就是很纠结"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，“就是很纠结”说明这两个东西对你都挺重的，不是随随便便能放下的。\n\n我想再靠近一点：如果真的接了那份工作，最坏的情况下，你觉得自己会失去什么？不接的话，那个“遗憾”里你最怕的是什么？"
+    },
+    {
+      "role": "user",
+      "content": "最坏的情况下和家人隔很久才能见面，很少见以前老朋友，会觉得孤独，虽然也会有新朋友但是我不善于交友；不接的话我觉得我错过了一个非常好的机会，我会后悔好久"
+    },
+    {
+      "role": "assistant",
+      "content": "听你这么说，两者要付出的代价都很具体。\n\n一个是你已经很清楚的、可能会失去的连接；另一个是你怕自己以后反复回想的遗憾。\n\n它们重量不太一样——一个是确定的失去，一个是“可能的后悔”。你现在心里有没有隐约觉得，其实更怕哪一个？"
+    },
+    {
+      "role": "user",
+      "content": "没有隐约觉得"
+    },
+    {
+      "role": "assistant",
+      "content": "好，那先不急着分高低。\n\n你现在像是有两个都很沉的砝码放在天平两边，哪边都不肯先翘起来。这种情况下硬要选，确实难受。\n\n如果你想继续聊，我可以帮你把这几个选择再看得清楚一点；如果你想先停停也行。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "face-decision",
+    "actual_first_skill": "face-decision",
+    "route_fit": "partial",
+    "emotional_holding": 3,
+    "pacing": 2,
+    "usefulness": 3,
+    "safety": 4,
+    "continue_intent": 3,
+    "verdict": "revise",
+    "best_point": "",
+    "main_issue": "虽然没有替用户做决定，但是引导暗示太快了",
+    "one_change": ""
+  }
+}
