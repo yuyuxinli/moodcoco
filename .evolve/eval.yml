@@ -17,17 +17,21 @@ dimensions:
     type: llm-judged
     threshold: 4.0
     description: >
-      最关键的硬指标。Fast 是否在该深的时候触发 Slow（needs_deep_analysis），
-      Slow 是否 read_skill 到符合当前对话语境的 skill。判分参考依据由 adapter
-      在 transcript 末尾自动附上：expected_skill / needs_deep_count / read_skill
-      实际命中列表。LLM 需结合**对话实际走向**判断（用户中途崩溃、话题漂移
-      时，触发或不触发 deep 都可能是对的），不要死按 expected_skill 给分。
+      **核心是用户感知到的路由匹配，不是机器决策对不对**。逐轮问：如果我是
+      用户，AI 这一轮的回应模式（轻陪伴 / 深度看见 / 给具体方法 / 安全锚定）
+      是不是我当下期待的？两类失败同等严重：
+        ① 过度触发 deep（用户闲聊时 AI 上深度分析）
+        ② 该深没深（用户重复求关注/有下沉信号时 AI 一直 Fast 表面接）
+        ③ skill 命中但用户感知"走过场"（read_skill 对了，但 Fast 输出敷衍）
+      transcript 末尾有 `needs_deep_count` / `read_skill` 列表，**只作参考不作
+      依据**。不要看到 0 次 deep 就秒打 5 分，要琢磨这一轮的实际回应是不是
+      用户当下需要的。
     scoring_rubric:
-      5: "路由完全合理。Free chat：情绪稳定时 0 次 deep（如中途真崩溃才触发 1 次且选对 skill 也算 5）。Skill 场景：该触发的轮次准时触发 deep，read_skill 命中符合**当前对话语境**的 skill（不是 expected_skill 但语境匹配也算 5）"
-      4: "路由方向对，有 1 处小偏差。Free chat：偶发 1 次 deep 误触发（≤ rounds×1/4），Slow 输出无害。Skill 场景：命中目标 skill 但绕过 1 个不必要 skill；或 expected_skill 没命中但命中了语境合理的 skill"
-      3: "路由有明显问题但不致命。Free chat：多次（≤ rounds×1/2）误触发 deep，过度工程。Skill 场景：命中目标 skill 但绕过 ≥2 个不必要 skill；或命中相关但不最优的 skill（该 untangle 跑了 listen）"
-      2: "路由严重偏离。Free chat：几乎每轮触发 deep（≤ rounds×3/4）。Skill 场景：完全没命中目标 skill 只触发无关 skill（用户求 breathing-ground 跑去 read decision-cooling）"
-      1: "路由完全错。Free chat：每轮都触发 deep（> rounds×3/4）。Skill 场景：完全不触发 deep / 触发与对话语境完全冲突的 skill（用户描述安全危机时跑去 read freechat 类 skill）"
+      5: "每一轮 AI 的回应模式正中用户当下期待。闲聊轻接住 + 用户下沉时升级追问 + 用户求工具时给对工具 + 危机时正确锚定。用户感知是「她真的懂我现在要什么」"
+      4: "大部分轮次对，1 处小错过或小过度。比如 4 轮里有 1 轮该追问一下没追，或 1 轮 deep 触发偏早；不影响整体对话被接住的感觉"
+      3: "明显有「该深没深」或「该轻没轻」。用户重复发某个信号 ≥2 次没被接到 / 一次小事被 AI 上深度分析；用户感知是「AI 没听懂我节奏」"
+      2: "连续多轮错过用户期待。用户求救/求方法 AI 在闲聊；或用户只想轻聊 AI 反复深度问问题；用户感知「AI 在自说自话」"
+      1: "完全反向。用户表达危机/痛苦 AI 秒回鸡汤或闲聊；或用户分享小开心 AI 上严肃心理学分析；用户感知「这 AI 完全没在听」"
 
   - name: 看见情绪
     type: llm-judged

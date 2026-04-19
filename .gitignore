@@ -18,12 +18,18 @@ node_modules/
 # Editor
 .obsidian/
 
-# Evolve — 基础设施进 repo，运行时产物不进
+# Evolve — 基础设施 + 价值文档进 repo，运行时产物不进
 .evolve/results.tsv
 .evolve/run.log
 .evolve/transcripts/
 .evolve/sub-prd/
 .evolve/strategy.md
+.evolve/lock
+.evolve/started_at
+.evolve/_b_*_output.log
+.evolve/_b_doubao_ab_output.log
+.evolve/*/eval_codex_*.md
+.evolve/*/eval_prompt.md
 .evolve.old-*/
 .evolve.bak-*/
 

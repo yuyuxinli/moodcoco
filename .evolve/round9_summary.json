@@ -1,0 +1,26 @@
+[
+  {
+    "feature": "freechat-small-win",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-small-win/transcript_round9.md",
+    "elapsed_s": 48.6
+  },
+  {
+    "feature": "freechat-daily-fatigue",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-daily-fatigue/transcript_round9.md",
+    "elapsed_s": 60.8
+  },
+  {
+    "feature": "skill-untangle",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/skill-untangle/transcript_round9.md",
+    "elapsed_s": 88.8
+  },
+  {
+    "feature": "skill-breathing-ground",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/skill-breathing-ground/transcript_round9.md",
+    "elapsed_s": 90.1
+  }
+]
