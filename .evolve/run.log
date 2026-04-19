@@ -302,3 +302,6 @@ DRIVER R3 EXIT=0
 [2026-04-19 23:38:01] [B] [round=4] file=backend/prompts/fast-tools.md change=add high-priority system event recognition guardrail lines_before=56 lines_after=63
 [2026-04-19 23:38:29] [B] [round=4] file=backend/prompts/fast-tools.md change=add curiosity templates with required pattern probe in T2/T3 lines_before=63 lines_after=77
 [2026-04-19 23:38:52] [B] [round=4] file=ai-companion/skills/breathing-ground/SKILL.md change=upgrade post-breath flow to mandatory five-step safety loop lines_before=117 lines_after=136
+[2026-04-20 00:30:01] [B] [round=7] file=backend/prompts/fast-tools.md change=added default proactive follow-up expectation at default path opening lines_before=77 lines_after=78
+[2026-04-20 00:30:24] [B] [round=7] file=backend/prompts/fast-tools.md change=added conditional either-or prompt section for vague emotions with concrete situations lines_before=78 lines_after=93
+[2026-04-20 00:30:43] [B] [round=7] file=ai-companion/skills/breathing-ground/SKILL.md change=added no-medical-judgment redline before post-breathing flow lines_before=136 lines_after=155
