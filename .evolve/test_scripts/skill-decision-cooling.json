@@ -1,0 +1,8 @@
+{
+  "name": "skill-decision-cooling",
+  "skill": "decision-cooling",
+  "persona": "小桔",
+  "theme": "你现在非常生气，很想立刻跟伴侣提分手，或者直接把他删了。你觉得再也忍不了了。",
+  "mood": "愤怒、冲动、受伤",
+  "rounds": 3
+}
