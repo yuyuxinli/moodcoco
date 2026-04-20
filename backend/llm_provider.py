@@ -16,8 +16,8 @@ def load_prompt(relative_path: str) -> str:
     """读取相对项目根的 Markdown 文件。
 
     常用路径：
-      - "ai-companion/SOUL.md"
-      - "ai-companion/skills/diary/SKILL.md"
+      - "backend/prompts/SOUL.md"
+      - "backend/skills/diary/SKILL.md"
       - "backend/prompts/fast-instructions.md"
     """
     full_path = PROJECT_ROOT / relative_path

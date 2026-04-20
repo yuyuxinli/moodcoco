@@ -3,7 +3,7 @@
 Agent loop：读 Skill → 写记忆 → 必要时多轮迭代，直到产出**给快思考的指导**。
 不限时，由 agent 自己决定何时结束。
 
-**关键语义**：Slow 的 output 不是给用户看的气泡，而是写入 `ai-companion/SLOW_GUIDANCE.md`
+**关键语义**：Slow 的 output 不是给用户看的气泡，而是写入 `backend/state/SLOW_GUIDANCE.md`
 作为**下一轮 Fast 的 instructions 参考**。Fast 自己决定是否采用。
 """
 
@@ -16,8 +16,8 @@ from pydantic_ai import Agent, RunContext
 
 from backend.llm_provider import PROJECT_ROOT, create_agent_model, load_prompt
 
-SKILLS_DIR = PROJECT_ROOT / "ai-companion" / "skills"
-MEMORY_FILE = PROJECT_ROOT / "ai-companion" / "MEMORY.md"
+SKILLS_DIR = PROJECT_ROOT / "backend" / "skills"
+MEMORY_FILE = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
 
 
 @dataclass
@@ -32,9 +32,9 @@ class SlowThinkDeps:
 
 SLOW_SYSTEM_PROMPT = "\n\n".join(
     [
-        load_prompt("ai-companion/SOUL.md"),
-        load_prompt("ai-companion/IDENTITY.md"),
-        load_prompt("ai-companion/AGENTS.md"),
+        load_prompt("backend/prompts/SOUL.md"),
+        load_prompt("backend/prompts/IDENTITY.md"),
+        load_prompt("backend/prompts/AGENTS.md"),
         load_prompt("backend/prompts/slow-instructions.md"),
     ]
 )

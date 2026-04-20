@@ -15,8 +15,8 @@ Fast Agent（tool-only，1 秒级）
                                            ▼
                                     Slow Agent（loop，不限时）
                                       └─ list_skills / read_skill / write_memory
-                                      └─ 读 ai-companion/skills/*/SKILL.md
-                                      └─ 写 ai-companion/MEMORY.md
+                                      └─ 读 backend/skills/*/SKILL.md
+                                      └─ 写 backend/state/MEMORY.md
                                       └─ 返回补充气泡文本
 ```
 
@@ -74,19 +74,27 @@ backend/
   coordinator.py     # fast→slow 协调（无超时）
   chat.py            # CLI REPL 入口
   llm_provider.py    # OpenAI 兼容 provider + load_prompt
-  prompts/
+  prompts/           # Fast/Slow 静态 prompt
     fast-instructions.md
     fast-tools.md
     slow-instructions.md
-ai-companion/        # 复用：SOUL.md / IDENTITY.md / AGENTS.md / MEMORY.md / skills/
+    SOUL.md          # Coco 人格
+    IDENTITY.md
+    AGENTS.md
+    USER.md
+    TOOLS.md
+  skills/            # Slow Agent 动态发现的技能库（20 个）
+  state/             # 运行时状态（.gitignored）
+    MEMORY.md        # 长期记忆
+    SLOW_GUIDANCE.md # Slow→Fast 桥接
 ```
 
 ## 调试 Tips
 
 - 想看 Fast 走了哪些 tool：直接看终端 `[快思考]` 段
 - 想看 Slow 调了几轮：看 `tool 轨迹`
-- 想看记忆写入：`cat ai-companion/MEMORY.md`
-- 想加新 Skill：在 `ai-companion/skills/<name>/SKILL.md` 新建即可，Slow Agent 会通过 `list_skills()` 发现
+- 想看记忆写入：`cat backend/state/MEMORY.md`
+- 想加新 Skill：在 `backend/skills/<name>/SKILL.md` 新建即可，Slow Agent 会通过 `list_skills()` 发现
 - 想改快思考触发规则：改 `backend/prompts/fast-tools.md`
 
 ## 已知限制（MVP 范围）

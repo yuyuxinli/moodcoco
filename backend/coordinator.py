@@ -4,7 +4,7 @@
 
 - Fast 本轮：读 MEMORY.md + 上一轮的 SLOW_GUIDANCE.md → tool_call
 - 若 `needs_deep_analysis=True` → 同步 await Slow loop
-- Slow 产出写入 `ai-companion/SLOW_GUIDANCE.md`，作为**下一轮** Fast 的 instructions
+- Slow 产出写入 `backend/state/SLOW_GUIDANCE.md`，作为**下一轮** Fast 的 instructions
 - 慢思考不再有"补充气泡"发给用户；用户只看到 Fast 一条回复
 - 快思考对"上一轮指导"有最终决定权：可采用、部分采用、或忽略
 """
@@ -17,8 +17,8 @@ from backend.fast import FastThinkDeps, fast_agent
 from backend.llm_provider import PROJECT_ROOT
 from backend.slow import SlowThinkDeps, slow_agent
 
-MEMORY_FILE = PROJECT_ROOT / "ai-companion" / "MEMORY.md"
-GUIDANCE_FILE = PROJECT_ROOT / "ai-companion" / "SLOW_GUIDANCE.md"
+MEMORY_FILE = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
+GUIDANCE_FILE = PROJECT_ROOT / "backend" / "state" / "SLOW_GUIDANCE.md"
 
 
 def _format_tool_call(tc: dict[str, Any]) -> str:

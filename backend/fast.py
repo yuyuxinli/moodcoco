@@ -28,9 +28,9 @@ class FastThinkDeps:
 
 SYSTEM_PROMPT = "\n\n".join(
     [
-        load_prompt("ai-companion/SOUL.md"),
-        load_prompt("ai-companion/IDENTITY.md"),
-        load_prompt("ai-companion/AGENTS.md"),
+        load_prompt("backend/prompts/SOUL.md"),
+        load_prompt("backend/prompts/IDENTITY.md"),
+        load_prompt("backend/prompts/AGENTS.md"),
         load_prompt("backend/prompts/fast-instructions.md"),
         load_prompt("backend/prompts/fast-tools.md"),
     ]

@@ -20,7 +20,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--reset-memory",
         action="store_true",
-        help="启动前把 ai-companion/MEMORY.md 重置为初始骨架",
+        help="启动前把 backend/state/MEMORY.md 重置为初始骨架",
     )
     parser.add_argument(
         "--session-id",

@@ -26,8 +26,8 @@ description: 周日回顾——帮用户看见这周的全貌。周日 20:00 Hea
 调用 `exec` 运行两个脚本：
 
 ```
-python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format json --people-dir people/ --memory-dir memory/
-python3 ai-companion/skills/diary/scripts/growth_tracker.py diary/
+python3 backend/skills/weekly-reflection/scripts/weekly_review.py diary/ --format json --people-dir people/ --memory-dir memory/
+python3 backend/skills/diary/scripts/growth_tracker.py diary/
 ```
 
 weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触发因素和每日明细。growth_tracker.py 输出成长节点（仅在有 ≥2 周数据时做跨周对比）。
@@ -91,7 +91,7 @@ weekly_review.py 输出本周情绪统计（按簇聚合）、人物频次、触
 
 调用 `exec` 生成 Canvas HTML：
 ```
-python3 ai-companion/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/
+python3 backend/skills/weekly-reflection/scripts/weekly_review.py diary/ --format html --people-dir people/
 ```
 生成周情绪地图卡片——7 天色块（暖色=正面，冷色=负面，灰色=无记录），每天标注情绪词和关键事件。
 通过 `openclaw nodes canvas present` 展示。
