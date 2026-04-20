@@ -49,3 +49,4 @@ node_modules/
 # Backend runtime state
 backend/state/*
 !backend/state/.gitkeep
+.screenshot*.png
