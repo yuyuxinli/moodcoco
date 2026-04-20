@@ -305,3 +305,16 @@ DRIVER R3 EXIT=0
 [2026-04-20 00:30:01] [B] [round=7] file=backend/prompts/fast-tools.md change=added default proactive follow-up expectation at default path opening lines_before=77 lines_after=78
 [2026-04-20 00:30:24] [B] [round=7] file=backend/prompts/fast-tools.md change=added conditional either-or prompt section for vague emotions with concrete situations lines_before=78 lines_after=93
 [2026-04-20 00:30:43] [B] [round=7] file=ai-companion/skills/breathing-ground/SKILL.md change=added no-medical-judgment redline before post-breathing flow lines_before=136 lines_after=155
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/check-in/SKILL.md removed=211 lines kept=367 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/crisis/SKILL.md removed=19 lines kept=340 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/diary/SKILL.md removed=87 lines kept=286 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/face-decision/SKILL.md removed=11 lines kept=326 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/farewell/SKILL.md removed=81 lines kept=295 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/know-myself/SKILL.md removed=12 lines kept=300 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/onboarding/SKILL.md removed=35 lines kept=503 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/proactive-trigger/SKILL.md removed=19 lines kept=278 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/scene-router/SKILL.md removed=20 lines kept=221 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/scene-router/references/romance.md removed=1 lines kept=89 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/scene-router/references/sos.md removed=2 lines kept=133 lines
+[2026-04-20 09:41:05] [B] [cleanup] file=ai-companion/skills/see-pattern/SKILL.md removed=35 lines kept=442 lines
+[2026-04-20 09:41:24] [B] [cleanup] DONE commit=849dfaa total_files=12 removed_lines=533
