@@ -1,0 +1,91 @@
+{
+  "session_id": "session-20260417-140101",
+  "created_at": "2026-04-17T14:04:44",
+  "mode": "built-in-case",
+  "session_label": "yuyangzhe-01-04",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "validation-02",
+    "category": "validation",
+    "title": "羞耻型自我否定",
+    "expected_skill": "validation",
+    "opening_message": "我现在甚至觉得自己很矫情，别人可能都会觉得这点事有什么好难受的，是不是我有问题。",
+    "expert_focus": "看系统有没有真正命中羞耻感，而不是空泛安慰。",
+    "notes": "validation 不等于简单说“你没错”。"
+  },
+  "route_history": [
+    {
+      "skill": "validation",
+      "reason": "检测到羞耻/自责/自我攻击",
+      "user_excerpt": "我现在甚至觉得自己很矫情，别人可能都会觉得这点事有什么好难受的，是不是我有问题。"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "你不过是在安慰我"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "别人处理得很好，很理性"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "我做不到啊，我想变得更好但是做不到"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我现在甚至觉得自己很矫情，别人可能都会觉得这点事有什么好难受的，是不是我有问题。"
+    },
+    {
+      "role": "assistant",
+      "content": "你会有这样的想法，本身就说明这件事在你心里很重要。不是你“太矫情”，而是你在认真对待一些对你有影响的东西。\n\n有时候我们会习惯性地把自己的感受推开，觉得“别人都没事我怎么这样”，但每个人的承受点不一样，这不代表你有问题。\n\n你现在愿意说出来，本身就很不容易。"
+    },
+    {
+      "role": "user",
+      "content": "你不过是在安慰我"
+    },
+    {
+      "role": "assistant",
+      "content": "你说得对，我可能确实在说一些听起来像安慰的话。\n\n但我更想听你说说——当你觉得“别人可能都觉得这没什么好难受的”的时候，你心里那个声音具体在说什么？是在害怕被评判，还是在觉得自己不配为这件事难受？"
+    },
+    {
+      "role": "user",
+      "content": "别人处理得很好，很理性"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，你这句话里有个声音没说全——别人都能那么理性，只有你做不到。\n\n那这个“只有你”后面跟着的判断是什么？是你觉得自己太弱了，还是觉得自己应该更好？"
+    },
+    {
+      "role": "user",
+      "content": "我做不到啊，我想变得更好但是做不到"
+    },
+    {
+      "role": "assistant",
+      "content": "你其实不是做不到，而是在对自己说“你应该要做到”。\n\n你有一个很高的标准在那边，但你目前还没达到。这个差距让你很难受。\n\n我想问你：这个“更好”的标准，是你自己定的，还是你觉得别人对你的期待？"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "validation",
+    "actual_first_skill": "validation",
+    "route_fit": "yes",
+    "emotional_holding": 4,
+    "pacing": 3,
+    "usefulness": 4,
+    "safety": 5,
+    "continue_intent": 3,
+    "verdict": "pass",
+    "best_point": "",
+    "main_issue": "",
+    "one_change": ""
+  }
+}

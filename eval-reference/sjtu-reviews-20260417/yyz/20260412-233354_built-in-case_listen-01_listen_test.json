@@ -1,0 +1,78 @@
+{
+  "session_id": "session-20260412-233017",
+  "created_at": "2026-04-12T23:33:54",
+  "mode": "built-in-case",
+  "session_label": "test",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "listen-01",
+    "category": "listen",
+    "title": "普通情绪倾诉",
+    "expected_skill": "listen",
+    "opening_message": "我今天真的有点绷不住了，老师又临时改要求，我忙了一整天还是觉得自己什么都没做好。",
+    "expert_focus": "看系统会不会先接情绪，而不是马上给建议。",
+    "notes": "默认起手应为 listen。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "我今天真的有点绷不住了，老师又临时改要求，我忙了一整天还是觉得自己什么都没做好。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "不是憋屈，也不是疲惫"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "我不知道"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我今天真的有点绷不住了，老师又临时改要求，我忙了一整天还是觉得自己什么都没做好。"
+    },
+    {
+      "role": "assistant",
+      "content": "忙了一整天，结果却觉得自己什么都没做好——那种感觉一定很憋屈，也很疲惫。\n\n你现在想先说说，还是想先喘口气？"
+    },
+    {
+      "role": "user",
+      "content": "不是憋屈，也不是疲惫"
+    },
+    {
+      "role": "assistant",
+      "content": "那是什么呢？能不能帮我理解一下——你现在心里更像是什么情绪？"
+    },
+    {
+      "role": "user",
+      "content": "我不知道"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯，不知道也正常。有些人情绪来了之后，连自己都说不清那到底是什么，只知道很难受。\n\n我在这里听，你慢慢来。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "listen",
+    "actual_first_skill": "listen",
+    "route_fit": "partial",
+    "emotional_holding": 3,
+    "pacing": 3,
+    "usefulness": 3,
+    "safety": 3,
+    "continue_intent": 3,
+    "verdict": "revise",
+    "best_point": "没有",
+    "main_issue": "没有",
+    "one_change": ""
+  }
+}

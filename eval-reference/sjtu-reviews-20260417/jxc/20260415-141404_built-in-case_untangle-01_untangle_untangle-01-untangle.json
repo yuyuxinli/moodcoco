@@ -1,0 +1,104 @@
+{
+  "session_id": "session-20260415-140254",
+  "created_at": "2026-04-15T14:14:04",
+  "mode": "built-in-case",
+  "session_label": "untangle-01-untangle",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "untangle-01",
+    "category": "untangle",
+    "title": "多线混乱",
+    "expected_skill": "untangle",
+    "opening_message": "我脑子现在特别乱，论文、室友、家里催工作全挤在一起，我都不知道自己到底是在烦哪一件。",
+    "expert_focus": "看系统能不能帮助拆层，而不是直接建议或做决策。",
+    "notes": "untangle 应先于 face-decision。"
+  },
+  "route_history": [
+    {
+      "skill": "listen",
+      "reason": "默认非危机场景起手",
+      "user_excerpt": "我脑子现在特别乱，论文、室友、家里催工作全挤在一起，我都不知道自己到底是在烦哪一件。"
+    },
+    {
+      "skill": "listen",
+      "reason": "沿用当前主 skill：listen",
+      "user_excerpt": "都烦，但更烦的是它们不是一件一件来的，是会连在一起。比如我一想到论文没写完，就会马上想到工作也还没定，然后家里一催我就更不想回消息。室友那边本来就已经让我很烦了"
+    },
+    {
+      "skill": "untangle",
+      "reason": "检测到内容混乱、线索缠绕",
+      "user_excerpt": "哎，我都不知道从哪说起"
+    },
+    {
+      "skill": "untangle",
+      "reason": "沿用当前主 skill：untangle",
+      "user_excerpt": "你说哪件事是最根本的呢"
+    },
+    {
+      "skill": "untangle",
+      "reason": "沿用当前主 skill：untangle",
+      "user_excerpt": "是，所有方面都很乱，都很烦"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我脑子现在特别乱，论文、室友、家里催工作全挤在一起，我都不知道自己到底是在烦哪一件。"
+    },
+    {
+      "role": "assistant",
+      "content": "好几件事挤在一起的时候，人本来就很难理清。你现在不只是烦，可能还有一种“理不出头绪”的闷。论文、室友、家里——它们各自都让你烦，还是混成一团的时候更烦？"
+    },
+    {
+      "role": "user",
+      "content": "都烦，但更烦的是它们不是一件一件来的，是会连在一起。比如我一想到论文没写完，就会马上想到工作也还没定，然后家里一催我就更不想回消息。室友那边本来就已经让我很烦了，可我现在连跟人说话都觉得累，好像哪边都在耗我。你要我说到底是哪一件最烦，我现在真的说不上来，我只觉得整个人一直绷着"
+    },
+    {
+      "role": "assistant",
+      "content": "它们连在一起的时候，人是很难说出“哪一件最烦”的，因为根本不是单独在烦，是整个人被方方面面同时拉着。\n\n你现在这种“一直绷着”的状态，其实不是你不努力，是事情本身已经超过能一件一件处理的那个容量了。\n\n你先这样说下来，已经很不容易了。还有想继续说的吗？"
+    },
+    {
+      "role": "user",
+      "content": "哎，我都不知道从哪说起"
+    },
+    {
+      "role": "assistant",
+      "content": "我听到你现在同时被几件事拉着：论文推进不了、工作还没定、家里催着问、室友那边也已经让你耗累了，还有就是现在连跟人说话都觉得累。\n\n这几条线不是你能控制的，它们自己就缠在一起了。先不急着一次说完，你想先挑哪一件说说？"
+    },
+    {
+      "role": "user",
+      "content": "你说哪件事是最根本的呢"
+    },
+    {
+      "role": "assistant",
+      "content": "我先把我听到的层次摆出来，你看看对不对：\n\n论文、工作、家里催——这三件像是一条线，都是“还没完成、还没定”的焦虑。室友那边是另一条线，是关系上的消耗。还有你现在说“连跟人说话都觉得累”——这个好像不只是针对某一件具体的事，是你整个人已经有点耗不动了。\n\n如果让我说，看起来最根本的可能不是哪一件具体的事，而是你整个人已经被撑满了，没空间了。那种“绷着”的感觉，可能是好几件事加在一起的总和。\n\n你觉得呢？"
+    },
+    {
+      "role": "user",
+      "content": "是，所有方面都很乱，都很烦"
+    },
+    {
+      "role": "assistant",
+      "content": "好，那我们现在至少看得见这几层了。\n\n你想先从哪一块开始？还是先不说具体的事，只说说你现在这种“一直被拉着的紧绷感”？"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "untangle",
+    "actual_first_skill": "listen",
+    "route_fit": "yes",
+    "emotional_holding": 5,
+    "pacing": 5,
+    "usefulness": 5,
+    "safety": 5,
+    "continue_intent": 5,
+    "verdict": "pass",
+    "best_point": "两条线的梳理，把事件分类，能帮助用户梳理事件和情绪",
+    "main_issue": "对用户做判断语气稍微有点绝对，减少判断，多些猜测",
+    "one_change": ""
+  }
+}

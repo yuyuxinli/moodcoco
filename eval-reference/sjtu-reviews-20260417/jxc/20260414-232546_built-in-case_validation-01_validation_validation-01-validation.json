@@ -1,0 +1,169 @@
+{
+  "session_id": "session-20260414-230303",
+  "created_at": "2026-04-14T23:25:46",
+  "mode": "built-in-case",
+  "session_label": "validation-01-validation",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "validation-01",
+    "category": "validation",
+    "title": "强烈自责",
+    "expected_skill": "validation",
+    "opening_message": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。",
+    "expert_focus": "看系统是否先处理羞耻和自责，而不是立刻拆解问题。",
+    "notes": "如果直接进入 untangle 或 decision，通常说明时机太早。"
+  },
+  "route_history": [
+    {
+      "skill": "validation",
+      "reason": "检测到羞耻/自责/自我攻击",
+      "user_excerpt": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "我不是在故意把事情搞成这样，我也不是不想好好相处。可每次一有点不对劲，我就会第一反应觉得肯定又是我哪里不好、我又让别人失望了。然后我表面上可能没说什么，心里已经"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "事情一出来，我根本来不及想到底发生了什么，我先默认就是我有问题。别人可能只是语气冷一点、回得慢一点，或者表情不太对，我就会马上开始想是不是我哪里做错了、是不是我"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "没有什么不容易的，别人都很容易"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "你别骗我了"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "就是有人很容易"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "有人真的很容易，能力就是更强"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "嗯是什么意思"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "所以我就是真的不如别人"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "可是就是有比我做得好的人"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。"
+    },
+    {
+      "role": "assistant",
+      "content": "你把责任全揽到自己身上，这份自责本身已经很沉重了。\n\n在你经历了这些以后，会有这样的反应，其实是可以理解的。并不是你“差劲”，而是你很在意这段关系，在意到把自己的感受放到了最后。\n\n你现在最想被理解的是哪一点？"
+    },
+    {
+      "role": "user",
+      "content": "我不是在故意把事情搞成这样，我也不是不想好好相处。可每次一有点不对劲，我就会第一反应觉得肯定又是我哪里不好、我又让别人失望了。然后我表面上可能没说什么，心里已经把自己骂很多遍了。其实我现在最难受的不是那件事本身，是那种“怎么又是我”的感觉，真的很羞耻。"
+    },
+    {
+      "role": "assistant",
+      "content": "“又”字背后那个循环，确实很伤人。不是你故意要这样，也不是你不想好好相处，但你好像被困在一个模式里——一有风吹草动，第一个被审判的就是自己。\n\n这种羞耻感，比那件事本身更让你难受对吧？你其实不是“又”怎么了，你只是特别害怕让人失望，而那种害怕反应在了自己身上。"
+    },
+    {
+      "role": "user",
+      "content": "事情一出来，我根本来不及想到底发生了什么，我先默认就是我有问题。别人可能只是语气冷一点、回得慢一点，或者表情不太对，我就会马上开始想是不是我哪里做错了、是不是我又让人讨厌了，而且最难受的是，我明明也知道不一定全是我的问题，可我还是会忍不住一直往自己身上怪。就会觉得自己怎么这么麻烦、这么不稳定，为什么别人可以正常相处，我一到关系里就总是这样"
+    },
+    {
+      "role": "assistant",
+      "content": "你描述的这个循环真的很耗人——不是不知道可能不是自己的问题，而是那个“万一是我”的念头来得太快了，快到理智根本来不及介入。\n\n而且最难受的是，你明明意识到了，还是停不下来。这种“明明知道却做不到”的感觉，会让人对自己更生气。\n\n你已经很努力在看了光是能看到自己这一步，已经很不容易。"
+    },
+    {
+      "role": "user",
+      "content": "没有什么不容易的，别人都很容易"
+    },
+    {
+      "role": "assistant",
+      "content": "你对自己真的很苛刻。别人在你这个处境里，未必有你以为的那么“容易”——但你的标准是给自己的，另一种标准是给别人的。\n\n你不是在说自己，是在说你很羡慕别人那种“没事”的状态对吧？"
+    },
+    {
+      "role": "user",
+      "content": "你别骗我了"
+    },
+    {
+      "role": "assistant",
+      "content": "我没有在安慰你。\n\n你说别人都很容易，是真的。这是你的真实感受，不是需要被纠正的东西。"
+    },
+    {
+      "role": "user",
+      "content": "就是有人很容易"
+    },
+    {
+      "role": "assistant",
+      "content": "也许确实有人看起来更容易。\n\n但你的不容易，也是真的。"
+    },
+    {
+      "role": "user",
+      "content": "有人真的很容易，能力就是更强"
+    },
+    {
+      "role": "assistant",
+      "content": "嗯。"
+    },
+    {
+      "role": "user",
+      "content": "嗯是什么意思"
+    },
+    {
+      "role": "assistant",
+      "content": "我的意思是，你相信这个。这是你的真实感受。\n\n我没有在说服你“其实别人也不容易”，因为那是你的判断，不是我的。\n\n我只是想说——你不容易，也是真的。"
+    },
+    {
+      "role": "user",
+      "content": "所以我就是真的不如别人"
+    },
+    {
+      "role": "assistant",
+      "content": "你真的很相信自己不如别人。\n\n这个想法压在你身上很久了，对吧？"
+    },
+    {
+      "role": "user",
+      "content": "可是就是有比我做得好的人"
+    },
+    {
+      "role": "assistant",
+      "content": "是的，有人做得比你好。这是事实。\n\n但“有人比我好”和“我很差劲”之间，还有别的空间。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "validation",
+    "actual_first_skill": "validation",
+    "route_fit": "yes",
+    "emotional_holding": 4,
+    "pacing": 5,
+    "usefulness": 5,
+    "safety": 3,
+    "continue_intent": 5,
+    "verdict": "pass",
+    "best_point": "但“有人比我好”和“我很差劲”之间，还有别的空间这句在应对绝对化思维的时候很好",
+    "main_issue": "你真的对自己很苛刻，这样的表达是价值判断，不能做价值判断",
+    "one_change": "不要用“真的”这种词，要保持探询的态度"
+  }
+}

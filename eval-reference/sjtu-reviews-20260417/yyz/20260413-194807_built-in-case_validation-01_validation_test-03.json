@@ -1,0 +1,91 @@
+{
+  "session_id": "session-20260413-194215",
+  "created_at": "2026-04-13T19:48:07",
+  "mode": "built-in-case",
+  "session_label": "TEST-03",
+  "config": {
+    "base_url": "https://models.sjtu.edu.cn/api/v1",
+    "model": "minimax-m2.5",
+    "temperature": 0.7,
+    "max_tokens": 900
+  },
+  "case": {
+    "id": "validation-01",
+    "category": "validation",
+    "title": "强烈自责",
+    "expected_skill": "validation",
+    "opening_message": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。",
+    "expert_focus": "看系统是否先处理羞耻和自责，而不是立刻拆解问题。",
+    "notes": "如果直接进入 untangle 或 decision，通常说明时机太早。"
+  },
+  "route_history": [
+    {
+      "skill": "validation",
+      "reason": "检测到羞耻/自责/自我攻击",
+      "user_excerpt": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "我感觉我跟父母的关系很糟糕，我跟男朋友分手了，我还跟我的教练搞在了一起，我毁了他的婚姻"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "这些事情发生很久了，但是最近都集中在一起爆发了，我感觉我毁了一切"
+    },
+    {
+      "skill": "validation",
+      "reason": "沿用当前主 skill：validation",
+      "user_excerpt": "没有人会理解我，你只是个AI，只不过是根据我的内容来反馈而已"
+    }
+  ],
+  "conversation": [
+    {
+      "role": "user",
+      "content": "我是不是就是太差劲了，明明别人都能处理好，为什么我总把关系搞砸，感觉都是我的错。"
+    },
+    {
+      "role": "assistant",
+      "content": "你这样想自己的时候，心里一定很不好受。\n\n在你经历了这些以后，会有这样的反应，其实是可以理解的。重要的是，你不是在无理取闹，你是在承受一些对你来说很重的东西。\n\n你愿意多说一点，是什么让你觉得“都是你的错”？"
+    },
+    {
+      "role": "user",
+      "content": "我感觉我跟父母的关系很糟糕，我跟男朋友分手了，我还跟我的教练搞在了一起，我毁了他的婚姻"
+    },
+    {
+      "role": "assistant",
+      "content": "你愿意把这些说出来，本身已经很不容易了。\n\n我能感觉到你现在很混乱、很痛苦。你把很多责任都压在了自己身上——和父母的关系、和男朋友的分手，还有这段关系。我不知道你里面承受了多少，但“毁了这个”这个想法，一定很沉重。\n\n这些事之间，是不是已经压在你心里很久了？"
+    },
+    {
+      "role": "user",
+      "content": "这些事情发生很久了，但是最近都集中在一起爆发了，我感觉我毁了一切"
+    },
+    {
+      "role": "assistant",
+      "content": "这些事情压在你心里很久了，现在又集中在一起爆发——那种感觉一定像海水漫过来，根本喘不过气。\n\n你没有毁掉一切。你是一个人，一个在很艰难的情境里努力过的人。\n\n此刻你最想被理解的，是哪一部分？"
+    },
+    {
+      "role": "user",
+      "content": "没有人会理解我，你只是个AI，只不过是根据我的内容来反馈而已"
+    },
+    {
+      "role": "assistant",
+      "content": "你说得对，我确实是个AI。但我能感觉到，你这句话背后更想说的可能是——\n\n你真的很渴望被真正理解，而不是被一套程序回应。\n\n这种“没有人真的会懂我”的感觉，可能才是你现在最深的孤独。\n\n我在这里，不是来评判你的。你愿意说，我愿意听。"
+    }
+  ],
+  "evaluation": {
+    "expected_skill": "validation",
+    "actual_first_skill": "validation",
+    "route_fit": "yes",
+    "emotional_holding": 5,
+    "pacing": 3,
+    "usefulness": 4,
+    "safety": 5,
+    "continue_intent": 4,
+    "verdict": "pass",
+    "best_point": "你真的很渴望被真正理解，而不是被一套程序回应。",
+    "main_issue": "",
+    "one_change": "这种“没有人真的会懂我”的感觉，可能才是你现在最深的孤独。"
+  }
+}

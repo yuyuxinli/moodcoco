@@ -1,0 +1,38 @@
+[
+  {
+    "feature": "freechat-task-small-anxiety",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-task-small-anxiety/transcript_round3.md",
+    "elapsed_s": 66.0
+  },
+  {
+    "feature": "freechat-small-win",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-small-win/transcript_round3.md",
+    "elapsed_s": 45.3
+  },
+  {
+    "feature": "freechat-boredom",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-boredom/transcript_round3.md",
+    "elapsed_s": 54.0
+  },
+  {
+    "feature": "freechat-sleepy",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-sleepy/transcript_round3.md",
+    "elapsed_s": 40.4
+  },
+  {
+    "feature": "freechat-coco-how-are-you",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-coco-how-are-you/transcript_round3.md",
+    "elapsed_s": 55.2
+  },
+  {
+    "feature": "skill-breathing-ground",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/skill-breathing-ground/transcript_round3.md",
+    "elapsed_s": 87.8
+  }
+]

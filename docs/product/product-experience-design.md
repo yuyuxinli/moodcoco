@@ -1863,18 +1863,20 @@ Phase 5：收尾
 
 #### 4.1 总览（10 个 Skill，≤15 上限）
 
-| # | Skill Name | 类型 | 来源 | 服务旅程 | 交互形态 | 心理学基础 |
-|---|-----------|------|------|---------|---------|-----------|
-| 1 | **breathing-ground** | 合并 | calm-down + sigh | F05 | exec + 纯对话 | Stanford cyclic sigh RCT; 4-7-8 vagal; 5-4-3-2-1 grounding |
-| 2 | **diary** | 保留（吸收 emotion-journal） | 原 diary + emotion-journal | F05/F06/F07 | 纯对话 | Emotion journal 六元组; EMNLP 2025 IMA; Mem0 冲突检测 |
-| 3 | **relationship-guide** | 合并 | relationship-coach + relationship-skills | F05/F07 | 纯对话 | IFS (Schwartz); EFT (Johnson); NVC (Rosenberg) |
-| 4 | **pattern-mirror** | 保留 | 原 pattern-mirror | F07 | 纯对话 + exec | 跨关系模式匹配（可可独有） |
-| 5 | **decision-cooling** | 保留 | 原 decision-cooling | F05/F06 | 纯对话 + Heartbeat | EFT Episodic Future Thinking; DBT STOP |
-| 6 | **farewell** | 保留 | 原 farewell | F08 | Poll/编号选择 + Canvas + 图片 + exec | 叙事疗法 Definitional Ceremony; ACT; Banks 2024 |
-| 7 | **onboarding** | 新增 | 新设计 | F04 | 纯对话 + Poll | Pi 自然破冰; Wysa 结构化入门 |
-| 8 | **check-in** | 新增 | 新设计 | F06 | 纯对话 | Daylio 情绪签到; Wysa evening monitoring |
-| 9 | **growth-story** | 新增 | 新设计 | F07 | exec + 纯对话/Canvas | INT/IMA (EMNLP 2025); Ash weekly insights |
-| 10 | **weekly-reflection** | 新增 | 新设计 | F06/F07 | exec + Canvas/纯对话 | Ash weekly insights; Daylio Year in Pixels |
+| # | Skill Name | 类型 | 来源 | 服务旅程 | 交互形态 | 执行模式 | 心理学基础 |
+|---|-----------|------|------|---------|---------|---------|-----------|
+| 1 | **breathing-ground** | 合并 | calm-down + sigh | F05 | exec + 纯对话 | Single-turn | Stanford cyclic sigh RCT; 4-7-8 vagal; 5-4-3-2-1 grounding |
+| 2 | **diary** | 保留（吸收 emotion-journal） | 原 diary + emotion-journal | F05/F06/F07 | 纯对话 | Agentic | Emotion journal 六元组; EMNLP 2025 IMA; Mem0 冲突检测 |
+| 3 | **relationship-guide** | 合并 | relationship-coach + relationship-skills | F05/F07 | 纯对话 | Agentic | IFS (Schwartz); EFT (Johnson); NVC (Rosenberg) |
+| 4 | **pattern-mirror** | 保留 | 原 pattern-mirror | F07 | 纯对话 + exec | Agentic | 跨关系模式匹配（可可独有） |
+| 5 | **decision-cooling** | 保留 | 原 decision-cooling | F05/F06 | 纯对话 + Heartbeat | Agentic | EFT Episodic Future Thinking; DBT STOP |
+| 6 | **farewell** | 保留 | 原 farewell | F08 | Poll/编号选择 + Canvas + 图片 + exec | Agentic | 叙事疗法 Definitional Ceremony; ACT; Banks 2024 |
+| 7 | **onboarding** | 新增 | 新设计 | F04 | 纯对话 + Poll | Single-turn | Pi 自然破冰; Wysa 结构化入门 |
+| 8 | **check-in** | 新增 | 新设计 | F06 | 纯对话 | Single-turn | Daylio 情绪签到; Wysa evening monitoring |
+| 9 | **growth-story** | 新增 | 新设计 | F07 | exec + 纯对话/Canvas | Agentic | INT/IMA (EMNLP 2025); Ash weekly insights |
+| 10 | **weekly-reflection** | 新增 | 新设计 | F06/F07 | exec + Canvas/纯对话 | Agentic | Ash weekly insights; Daylio Year in Pixels |
+
+**执行模式**：默认 Agentic（需要多步推理、读记忆、风险评估）。标为 Single-turn 的 skill 不需要复杂决策，错误代价低，LLM 单轮即可完成。
 
 #### 4.2 旅程覆盖验证
 

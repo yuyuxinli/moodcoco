@@ -13,7 +13,7 @@
 
 ### 1.1 一句话
 
-AI 治愈系好友，陪你看见自己。为 18-24 岁女性（扩展群体 18-28 岁男女）提供以亲密关系为核心的情感陪伴，做四件事：**接住情绪、解读信号、记住你、看到模式**。
+AI 治愈系好友，陪你做自己。为 18-24 岁女性（扩展群体 18-28 岁男女）提供以亲密关系为核心的情感陪伴，做四件事：**接住情绪、解读信号、记住你、看到模式**。
 
 ### 1.2 五层技术栈
 
@@ -319,18 +319,20 @@ Streaming 输出（humanDelay: natural，句子级分块）
 
 ### 4.1 Skill 清单（10 个）
 
-| # | Skill | 做什么 | 交互形态 | 服务旅程 | 心理学基础 |
-|---|-------|--------|---------|---------|-----------|
-| 1 | breathing-ground | 情绪急救（呼吸/grounding） | exec + 纯对话 | F05 | Stanford cyclic sigh; 5-4-3-2-1 grounding |
-| 2 | diary | 情绪日记（六元组记录） | 纯对话 + Poll | F05/F06/F07 | Emotion journal; IMA |
-| 3 | relationship-guide | 关系探索与沟通工具 | 纯对话 | F05/F07 | IFS; EFT; NVC |
-| 4 | pattern-mirror | 跨关系模式呈现 | 纯对话 + exec + Canvas | F07 | 可可独有 |
-| 5 | decision-cooling | 24h 决策冷却 + 回访 | 纯对话 + Heartbeat | F05/F06 | EFT; DBT STOP |
-| 6 | farewell | 关系告别仪式 | Poll + Canvas + 图片 + exec | F08 | 叙事疗法; ACT; Banks 2024 |
-| 7 | onboarding | 首次相遇引导 | 纯对话 + Poll | F04 | Pi 破冰; Wysa 入门 |
-| 8 | check-in | 日常情绪签到 | 纯对话 | F06 | Daylio; Wysa monitoring |
-| 9 | growth-story | 成长叙事 | exec + 纯对话/Canvas | F07 | INT/IMA; Ash insights |
-| 10 | weekly-reflection | 周回顾引导 | exec + Canvas/纯对话 + Poll | F06/F07 | Ash insights; Daylio |
+| # | Skill | 做什么 | 交互形态 | 执行模式 | 服务旅程 | 心理学基础 |
+|---|-------|--------|---------|---------|---------|-----------|
+| 1 | breathing-ground | 情绪急救（呼吸/grounding） | exec + 纯对话 | Single-turn | F05 | Stanford cyclic sigh; 5-4-3-2-1 grounding |
+| 2 | diary | 情绪日记（六元组记录） | 纯对话 + Poll | Agentic | F05/F06/F07 | Emotion journal; IMA |
+| 3 | relationship-guide | 关系探索与沟通工具 | 纯对话 | Agentic | F05/F07 | IFS; EFT; NVC |
+| 4 | pattern-mirror | 跨关系模式呈现 | 纯对话 + exec + Canvas | Agentic | F07 | 可可独有 |
+| 5 | decision-cooling | 24h 决策冷却 + 回访 | 纯对话 + Heartbeat | Agentic | F05/F06 | EFT; DBT STOP |
+| 6 | farewell | 关系告别仪式 | Poll + Canvas + 图片 + exec | Agentic | F08 | 叙事疗法; ACT; Banks 2024 |
+| 7 | onboarding | 首次相遇引导 | 纯对话 + Poll | Single-turn | F04 | Pi 破冰; Wysa 入门 |
+| 8 | check-in | 日常情绪签到 | 纯对话 | Single-turn | F06 | Daylio; Wysa monitoring |
+| 9 | growth-story | 成长叙事 | exec + 纯对话/Canvas | Agentic | F07 | INT/IMA; Ash insights |
+| 10 | weekly-reflection | 周回顾引导 | exec + Canvas/纯对话 + Poll | Agentic | F06/F07 | Ash insights; Daylio |
+
+**执行模式**：默认 Agentic（需要多步推理、读记忆、风险评估）。标为 Single-turn 的 skill 不需要复杂决策，错误代价低，LLM 单轮即可完成。
 
 **路由优先级**：P0 安全协议 > P1 breathing-ground > P2 decision-cooling > P3 pattern-mirror > P4 growth-story > P5 diary > check-in
 

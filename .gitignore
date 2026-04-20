@@ -1,6 +1,9 @@
 # OS
 .DS_Store
 
+# Claude Code local state
+.claude/scheduled_tasks.lock
+
 # Runtime
 __pycache__/
 *.pyc
@@ -14,4 +17,34 @@ node_modules/
 
 # Editor
 .obsidian/
-.evolve/
+
+# Evolve — 基础设施 + 价值文档进 repo，运行时产物不进
+.evolve/results.tsv
+.evolve/run.log
+.evolve/transcripts/
+.evolve/sub-prd/
+.evolve/strategy.md
+.evolve/lock
+.evolve/started_at
+.evolve/_b_*_output.log
+.evolve/_b_doubao_ab_output.log
+.evolve/*/eval_codex_*.md
+.evolve/*/eval_prompt.md
+.evolve.old-*/
+.evolve.bak-*/
+
+# Local evolve framework symlink（指向用户本地 framework 目录，其他机器不通）
+.claude/skills/evolve
+.claude/skills/evolve.bak-*
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+.venv/
+*.egg-info/
+
+# Slow guidance runtime state
+ai-companion/SLOW_GUIDANCE.md
