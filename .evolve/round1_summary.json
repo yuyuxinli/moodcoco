@@ -1,0 +1,32 @@
+[
+  {
+    "feature": "freechat-hi-greeting",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-hi-greeting/transcript_round1.md",
+    "elapsed_s": 72.4
+  },
+  {
+    "feature": "freechat-daily-fatigue",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-daily-fatigue/transcript_round1.md",
+    "elapsed_s": 126.7
+  },
+  {
+    "feature": "freechat-food-share",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-food-share/transcript_round1.md",
+    "elapsed_s": 83.1
+  },
+  {
+    "feature": "freechat-weekend-plan",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-weekend-plan/transcript_round1.md",
+    "elapsed_s": 68.2
+  },
+  {
+    "feature": "freechat-weather",
+    "status": "ready",
+    "transcript": "/Users/jianghongwei/Documents/moodcoco/.evolve/freechat-weather/transcript_round1.md",
+    "elapsed_s": 47.8
+  }
+]

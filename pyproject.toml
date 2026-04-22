@@ -1,4 +1,27 @@
 # ============================================================
+# Project — moodcoco 快慢思考 MVP
+# ============================================================
+[project]
+name = "moodcoco"
+version = "0.1.0"
+description = "moodcoco — 快慢思考对话架构 MVP（PydanticAI）"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic-ai>=0.0.14",
+    "openai>=1.50",
+    "python-dotenv>=1.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+# ============================================================
 # Ruff — lint + 格式化
 # ============================================================
 [tool.ruff]
@@ -24,7 +47,7 @@ ignore = ["E501", "RUF001", "RUF002", "RUF003"]  # 中文全角标点是正常�
 fixable = ["ALL"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ai_companion"]
+known-first-party = ["backend"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -36,7 +59,7 @@ docstring-code-format = true
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
-include = ["ai-companion/skills"]
+include = ["backend"]
 exclude = ["**/__pycache__", ".venv", ".evolve", ".claude"]
 reportMissingTypeStubs = false
 
