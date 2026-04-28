@@ -63,6 +63,10 @@ class XfyunSTTTimeoutError(XfyunSTTError):
     """Recognition exceeded the 60-second hard timeout."""
 
 
+class XfyunRecognitionError(XfyunSTTError):
+    """Xfyun returned a recognition-domain non-zero error code."""
+
+
 # ---------------------------------------------------------------------------
 # Plugin
 # ---------------------------------------------------------------------------
