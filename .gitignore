@@ -50,3 +50,8 @@ node_modules/
 backend/state/*
 !backend/state/.gitkeep
 .screenshot*.png
+.gstack/
+
+# Codex / Agents 本地工具配置（每个开发者各自）
+.codex/
+.agents/
