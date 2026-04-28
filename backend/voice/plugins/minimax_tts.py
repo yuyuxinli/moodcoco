@@ -9,7 +9,6 @@ we call it directly inside the ChunkedStream._run() coroutine running in the eve
 """
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -24,13 +23,12 @@ from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, APIConnectOptions
 from livekit.agents import APIConnectionError, APIStatusError, APITimeoutError
 
 from backend.voice._vendor.psy.tts.service import MiniMaxTTSService
-from backend.voice._vendor.psy.tts.types import MiniMaxAccountConfig
-from backend.voice._vendor.psy.tts.router import MiniMaxAccountRouter, MiniMaxAccountState
-from backend.voice._vendor.psy.tts.client import MiniMaxTTSClient
 
 logger = logging.getLogger("voice.plugins.minimax_tts")
 
-_DEFAULT_SAMPLE_RATE = 32_000
+# Vendor hardcodes "sample_rate": 16000 in _vendor/psy/tts/client.py L96.
+# Plugin must advertise the same value to LiveKit or pitch/duration will be wrong.
+_DEFAULT_SAMPLE_RATE = 16_000
 _DEFAULT_NUM_CHANNELS = 1
 _DEFAULT_MODEL = "speech-01"
 _DEFAULT_VOICE_ID = "female-shaonv"
@@ -94,12 +92,16 @@ class MinimaxTTSPlugin(TTS):
             env var; default ``"speech-01"``.
         voice_id: Voice ID.  Falls back to ``MINIMAX_TTS_VOICE_ID`` env var;
             default ``"female-shaonv"``.
-        sample_rate: Output audio sample rate in Hz.  Default 32 000.
+        sample_rate: Output audio sample rate in Hz.  Must be 16 000 to match the
+            MiniMax vendor's hardcoded ``"sample_rate": 16000`` in the request body.
+            Passing any other value raises ``ValueError`` to prevent silent pitch
+            distortion in LiveKit's codec pipeline.
         _service: Optional pre-built ``MiniMaxTTSService`` for test injection.
             When provided, ``api_key`` / ``model`` / ``voice_id`` are ignored.
 
     Raises:
-        ValueError: If ``api_key`` cannot be resolved (neither kwarg nor env var).
+        ValueError: If ``api_key`` cannot be resolved (neither kwarg nor env var),
+            or if ``sample_rate`` is not 16000 (must match vendor hardcode).
     """
 
     def __init__(
@@ -111,6 +113,10 @@ class MinimaxTTSPlugin(TTS):
         sample_rate: int = _DEFAULT_SAMPLE_RATE,
         _service: MiniMaxTTSService | None = None,
     ) -> None:
+        if sample_rate != _DEFAULT_SAMPLE_RATE:
+            raise ValueError(
+                f"MinimaxTTSPlugin sample_rate must match vendor (16000); got {sample_rate}"
+            )
         super().__init__(
             capabilities=TTSCapabilities(streaming=False),
             sample_rate=sample_rate,
