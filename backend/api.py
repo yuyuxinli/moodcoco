@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+import os
+import uuid
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -11,6 +14,10 @@ from pydantic import BaseModel, Field
 from backend.coordinator import reset_guidance_for_demo, run_turn
 from backend.persona import list_personas, run_persona_turn
 from backend.slow import reset_memory_file_for_demo
+
+_voice_api_logger = logging.getLogger("voice.api")
+_DEFAULT_ROOM_NAME = "moodcoco-voice"
+_DEFAULT_LK_URL = "wss://your-livekit-server.livekit.cloud"
 
 app = FastAPI(title="moodcoco API", version="0.1.0")
 
@@ -174,3 +181,137 @@ async def reset_endpoint() -> dict:
     reset_guidance_for_demo()
     reset_memory_file_for_demo()
     return {"status": "reset"}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# F9 — POST /api/voice/token  (LiveKit JWT signing for the web voice client)
+#
+# Contract per F2 §7 (authoritative for F10 web client):
+#   request:  { session_id?, room_name?, participant_identity? }
+#   response: { token, ws_url, room_name, participant_identity }
+#
+# JWT claims (per F2 §7):
+#   identity = participant_identity (defaults to "web-user-{session_id}")
+#   roomJoin=true, room=<room_name>, canPublish=true, canSubscribe=true
+#   ttl = 3600s (LiveKit AccessToken default)
+#
+# Error semantics:
+#   500 — LIVEKIT_API_KEY / LIVEKIT_API_SECRET missing in env
+#   422 — Pydantic-level validation failure (FastAPI default)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class VoiceTokenReq(BaseModel):
+    """Voice token request body (F2 §7).
+
+    All fields optional so the web client can connect with sensible defaults
+    during demo. ``session_id`` ties the LiveKit room back to the same logical
+    session as the text chat (``web-demo`` in current UI).
+    """
+
+    session_id: str | None = Field(default=None, max_length=128)
+    room_name: str | None = Field(default=None, min_length=1, max_length=128)
+    participant_identity: str | None = Field(default=None, min_length=1, max_length=128)
+
+
+class VoiceTokenResp(BaseModel):
+    """Voice token response body (F2 §7)."""
+
+    token: str = Field(..., description="LiveKit JWT access token")
+    ws_url: str = Field(..., description="LiveKit SFU WebSocket URL")
+    room_name: str = Field(..., description="Canonical room name (echo or generated)")
+    participant_identity: str = Field(..., description="Participant identity baked into the JWT")
+
+
+@app.post("/api/voice/token", response_model=VoiceTokenResp)
+async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
+    """Issue a LiveKit room access token for the browser voice client.
+
+    Signs a JWT locally using ``LIVEKIT_API_KEY`` / ``LIVEKIT_API_SECRET``;
+    the LiveKit SFU is not contacted by this route.
+
+    Args:
+        req: Optional ``session_id`` / ``room_name`` / ``participant_identity``.
+            Missing fields default to demo-friendly values.
+
+    Returns:
+        ``VoiceTokenResp`` with the signed JWT, the LiveKit WebSocket URL
+        (``LIVEKIT_URL`` env var, falling back to a clearly-fake placeholder),
+        the canonical ``room_name``, and the ``participant_identity`` that was
+        baked into the JWT.
+
+    Raises:
+        HTTPException: 500 when ``LIVEKIT_API_KEY`` or ``LIVEKIT_API_SECRET``
+            are missing from the environment.
+    """
+    lk_api_key = os.environ.get("LIVEKIT_API_KEY")
+    lk_api_secret = os.environ.get("LIVEKIT_API_SECRET")
+    lk_url = os.environ.get("LIVEKIT_URL", _DEFAULT_LK_URL)
+
+    if not lk_api_key or not lk_api_secret:
+        _voice_api_logger.error(
+            "voice_token_env_missing",
+            extra={
+                "session_id": req.session_id or "",
+                "has_key": bool(lk_api_key),
+                "has_secret": bool(lk_api_secret),
+            },
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="LIVEKIT_API_KEY and LIVEKIT_API_SECRET must be set",
+        )
+
+    # Resolve canonical room_name + participant_identity with stable defaults.
+    session_id = req.session_id or "web-demo"
+    room_name = req.room_name or _DEFAULT_ROOM_NAME
+    participant_identity = (
+        req.participant_identity
+        or f"web-user-{session_id}-{uuid.uuid4().hex[:8]}"
+    )
+
+    # Lazy import keeps the API module importable without livekit-api installed
+    # (e.g., in environments that only run the text chat).
+    from livekit.api import AccessToken, VideoGrants
+
+    try:
+        token = (
+            AccessToken(lk_api_key, lk_api_secret)
+            .with_identity(participant_identity)
+            .with_name(participant_identity)
+            .with_grants(
+                VideoGrants(
+                    room_join=True,
+                    room=room_name,
+                    can_publish=True,
+                    can_subscribe=True,
+                )
+            )
+            .to_jwt()
+        )
+    except ValueError as exc:
+        _voice_api_logger.error(
+            "voice_token_signing_failed",
+            extra={
+                "session_id": session_id,
+                "room_name": room_name,
+                "error": str(exc),
+            },
+        )
+        raise HTTPException(status_code=500, detail=f"token signing failed: {exc}") from exc
+
+    _voice_api_logger.info(
+        "voice_token_issued",
+        extra={
+            "session_id": session_id,
+            "room_name": room_name,
+            "participant_identity": participant_identity,
+        },
+    )
+
+    return VoiceTokenResp(
+        token=token,
+        ws_url=lk_url,
+        room_name=room_name,
+        participant_identity=participant_identity,
+    )
