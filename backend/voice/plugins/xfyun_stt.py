@@ -15,7 +15,6 @@ import os
 import re
 import tempfile
 import time
-from contextvars import ContextVar
 
 from livekit.agents import APIConnectionError
 from livekit.agents.stt import (
@@ -35,16 +34,12 @@ from livekit.agents.utils import AudioBuffer
 from livekit.agents.utils.audio import combine_frames
 
 from backend.voice._vendor.psy.stt.speech_to_text_xfyun_service import XfyunASR
+from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 
 logger = logging.getLogger("voice.plugins.xfyun_stt")
 
 _DEFAULT_LANGUAGE = "zh-cn"
 _DEFAULT_SAMPLE_RATE = 16_000
-
-voice_session_ctx: ContextVar[str | None] = ContextVar(
-    "voice_session_ctx", default=None
-)
-voice_turn_ctx: ContextVar[str | None] = ContextVar("voice_turn_ctx", default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +94,7 @@ class XfyunSTTPlugin(STT):
     stateless per call).
 
     Args:
-        app_id: Xfyun application ID.  Falls back to ``XFYUN_APPID`` env var.
+        app_id: Xfyun application ID.  Falls back to ``XFYUN_APP_ID`` env var.
         api_key: Xfyun API key.  Falls back to ``XFYUN_API_KEY`` env var.
         api_secret: Xfyun API secret.  Falls back to ``XFYUN_API_SECRET`` env var.
         language: BCP-47 language tag returned in ``SpeechData``.  Defaults to

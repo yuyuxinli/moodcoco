@@ -1,6 +1,6 @@
 """Unit tests for XfyunSTTPlugin (F3).
 
-All 6 test cases per F1 §8 F3 acceptance criteria.
+12 test cases: 6 original + 4 missing F1 §8 cases + 2 new error-class tests.
 XfyunASR is fully mocked — no network calls are made.
 """
 from __future__ import annotations
@@ -15,10 +15,13 @@ from livekit.agents.stt import SpeechData, SpeechEvent, SpeechEventType
 from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS
 
 from backend.voice.plugins.xfyun_stt import (
+    XfyunRecognitionError,
     XfyunSTTAuthError,
     XfyunSTTNetworkError,
     XfyunSTTPlugin,
+    XfyunSTTRateLimitError,
     XfyunSTTTimeoutError,
+    XfyunVendorError,
 )
 
 
@@ -50,7 +53,7 @@ def _make_audio_buffer(
 
 @pytest.mark.asyncio
 async def test_init_reads_env_vars(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Env vars XFYUN_APPID/API_KEY/API_SECRET are propagated to XfyunASR."""
+    """Env vars XFYUN_APP_ID/API_KEY/API_SECRET are propagated to XfyunASR."""
     monkeypatch.setenv("XFYUN_APP_ID", "test_app_id_123")
     monkeypatch.setenv("XFYUN_API_KEY", "test_key_abc")
     monkeypatch.setenv("XFYUN_API_SECRET", "test_secret_xyz")
@@ -188,3 +191,181 @@ async def test_xfyun_auth_error_mapped(
             await plugin._recognize_impl(
                 buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
             )
+
+
+# ---------------------------------------------------------------------------
+# F1 §8 missing cases (round-2 additions)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_recognize_empty_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F1 §8 case 2 — XfyunASR returns '' → SpeechEvent with empty text, no exception."""
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.return_value = ""
+
+        plugin = XfyunSTTPlugin()
+        buffer = _make_audio_buffer()
+
+        event: SpeechEvent = await plugin._recognize_impl(
+            buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+        )
+
+    assert event.type == SpeechEventType.FINAL_TRANSCRIPT
+    assert len(event.alternatives) == 1
+    alt: SpeechData = event.alternatives[0]
+    assert alt.text == ""
+    assert alt.confidence == 0.0
+
+
+@pytest.mark.asyncio
+async def test_xfyun_error_code_propagation(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """F1 §8 case 4 — Xfyun error code 10165 → timeout error + structured code log."""
+
+    def timeout_code_error(path: str) -> str:
+        raise XfyunVendorError("session timeout", code=10165)
+
+    caplog.set_level("ERROR", logger="voice.plugins.xfyun_stt")
+
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.side_effect = timeout_code_error
+
+        plugin = XfyunSTTPlugin()
+        buffer = _make_audio_buffer()
+
+        with pytest.raises(XfyunSTTTimeoutError) as exc_info:
+            await plugin._recognize_impl(
+                buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+            )
+
+    assert exc_info.value.code == 10165
+    assert any(getattr(record, "code", None) == 10165 for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_recognize_large_buffer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F1 §8 case 5 — 1 MB AudioBuffer → temp file written + cleaned, no OOM, recognize called once."""
+    captured_paths: list[str] = []
+
+    def fake_recognize(path: str) -> str:
+        captured_paths.append(path)
+        assert os.path.exists(path), "temp file should exist during recognize()"
+        size = os.path.getsize(path)
+        assert size >= 1_000_000, f"expected ≥1 MB temp file, got {size} bytes"
+        return "大文件测试"
+
+    sample_rate = 16_000
+    # 1 MB of 16-bit mono PCM ≈ 31.25 s of audio
+    pcm_bytes = bytes(1_048_576)
+    samples = len(pcm_bytes) // 2
+    frame = rtc.AudioFrame(
+        data=pcm_bytes,
+        sample_rate=sample_rate,
+        num_channels=1,
+        samples_per_channel=samples,
+    )
+    buffer = [frame]
+
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.side_effect = fake_recognize
+
+        plugin = XfyunSTTPlugin(sample_rate=sample_rate)
+        event: SpeechEvent = await plugin._recognize_impl(
+            buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+        )
+
+    assert event.alternatives[0].text == "大文件测试"
+    assert mock_instance.recognize.call_count == 1
+    assert len(captured_paths) == 1
+    assert not os.path.exists(captured_paths[0]), "temp file not cleaned up"
+
+
+@pytest.mark.asyncio
+async def test_speech_data_field_shape(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """F1 §8 case 6 — SpeechEvent.alternatives[0] has .text, .language, .confidence with correct types."""
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.return_value = "测试字段结构"
+
+        plugin = XfyunSTTPlugin()
+        buffer = _make_audio_buffer()
+
+        event: SpeechEvent = await plugin._recognize_impl(
+            buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+        )
+
+    assert len(event.alternatives) >= 1
+    alt = event.alternatives[0]
+    assert isinstance(alt.text, str)
+    assert isinstance(alt.language, str)
+    assert isinstance(alt.confidence, float)
+    assert alt.text == "测试字段结构"
+    assert alt.language.lower() == "zh-cn"
+    assert 0.0 <= alt.confidence <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# New error-class tests (FIX 1 & FIX 2 coverage)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_xfyun_recognition_error_mapped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX 1 — error code in 10800-10899 range maps to XfyunRecognitionError (returns empty SpeechEvent)."""
+
+    def recognition_error(path: str) -> str:
+        raise XfyunRecognitionError("engine error", code=10800)
+
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.side_effect = recognition_error
+
+        plugin = XfyunSTTPlugin()
+        buffer = _make_audio_buffer()
+
+        # Recognition-domain errors return empty SpeechEvent instead of raising.
+        event: SpeechEvent = await plugin._recognize_impl(
+            buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+        )
+
+    assert event.type == SpeechEventType.FINAL_TRANSCRIPT
+    assert event.alternatives[0].text == ""
+    assert event.alternatives[0].confidence == 0.0
+
+
+@pytest.mark.asyncio
+async def test_xfyun_rate_limit_error_mapped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """FIX 2 — error code 10114 maps to XfyunSTTRateLimitError."""
+
+    def rate_limit_error(path: str) -> str:
+        raise XfyunVendorError("concurrency limit exceeded", code=10114)
+
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.side_effect = rate_limit_error
+
+        plugin = XfyunSTTPlugin()
+        buffer = _make_audio_buffer()
+
+        with pytest.raises(XfyunSTTRateLimitError) as exc_info:
+            await plugin._recognize_impl(
+                buffer, conn_options=DEFAULT_API_CONNECT_OPTIONS
+            )
+
+    assert exc_info.value.code == 10114
