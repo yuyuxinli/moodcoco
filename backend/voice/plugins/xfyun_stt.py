@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import tempfile
 import time
 import uuid
@@ -50,6 +51,11 @@ _DEFAULT_SAMPLE_RATE = 16_000
 class XfyunSTTError(Exception):
     """Base class for all Xfyun STT plugin errors."""
 
+    def __init__(self, message: str = "", *, code: int | None = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.xfyun_message = message
+
 
 class XfyunSTTNetworkError(XfyunSTTError):
     """WebSocket connection to Xfyun failed, dropped, or timed out."""
@@ -63,8 +69,16 @@ class XfyunSTTTimeoutError(XfyunSTTError):
     """Recognition exceeded the 60-second hard timeout."""
 
 
+class XfyunSTTRateLimitError(XfyunSTTError):
+    """Xfyun rejected the request due to rate limiting or quota pressure."""
+
+
 class XfyunRecognitionError(XfyunSTTError):
     """Xfyun returned a recognition-domain non-zero error code."""
+
+
+class XfyunVendorError(XfyunSTTError):
+    """Vendored XfyunASR surfaced a non-zero response code."""
 
 
 # ---------------------------------------------------------------------------
@@ -198,54 +212,87 @@ class XfyunSTTPlugin(STT):
 
             # Run the blocking call in a thread pool (OQ-11).
             result_text: str = await asyncio.to_thread(
-                self._asr.recognize, tmp_path
+                self._recognize_with_vendor_errors, tmp_path
             )
 
         except Exception as exc:
             latency_ms = round((time.monotonic() - t_start) * 1000)
-            exc_str = str(exc).lower()
+            code = _extract_xfyun_code(exc)
+            message = _extract_xfyun_message(exc)
+            error_cls = _classify_xfyun_error(code, message)
+            if isinstance(exc, XfyunRecognitionError) and code in (None, 0):
+                error_cls = XfyunRecognitionError
 
-            # Classify the error.
-            if _is_auth_error(exc_str):
+            if code not in (None, 0):
+                logger.error(
+                    "xfyun_stt_xfyun_error",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "code": code,
+                        "xfyun_message": message,
+                        "latency_ms": latency_ms,
+                    },
+                    exc_info=True,
+                )
+
+            if error_cls is XfyunRecognitionError:
+                result_text = ""
+
+            elif error_cls is XfyunSTTAuthError:
                 logger.error(
                     "xfyun_stt_auth_error",
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
-                        "error": str(exc),
+                        "error": message,
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
                 )
-                raise XfyunSTTAuthError(str(exc)) from exc
+                raise XfyunSTTAuthError(message, code=code) from exc
 
-            if _is_timeout_error(exc_str):
+            elif error_cls is XfyunSTTTimeoutError:
                 logger.error(
                     "xfyun_stt_timeout",
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
-                        "error": str(exc),
+                        "error": message,
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
                 )
-                raise XfyunSTTTimeoutError(str(exc)) from exc
+                raise XfyunSTTTimeoutError(message, code=code) from exc
 
-            # Default: treat as network / connection error.
-            logger.error(
-                "xfyun_stt_network_error",
-                extra={
-                    "session_id": session_id,
-                    "turn_id": turn_id,
-                    "error": str(exc),
-                    "latency_ms": latency_ms,
-                },
-                exc_info=True,
-            )
-            network_err = XfyunSTTNetworkError(str(exc))
-            # Re-raise as APIConnectionError so the LiveKit retry loop fires.
-            raise APIConnectionError(str(exc)) from network_err
+            elif error_cls is XfyunSTTRateLimitError:
+                logger.error(
+                    "xfyun_stt_rate_limited",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "error": message,
+                        "latency_ms": latency_ms,
+                    },
+                    exc_info=True,
+                )
+                raise XfyunSTTRateLimitError(message, code=code) from exc
+
+            else:
+                # Default: treat as network / connection error.
+                logger.error(
+                    "xfyun_stt_network_error",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "error": message,
+                        "latency_ms": latency_ms,
+                    },
+                    exc_info=True,
+                )
+                network_err = XfyunSTTNetworkError(message, code=code)
+                # Re-raise as APIConnectionError so the LiveKit retry loop fires.
+                raise APIConnectionError(message) from network_err
 
         finally:
             # Always clean up the temp file (OQ-3).
@@ -291,20 +338,97 @@ class XfyunSTTPlugin(STT):
     async def aclose(self) -> None:
         """No persistent connections to close (stateless per-recognize)."""
 
+    def _recognize_with_vendor_errors(self, tmp_path: str) -> str:
+        """Call vendored recognizer and recover its swallowed non-zero code."""
+        vendor_logger = logging.getLogger(
+            "backend.voice._vendor.psy.stt.speech_to_text_xfyun_service"
+        )
+        handler = _XfyunErrorCaptureHandler()
+        vendor_logger.addHandler(handler)
+        try:
+            result = self._asr.recognize(tmp_path)
+        finally:
+            vendor_logger.removeHandler(handler)
+
+        if result == "" and handler.error is not None:
+            raise handler.error
+        return result
+
 
 # ---------------------------------------------------------------------------
 # Error-classification helpers
 # ---------------------------------------------------------------------------
 
 
-def _is_auth_error(msg: str) -> bool:
-    """Return True if the error message looks like an authentication failure."""
-    auth_keywords = ("auth", "401", "403", "forbidden", "unauthorized", "invalid key",
-                     "api_key", "api key", "secret")
-    return any(kw in msg for kw in auth_keywords)
+_VENDOR_ERROR_RE = re.compile(r"code=(?P<code>-?\d+), message=(?P<message>.*)")
+_AUTH_ERROR_CODES = {10105, 10106, 10107, 10110, 11200}
+_RATE_LIMIT_ERROR_CODES = {10114, 10162}
+_TIMEOUT_ERROR_CODES = {10165}
 
 
-def _is_timeout_error(msg: str) -> bool:
-    """Return True if the error message looks like a timeout."""
+class _XfyunErrorCaptureHandler(logging.Handler):
+    """Capture Xfyun header.code from the vendored logger without editing vendor."""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.ERROR)
+        self.error: XfyunVendorError | None = None
+
+    def emit(self, record: logging.LogRecord) -> None:
+        match = _VENDOR_ERROR_RE.search(record.getMessage())
+        if match is None:
+            return
+
+        code = int(match.group("code"))
+        message = match.group("message").strip()
+        self.error = XfyunVendorError(message, code=code)
+
+
+def _classify_xfyun_error(
+    code: int | None, message: str
+) -> type[XfyunSTTError]:
+    """Map Xfyun response codes to stable plugin exception classes."""
+    if code not in (None, 0):
+        if code in _AUTH_ERROR_CODES:
+            return XfyunSTTAuthError
+        if code in _RATE_LIMIT_ERROR_CODES:
+            return XfyunSTTRateLimitError
+        if code in _TIMEOUT_ERROR_CODES:
+            return XfyunSTTTimeoutError
+        if 10800 <= code <= 10899:
+            return XfyunRecognitionError
+        return XfyunSTTNetworkError
+
+    # Fallback for exceptions that do not carry Xfyun header.code.
+    # Prefer the official code map above; see https://www.xfyun.cn/document/error-code.
+    msg = message.lower()
+    auth_keywords = (
+        "auth",
+        "401",
+        "403",
+        "forbidden",
+        "unauthorized",
+        "invalid key",
+        "api_key",
+        "api key",
+        "secret",
+    )
+    if any(kw in msg for kw in auth_keywords):
+        return XfyunSTTAuthError
+
     timeout_keywords = ("timeout", "timed out", "time out", "deadline")
-    return any(kw in msg for kw in timeout_keywords)
+    if any(kw in msg for kw in timeout_keywords):
+        return XfyunSTTTimeoutError
+
+    return XfyunSTTNetworkError
+
+
+def _extract_xfyun_code(exc: Exception) -> int | None:
+    """Return an Xfyun error code from an exception when one is available."""
+    code = getattr(exc, "code", None)
+    return code if isinstance(code, int) else None
+
+
+def _extract_xfyun_message(exc: Exception) -> str:
+    """Return the Xfyun message payload or fall back to str(exc)."""
+    message = getattr(exc, "xfyun_message", None)
+    return message if isinstance(message, str) and message else str(exc)
