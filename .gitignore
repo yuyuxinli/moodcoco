@@ -32,6 +32,8 @@ node_modules/
 .evolve/*/eval_prompt.md
 .evolve.old-*/
 .evolve.bak-*/
+.evolve.sjtu-*/
+.evolve.archived-*/
 
 # Local evolve framework symlink（指向用户本地 framework 目录，其他机器不通）
 .claude/skills/evolve
@@ -66,3 +68,4 @@ Moodcoco_data/
 # Codex / Agents 本地工具配置（每个开发者各自）
 .codex/
 .agents/
+.evolve/
