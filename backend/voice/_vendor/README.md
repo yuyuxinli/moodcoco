@@ -14,8 +14,8 @@ LiveKit plugin wrappers (F3/F4) live in `backend/voice/plugins/{xfyun_stt,minima
 and `import` from these vendored modules directly:
 
 ```python
-from backend.voice._vendor.psy.stt.speech_to_text_xfyun_service import XfyunSTTService
-from backend.voice._vendor.psy.tts.service import MinimaxTTSService
+from backend.voice._vendor.psy.stt.speech_to_text_xfyun_service import XfyunASR
+from backend.voice._vendor.psy.tts.service import MiniMaxTTSService
 ```
 
 Do not modify files under `_vendor/` to fix moodcoco-specific bugs — wrap them
