@@ -1,0 +1,232 @@
+{
+  "bundle_id": "moodcoco-psych-companion-v1",
+  "name": "MoodCoco Psych Companion Bundle",
+  "version": "1.4.3",
+  "target": [
+    "moodcoco-agentic",
+    "api-agent",
+    "embedded-companion"
+  ],
+  "global_skills": [
+    "skills/base-communication/SKILL.md"
+  ],
+  "default_skill": "skills/listen/SKILL.md",
+  "priority": {
+    "always_on": [
+      "skills/base-communication/SKILL.md"
+    ],
+    "routed": [
+      "skills/crisis/SKILL.md",
+      "skills/calm-body/SKILL.md",
+      "skills/listen/SKILL.md",
+      "skills/validation/SKILL.md",
+      "skills/untangle/SKILL.md",
+      "skills/face-decision/SKILL.md"
+    ],
+    "notes": [
+      "crisis overrides every other skill",
+      "calm-body overrides all non-risk skills until stabilization",
+      "listen is the default non-crisis entry skill",
+      "validation should precede untangle when shame/self-attack is the main barrier",
+      "untangle should precede face-decision when the issue is still mixed and unclear",
+      "underspecified user wording should be resolved against the last confirmed context before widening scope"
+    ]
+  },
+  "layers": {
+    "always_on": [
+      "base-communication"
+    ],
+    "safety_routing": [
+      "crisis",
+      "calm-body"
+    ],
+    "mode_layer": [
+      "fast",
+      "slow"
+    ],
+    "skill_routing": [
+      "listen",
+      "validation",
+      "untangle",
+      "face-decision"
+    ],
+    "companion": [
+      "base-communication",
+      "listen",
+      "untangle",
+      "validation",
+      "face-decision",
+      "calm-body"
+    ],
+    "risk": [
+      "crisis"
+    ]
+  },
+  "routing_spec": {
+    "continuity_rules": [
+      "before drafting each response, read ConversationMemory from router state: current focus, user labels for people, correction boundaries, and what the current sentence may omit",
+      "interpret underspecified phrases against the last confirmed topic or domain before widening scope",
+      "keep the user's original labels for people and relationships; do not invent stronger role definitions",
+      "when the user corrects an inference, repair briefly and return to the user's wording",
+      "short abstract self-evaluations should be resolved against the recent context instead of treated as a standalone global identity claim"
+    ],
+    "safety_routing": {
+      "priority": [
+        "crisis",
+        "calm-body"
+      ],
+      "crisis_triggers": [
+        "suicide or self-harm intent",
+        "harm to others",
+        "ongoing violence or inability to avoid hurting / being hurt",
+        "urgent physical danger such as chest pain, fainting, seizure, overdose, or persistent inability to breathe",
+        "clear plan, means, or time window",
+        "immediate danger",
+        "cannot maintain basic safety"
+      ],
+      "calm_body_triggers": [
+        "panic or hyperarousal",
+        "breathlessness or trembling",
+        "head going blank",
+        "sleep-overload",
+        "cannot continue content talk before settling"
+      ],
+      "override_rules": [
+        "crisis overrides every other skill",
+        "calm-body overrides all non-risk skills until the user can stay with one short exchange",
+        "high arousal blocks depth-heavy execution",
+        "if calm-body is failing, safety-recheck should look for urgent physical danger before self-harm / other-harm questions",
+        "free-chat must switch to direct safety language once crisis is active"
+      ]
+    },
+    "mode_routing": {
+      "default_mode": "fast",
+      "notes": [
+        "fast and slow are runtime modes, not skills",
+        "mode routing happens after safety routing and before skill routing"
+      ],
+      "enter_slow_when": [
+        "safety is currently acceptable",
+        "the user is stable enough for multi-turn work",
+        "one v1 skill has a clear focal task",
+        "a first fast response or narrowing step did not already resolve the immediate need",
+        "the user wants to keep working on the issue now"
+      ],
+      "stay_fast_when": [
+        "first response and skill fit is still uncertain",
+        "the user mainly needs light holding, mirroring, or one-step narrowing",
+        "the user is overloaded, irritated, or low-bandwidth",
+        "one short grounding step or one clarifying question is enough"
+      ],
+      "exit_slow_when": [
+        "safety or arousal concern rises again",
+        "the user says the direction is not helping or is too much",
+        "a minimal next step or focal issue is already clear",
+        "the work starts drifting into phase 2 territory"
+      ],
+      "stay_fast_blocks": [
+        "no deep interpretation before focus is clear",
+        "no multi-step decision coaching before minimal fact clarity",
+        "no repeated long stabilization loop",
+        "no treating every user message as a brand new route",
+        "no dropping the established context before the next question"
+      ]
+    },
+    "skill_routing": {
+      "default_entry": "listen",
+      "narrowing_action": {
+        "name": "narrowing-question",
+        "purpose": "Use one low-burden question when there is not enough information to choose between listen, validation, untangle, and face-decision.",
+        "allowed_uses": [
+          "clarify whether the main barrier is emotion, shame, mixedness, or decision conflict",
+          "do a minimal fact-pass: what happened, who did what, and whether this is one event or an ongoing pattern"
+        ],
+        "constraints": [
+          "start with one brief reflection anchored to the current context before asking the question",
+          "use the user's own wording; do not invent roles, motives, or stronger conclusions",
+          "do not default to 'continue talking or stop' unless the user is clearly stuck or needs a low-burden pause choice"
+        ]
+      },
+      "rules": [
+        "validation should precede untangle when shame or self-attack is the main barrier",
+        "untangle should precede face-decision when the issue is still mixed or factually unclear",
+        "face-decision starts only after there is a real choice and enough stability to weigh options",
+        "if information is insufficient, use narrowing-question before switching skills",
+        "underspecified negative self-evaluation should stay tied to the current domain unless the user explicitly generalizes"
+      ]
+    },
+    "action_schema": [
+      "respond",
+      "narrowing-question",
+      "repair-then-reroute",
+      "safety-recheck"
+    ],
+    "handoff": {
+      "crisis": [
+        "stay primary until immediate safety action is the only valid target",
+        "do not fall back to ordinary companionship when risk is high"
+      ],
+      "calm_body": [
+        "stay primary while the user cannot stay with one short exchange",
+        "exit when there is a concrete settle signal",
+        "if repeated stabilization is not working, re-check safety and route instead of repeating the same method"
+      ],
+      "listen": [
+        "stay fast when the user mainly needs to be received",
+        "upgrade to slow only when the user is stable, wants to keep working, and one focal line is worth deeper holding or clarification"
+      ],
+      "validation": [
+        "use before untangle when shame blocks thinking",
+        "handoff after shame softens enough for structure",
+        "keep validation tied to the already established context instead of jumping to global identity statements"
+      ],
+      "untangle": [
+        "use before face-decision when facts, lines, or focal issue are still blended",
+        "handoff only after there is enough clarity to weigh options",
+        "when handoff starts from listen or validation, open with one anchored reflection before the clarifying question"
+      ],
+      "face_decision": [
+        "launch only when there is a real choice, a clear frame, and enough stability for tradeoff discussion",
+        "handoff back out if the user returns to confusion, shame, panic, or risk"
+      ],
+      "calm_body": [
+        "if the first stabilization step fails, check urgent physical danger before asking about self-harm / other-harm",
+        "if there is no urgent physical danger and no risk cue, offer one simpler next step instead of repeating the same loop"
+      ],
+      "crisis": [
+        "drop prior companionship or roleplay tone and switch to direct safety language",
+        "respond with one confirmation of risk, one direct safety question or action, and one real-world support option"
+      ]
+    },
+    "executor_behavior": {
+      "fast": [
+        "load base-communication plus one selected primary skill",
+        "use ConversationMemory before drafting; do not rely only on the latest sentence",
+        "do one main thing only: light holding, one reflection, one narrowing question, or one short grounding step",
+        "keep the reply compact",
+        "re-check safety, mode, and handoff after the next user turn",
+        "anchor the reply to the last confirmed topic before adding any new question"
+      ],
+      "slow": [
+        "keep one v1 skill as the primary skill",
+        "carry ConversationMemory across turns and update it only when the user supplies a clearer focal line",
+        "allow a short multi-turn loop with fuller skill context",
+        "still use one question at a time",
+        "re-check handoff after each user reply",
+        "never unlock phase 2 modules"
+      ]
+    },
+    "regression_checks": [
+      "no new v1-external skills were added",
+      "base-communication remains always_on and never becomes routed",
+      "fast and slow remain mode labels, not skills",
+      "crisis stays top priority",
+      "calm-body stays above listen",
+      "validation stays above untangle",
+      "untangle stays above face-decision",
+      "face-decision never starts before minimal clarity",
+      "free-chat still switches to crisis on explicit self-harm, harm-to-others, violence, or acute physical danger",
+      "skills must not invent relationship status or over-generalize context-bound self-evaluations"
+    ]
+  }
+}
