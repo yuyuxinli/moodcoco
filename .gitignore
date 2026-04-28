@@ -49,6 +49,17 @@ node_modules/
 # Backend runtime state
 backend/state/*
 !backend/state/.gitkeep
+
+# Slow guidance runtime state
+ai-companion/SLOW_GUIDANCE.md
+
+# SJTU expert eval local secrets and generated artifacts
+SJTU_skills/moodcoco-psych-companion-v1/expert-eval/state/
+SJTU_skills/moodcoco-psych-companion-v1/expert-eval/outputs/
+SJTU_skills/moodcoco-psych-companion-v1/dist/
+
+# Local evaluation datasets and transcripts
+Moodcoco_data/
 .screenshot*.png
 .gstack/
 
