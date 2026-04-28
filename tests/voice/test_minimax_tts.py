@@ -15,6 +15,7 @@ from livekit import rtc
 
 from backend.voice.plugins.minimax_tts import (
     MinimaxTTSAuthError,
+    MinimaxTTSNetworkError,
     MinimaxTTSPlugin,
     MinimaxTTSRateLimitError,
     MinimaxTTSTimeoutError,
@@ -244,3 +245,69 @@ async def test_minimax_timeout() -> None:
         async with plugin.synthesize("timeout test") as stream:
             async for _ in stream:
                 pass
+
+
+# ---------------------------------------------------------------------------
+# F1 §8 mandatory cases — Round 2 additions
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_synthesize_empty_audio() -> None:
+    """Mock vendor returns empty bytes → MinimaxTTSError raised, no audio chunk emitted."""
+    svc = _make_service_mock(return_bytes=b"")
+    plugin = MinimaxTTSPlugin(_service=svc)
+
+    with pytest.raises(MinimaxTTSError) as exc_info:
+        async with plugin.synthesize("empty audio test") as stream:
+            async for _ in stream:
+                pass
+
+    assert "empty audio" in str(exc_info.value).lower()
+
+
+@pytest.mark.asyncio
+async def test_sample_rate_contract() -> None:
+    """Plugin must advertise 16 000 Hz to match the vendor's hardcoded sample_rate."""
+    svc = _make_service_mock(return_bytes=b"dummy")
+    plugin = MinimaxTTSPlugin(_service=svc)
+
+    assert plugin.sample_rate == 16000, (
+        f"sample_rate should be 16000 (vendor hardcode), got {plugin.sample_rate}"
+    )
+    assert plugin.num_channels == 1
+
+    # Passing an incorrect sample_rate must fail fast.
+    with pytest.raises(ValueError, match="must match vendor"):
+        MinimaxTTSPlugin(_service=svc, sample_rate=32000)
+
+
+@pytest.mark.asyncio
+async def test_aclose_no_raise() -> None:
+    """aclose() must complete without raising and close the underlying service."""
+    svc = _make_service_mock(return_bytes=b"audio")
+    plugin = MinimaxTTSPlugin(_service=svc)
+
+    # Should not raise even if called without any prior synthesize() call.
+    await plugin.aclose()
+
+    svc.close.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_network_error_mapped() -> None:
+    """httpx.RequestError (e.g. connection refused) → MinimaxTTSNetworkError."""
+    net_exc = httpx.RequestError("connection refused")
+
+    svc = MagicMock()
+    svc.synthesize_bytes = AsyncMock(side_effect=net_exc)
+    svc.close = AsyncMock()
+
+    plugin = MinimaxTTSPlugin(_service=svc)
+
+    with pytest.raises(MinimaxTTSNetworkError) as exc_info:
+        async with plugin.synthesize("network error test") as stream:
+            async for _ in stream:
+                pass
+
+    assert "network error" in str(exc_info.value).lower()
