@@ -60,3 +60,4 @@ SJTU_skills/moodcoco-psych-companion-v1/dist/
 
 # Local evaluation datasets and transcripts
 Moodcoco_data/
+.screenshot*.png
