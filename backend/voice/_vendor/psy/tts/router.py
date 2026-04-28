@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from services.shared.tts.types import MiniMaxAccountConfig
+from backend.voice._vendor.psy.tts.types import MiniMaxAccountConfig
 
 
 @dataclass

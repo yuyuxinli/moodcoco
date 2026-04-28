@@ -4,7 +4,10 @@ import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-from services.shared.tts.types import MiniMaxSynthesisOptions
+from backend.voice._vendor.psy.tts.types import MiniMaxSynthesisOptions
+
+# NOTE: vendored into moodcoco — DB-backed cache replaced with in-memory TTL dict.
+# Original psychologists implementation used db.session + services.cache_service.
 
 CACHE_NAMESPACE = "minimax_tts_audio"
 
@@ -28,26 +31,26 @@ def build_tts_cache_key(text: str, options: MiniMaxSynthesisOptions) -> str:
 
 
 class MiniMaxTTSCacheStore:
+    """In-memory TTL cache for MiniMax TTS results (moodcoco vendored version)."""
+
     def __init__(self, ttl_seconds: int = 4 * 60 * 60) -> None:
         self._ttl_seconds = ttl_seconds
+        self._store: Dict[str, Dict[str, Any]] = {}
 
     async def get_cached_result(
         self,
         text: str,
         options: MiniMaxSynthesisOptions,
     ) -> Optional[Dict[str, Any]]:
-        from db.session import async_session_maker
-        from services.cache_service import CacheService
-
         cache_key = build_tts_cache_key(text, options)
-        async with async_session_maker() as session:
-            payload = await CacheService(session).get(CACHE_NAMESPACE, cache_key)
+        payload = self._store.get(cache_key)
         if not payload:
             return None
         expires_at_raw = payload.get("expires_at")
         if expires_at_raw:
             expires_at = datetime.fromisoformat(expires_at_raw)
             if expires_at <= datetime.now(timezone.utc):
+                del self._store[cache_key]
                 return None
         return payload
 
@@ -57,9 +60,6 @@ class MiniMaxTTSCacheStore:
         options: MiniMaxSynthesisOptions,
         value: Dict[str, Any],
     ) -> None:
-        from db.session import async_session_maker
-        from services.cache_service import CacheService
-
         cache_key = build_tts_cache_key(text, options)
         payload = dict(value)
         payload["expires_at"] = (
@@ -67,10 +67,4 @@ class MiniMaxTTSCacheStore:
             .replace(microsecond=0)
             .isoformat()
         )
-        async with async_session_maker() as session:
-            await CacheService(session).set(
-                CACHE_NAMESPACE,
-                cache_key,
-                payload,
-                ttl_seconds=self._ttl_seconds,
-            )
+        self._store[cache_key] = payload

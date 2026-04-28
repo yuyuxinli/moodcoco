@@ -4,7 +4,7 @@ import asyncio
 import time
 from typing import Awaitable, Callable, Tuple
 
-from services.shared.tts.router import MiniMaxAccountLease, MiniMaxAccountRouter
+from backend.voice._vendor.psy.tts.router import MiniMaxAccountLease, MiniMaxAccountRouter
 
 
 class MiniMaxTTSQueueCoordinator:

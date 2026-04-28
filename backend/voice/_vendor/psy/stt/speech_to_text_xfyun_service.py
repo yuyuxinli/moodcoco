@@ -7,17 +7,37 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
-import time
 import ssl
+import time
 from datetime import datetime, timezone
 from email.utils import formatdate
 from urllib.parse import urlencode
 
 import websocket
 
-from config import settings
-from utils.logger import log
+# vendored into moodcoco: replaced psychologists config/logger with stdlib equivalents
+log = logging.getLogger(__name__)
+
+
+class _Settings:
+    """Lazy env-var shim replacing psychologists' config.settings."""
+    @property
+    def XFYUN_APP_ID(self) -> str:
+        return os.environ.get("XFYUN_APP_ID", "")
+    @property
+    def XFYUN_API_KEY(self) -> str:
+        return os.environ.get("XFYUN_API_KEY", "")
+    @property
+    def XFYUN_API_SECRET(self) -> str:
+        return os.environ.get("XFYUN_API_SECRET", "")
+    @property
+    def XFYUN_ASR_URL(self) -> str:
+        return os.environ.get("XFYUN_ASR_URL", "wss://ws-api.xfyun.cn/v2/iat")
+
+
+settings = _Settings()
 
 
 class XfyunASR:

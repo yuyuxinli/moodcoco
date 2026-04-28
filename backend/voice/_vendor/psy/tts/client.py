@@ -8,7 +8,7 @@ from typing import Dict, Optional, Tuple
 
 import httpx
 
-from services.shared.tts.types import MiniMaxAccountConfig, MiniMaxSynthesisOptions
+from backend.voice._vendor.psy.tts.types import MiniMaxAccountConfig, MiniMaxSynthesisOptions
 
 log = logging.getLogger(__name__)
 

@@ -7,11 +7,11 @@ from typing import Any, Optional
 
 import httpx
 
-from services.shared.tts.cache import MiniMaxTTSCacheStore
-from services.shared.tts.client import MiniMaxTTSClient
-from services.shared.tts.queue import MiniMaxTTSQueueCoordinator
-from services.shared.tts.router import MiniMaxAccountRouter, MiniMaxAccountState
-from services.shared.tts.types import MiniMaxAccountConfig, MiniMaxSynthesisOptions
+from backend.voice._vendor.psy.tts.cache import MiniMaxTTSCacheStore
+from backend.voice._vendor.psy.tts.client import MiniMaxTTSClient
+from backend.voice._vendor.psy.tts.queue import MiniMaxTTSQueueCoordinator
+from backend.voice._vendor.psy.tts.router import MiniMaxAccountRouter, MiniMaxAccountState
+from backend.voice._vendor.psy.tts.types import MiniMaxAccountConfig, MiniMaxSynthesisOptions
 
 log = logging.getLogger(__name__)
 
