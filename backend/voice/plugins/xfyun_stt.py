@@ -15,10 +15,9 @@ import os
 import re
 import tempfile
 import time
-import uuid
-from typing import Any
+from contextvars import ContextVar
 
-from livekit.agents import APIConnectionError, APITimeoutError
+from livekit.agents import APIConnectionError
 from livekit.agents.stt import (
     STT,
     STTCapabilities,
@@ -41,6 +40,11 @@ logger = logging.getLogger("voice.plugins.xfyun_stt")
 
 _DEFAULT_LANGUAGE = "zh-cn"
 _DEFAULT_SAMPLE_RATE = 16_000
+
+voice_session_ctx: ContextVar[str | None] = ContextVar(
+    "voice_session_ctx", default=None
+)
+voice_turn_ctx: ContextVar[str | None] = ContextVar("voice_turn_ctx", default=None)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +159,6 @@ class XfyunSTTPlugin(STT):
         *,
         language: NotGivenOr[str] = NOT_GIVEN,
         conn_options: APIConnectOptions = DEFAULT_API_CONNECT_OPTIONS,
-        **kwargs: Any,
     ) -> SpeechEvent:
         """Persist ``AudioBuffer`` PCM to a temp file, call ``XfyunASR.recognize()``.
 
@@ -166,7 +169,6 @@ class XfyunSTTPlugin(STT):
             buffer: Accumulated ``rtc.AudioFrame`` list from the LiveKit room.
             language: Optional language hint (ignored — plugin hard-codes zh-cn).
             conn_options: Connection / retry options supplied by the base class.
-            **kwargs: Accepts optional ``session_id`` and ``turn_id`` for logging.
 
         Returns:
             ``SpeechEvent`` with ``type=FINAL_TRANSCRIPT``.  ``alternatives[0].text``
@@ -182,8 +184,8 @@ class XfyunSTTPlugin(STT):
             APIConnectionError: Re-raised from ``XfyunSTTNetworkError`` so that the
                 LiveKit base class retry logic triggers correctly.
         """
-        session_id: str = kwargs.get("session_id", "")
-        turn_id: str = kwargs.get("turn_id", uuid.uuid4().hex[:8])
+        session_id = voice_session_ctx.get()
+        turn_id = voice_turn_ctx.get()
 
         # Measure audio duration for logging.
         combined = combine_frames(buffer) if isinstance(buffer, list) else buffer
