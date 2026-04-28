@@ -90,8 +90,20 @@ def _make_agent(
     )
 
     # Attach a mock session so self.session.say and self.session.room work.
+    # session.say drains its async-iterable arg in a background task — without
+    # this, the streaming-Future generator never iterates, so the filler future
+    # never resolves and on_user_turn_completed hangs.  Real LiveKit drives this.
     session_mock = MagicMock()
-    session_mock.say = MagicMock(return_value=MagicMock())
+
+    def _say(source, *args, **kwargs):
+        if hasattr(source, "__aiter__"):
+            async def _drain():
+                async for _ in source:
+                    pass
+            asyncio.create_task(_drain())
+        return MagicMock()
+
+    session_mock.say = MagicMock(side_effect=_say)
     room_mock = MagicMock()
     room_mock.name = "test-room-001"
     session_mock.room = room_mock

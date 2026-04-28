@@ -1,16 +1,21 @@
 """FastSlowAgent — LiveKit Agent implementing fast-filler + slow_v1 pattern.
 
-F5 skeleton: fast filler ×1 (fires after min_silence_before_kicking if slow hasn't
-produced its first token) + slow_v1 (LiveKit default LLM pipeline).
+F5 skeleton: fast filler ×1 (fires after ``min_silence_before_kicking`` if
+slow_v1 hasn't yet emitted its first token) + slow_v1 (LiveKit default LLM
+pipeline).  Merged-decision, DP-continue, slow_v2 are out of scope.
 
-F6/F8 scope: merged_decision, DP-continue, slow_v2 are NOT implemented here.
+The filler is streamed via the canonical ``asyncio.Future`` pattern from
+``fast-preresponse.py`` (LiveKit voice-agent reference): the LLM stream is
+piped chunk-by-chunk into ``session.say()`` so TTS starts speaking on the
+first token (~150 ms TTFB), while a Future captures the complete text for
+the chat-context write-back that follows.
 
-OQ-12 addressed: _slow_first_token_emitted flag + asyncio.Event set from
-_maybe_filler's own timer logic (wall-clock gate only in skeleton).
-OQ-13 addressed: chat_ctx write-back happens *after* session.say filler_fut resolves,
-so the ordering is: TTS starts → filler text fully buffered → write-back → slow_v1 sees it.
-OQ-14 addressed: self.session is accessed only inside on_user_turn_completed (after agent
-is bound to a session by LiveKit), never at construction time.
+OQ-12: ``_slow_first_token_emitted`` flag never set in skeleton (F8 will
+wrap the LLM stream); wall-clock timer is the only gate.
+OQ-13: chat_ctx write-back happens after the streaming filler future
+resolves so slow_v1 sees the filler in turn_ctx.
+OQ-14: ``self.session`` is read only inside ``on_user_turn_completed``
+(after LiveKit binds the session), guarded by try/except.
 """
 from __future__ import annotations
 
@@ -261,13 +266,51 @@ class FastSlowAgent(Agent):
         self._turn_filler_count += 1
         t_filler_start = time.monotonic()
 
+        # Streaming Future pattern (per fast-preresponse.py L61-74):
+        # 1. Open fast-LLM stream wrapped in an async generator.
+        # 2. session.say(_gen()) — TTS begins on the FIRST chunk (~150 ms TTFB).
+        # 3. await filler_text_fut — block on completion of the stream.
+        # 4. turn_ctx.add_message(...) — write-back so slow_v1 sees the filler.
+        filler_text_fut: asyncio.Future[str] = asyncio.get_event_loop().create_future()
+
+        async def _fast_llm_reply() -> AsyncIterable[str]:
+            collected: list[str] = []
+            try:
+                stream = await self._fast_llm.chat.completions.create(
+                    model=self._fast_llm_model,
+                    messages=[{"role": "system", "content": FILLER_PROMPT}],
+                    stream=True,
+                    max_tokens=30,
+                )
+                async for chunk in stream:
+                    delta = chunk.choices[0].delta.content or ""
+                    if delta:
+                        collected.append(delta)
+                        yield delta
+                if not filler_text_fut.done():
+                    filler_text_fut.set_result("".join(collected))
+            except Exception as exc:
+                logger.warning(
+                    "filler_llm_failed",
+                    extra={"session_id": session_id, "turn_id": turn_id, "error": str(exc)},
+                    exc_info=True,
+                )
+                if not filler_text_fut.done():
+                    filler_text_fut.set_exception(exc)
+
         try:
-            # Step 1: Generate the full filler text from the fast LLM.
-            # We collect it first so we know the text for chat_ctx write-back (OQ-13).
-            filler_text = await self._generate_filler_text(session_id, turn_id)
+            # Stream chunks into TTS as they arrive — TTFB is first-token, NOT
+            # full-response latency.  add_to_chat_ctx=False because we own
+            # the write-back below (OQ-13 ordering).
+            self.session.say(_fast_llm_reply(), add_to_chat_ctx=False)
+
+            try:
+                filler_text = await filler_text_fut
+            except Exception:
+                # Already logged inside the generator; abort write-back.
+                return
 
             if not filler_text:
-                # LLM returned empty — skip say and write-back.
                 logger.warning(
                     "filler_empty_response",
                     extra={"session_id": session_id, "turn_id": turn_id},
@@ -285,72 +328,15 @@ class FastSlowAgent(Agent):
                 },
             )
 
-            # Step 2: Pass as async iterable to session.say() (OQ-10 pattern).
-            # add_to_chat_ctx=False so we control ordering ourselves (OQ-13).
-            async def _filler_gen() -> AsyncIterable[str]:
-                yield filler_text
-
-            self.session.say(_filler_gen(), add_to_chat_ctx=False)
-
-            # Step 3: Write filler into chat_ctx AFTER session.say() is submitted (OQ-13).
-            # TTS starts immediately above; we write back now so slow_v1 sees it.
-            turn_ctx.add_message(
-                role="assistant",
-                content=filler_text,
-                interrupted=False,
-            )
+            # Write-back so slow_v1 sees the filler in chat_ctx (OQ-13).
+            turn_ctx.add_message(role="assistant", content=filler_text, interrupted=False)
 
         except Exception as exc:
             logger.warning(
                 "filler_dispatch_failed",
-                extra={
-                    "session_id": session_id,
-                    "turn_id": turn_id,
-                    "error": str(exc),
-                },
+                extra={"session_id": session_id, "turn_id": turn_id, "error": str(exc)},
                 exc_info=True,
             )
-
-    # ── Filler text generation ───────────────────────────────────────────────
-
-    async def _generate_filler_text(self, session_id: str, turn_id: str) -> str:
-        """Call fast LLM to generate a short filler acknowledgement.
-
-        Collects all stream chunks and returns the full filler string.
-
-        Args:
-            session_id: For structured logging.
-            turn_id: For structured logging.
-
-        Returns:
-            Filler text string (≤30 tokens).  Returns ``""`` on LLM error.
-
-        Raises:
-            No exceptions propagated.  On failure returns empty string and logs.
-        """
-        filler_text = ""
-        try:
-            stream = await self._fast_llm.chat.completions.create(
-                model=self._fast_llm_model,
-                messages=[{"role": "system", "content": FILLER_PROMPT}],
-                stream=True,
-                max_tokens=30,
-            )
-            async for chunk in stream:
-                delta = chunk.choices[0].delta.content or ""
-                if delta:
-                    filler_text += delta
-        except Exception as exc:
-            logger.warning(
-                "filler_llm_failed",
-                extra={
-                    "session_id": session_id,
-                    "turn_id": turn_id,
-                    "error": str(exc),
-                },
-                exc_info=True,
-            )
-        return filler_text
 
     # ── Slow v1 skeleton ─────────────────────────────────────────────────────
 
