@@ -23,6 +23,7 @@ from livekit.agents.types import DEFAULT_API_CONNECT_OPTIONS, APIConnectOptions
 from livekit.agents import APIConnectionError, APIStatusError, APITimeoutError
 
 from backend.voice._vendor.psy.tts.service import MiniMaxTTSService
+from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 
 logger = logging.getLogger("voice.plugins.minimax_tts")
 
@@ -166,8 +167,10 @@ class MinimaxTTSPlugin(TTS):
         Args:
             text: Text to synthesise.
             conn_options: Connection / retry options supplied by the base class.
-            **kwargs: Accepts optional ``session_id`` and ``turn_id`` for
-                structured logging.
+            **kwargs: Accepts optional ``session_id`` and ``turn_id`` overrides for
+                structured logging.  If not provided, values are read from the
+                shared ``voice_session_ctx`` / ``voice_turn_ctx`` ContextVars
+                (set by FastSlowAgent before invoking the TTS pipeline).
 
         Returns:
             ``MinimaxChunkedStream`` instance (async-iterable of
@@ -176,8 +179,8 @@ class MinimaxTTSPlugin(TTS):
         Raises:
             MinimaxTTSError: propagated from ``_run()`` if the HTTP call fails.
         """
-        session_id: str = kwargs.get("session_id", "")
-        turn_id: str = kwargs.get("turn_id", uuid.uuid4().hex[:8])
+        session_id: str = kwargs.get("session_id") or voice_session_ctx.get() or ""
+        turn_id: str = kwargs.get("turn_id") or voice_turn_ctx.get() or uuid.uuid4().hex[:8]
         return MinimaxChunkedStream(
             tts=self,
             input_text=text,
@@ -231,8 +234,10 @@ class MinimaxChunkedStream(ChunkedStream):
             MinimaxTTSError: Empty audio response or other MiniMax error.
             APIStatusError: Re-raised for LiveKit retry logic on 4xx/5xx.
         """
-        session_id = self._session_id
-        turn_id = self._turn_id
+        # Prefer ContextVar values so FastSlowAgent can correlate logs without
+        # passing extra kwargs through the LiveKit framework pipeline.
+        session_id = voice_session_ctx.get() or self._session_id or ""
+        turn_id = voice_turn_ctx.get() or self._turn_id or uuid.uuid4().hex[:8]
         text = self._input_text
         tts_plugin: MinimaxTTSPlugin = self._tts  # type: ignore[assignment]
 
@@ -272,6 +277,7 @@ class MinimaxChunkedStream(ChunkedStream):
                         "session_id": session_id,
                         "turn_id": turn_id,
                         "status_code": status_code,
+                        "latency_ms": latency_ms,
                     },
                     exc_info=True,
                 )
@@ -283,6 +289,7 @@ class MinimaxChunkedStream(ChunkedStream):
                         "session_id": session_id,
                         "turn_id": turn_id,
                         "status_code": status_code,
+                        "latency_ms": latency_ms,
                     },
                     exc_info=True,
                 )
@@ -296,6 +303,7 @@ class MinimaxChunkedStream(ChunkedStream):
                     "session_id": session_id,
                     "turn_id": turn_id,
                     "status_code": status_code,
+                    "latency_ms": latency_ms,
                 },
                 exc_info=True,
             )
@@ -318,11 +326,13 @@ class MinimaxChunkedStream(ChunkedStream):
             raise MinimaxTTSNetworkError(f"MiniMax TTS network error: {exc}") from exc
 
         if not audio_bytes:
+            latency_ms = round((time.monotonic() - t_start) * 1000)
             logger.error(
                 "minimax_tts_empty_audio",
                 extra={
                     "session_id": session_id,
                     "turn_id": turn_id,
+                    "latency_ms": latency_ms,
                 },
             )
             raise MinimaxTTSError("MiniMax TTS returned empty audio response")
