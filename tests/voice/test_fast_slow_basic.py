@@ -193,34 +193,59 @@ async def test_filler_skipped_if_slow_fast():
     assert agent._turn_filler_count == 0
 
 
-# ── Test 3: filler max count = 1 ─────────────────────────────────────────────
+# ── Test 3: filler max count = 1 (strengthened) ─────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_filler_max_count_one():
-    """Even if slow stays silent for a very long time, filler is called ONLY ONCE.
+    """F1 §8 F5 case 3 strengthened: even with the slow path silent for 5+ s and
+    the filler timer firing twice (simulating a multi-tick timer in F8), the
+    filler LLM is invoked at most once.
 
-    F1 §8 F5 case 3: fast_filler_max_count=1 hard limit.
-    We call on_user_turn_completed and verify _turn_filler_count never exceeds 1.
+    The round-1 version was tautological: a single ``on_user_turn_completed``
+    call can only fire ``_maybe_filler`` once, so ``_turn_filler_count == 1``
+    was guaranteed even if the MAX_COUNT guard were deleted.
+
+    This version invokes ``_maybe_filler`` directly twice with the slow path
+    pinned silent (``_run_slow`` returns a 5 s no-op).  The MAX_COUNT=1 guard
+    must skip the second invocation: the LLM must be called exactly once and
+    ``session.say`` must be called exactly once.
     """
     agent = _make_agent(min_silence=0.01, fast_filler_max_count=1)
 
     ctx = _make_chat_context()
-    user_msg = _make_user_message()
+    _ = _make_user_message()
 
-    # Run the full turn.
+    # Reset per-turn state (normally done by on_user_turn_completed).
+    agent._turn_filler_count = 0
+    agent._slow_first_token_emitted = False
+
+    # Set ContextVars (normally done by on_user_turn_completed).
+    from backend.voice.fast_slow_agent import voice_session_ctx, voice_turn_ctx
+    voice_session_ctx.set("test-room-001")
+    voice_turn_ctx.set("turn00001")
+
+    # Pin the slow path silent for 5 s (longer than any reasonable filler timer).
+    async def _slow_long(*args, **kwargs):
+        await asyncio.sleep(5.0)
+
+    agent._run_slow = _slow_long  # type: ignore[method-assign]
+
+    # Fire the filler timer TWICE (each waits min_silence = 0.01 s).
     await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg),
-        timeout=3.0,
+        agent._maybe_filler(ctx, "test-room-001", "turn00001"), timeout=3.0
+    )
+    await asyncio.wait_for(
+        agent._maybe_filler(ctx, "test-room-001", "turn00001"), timeout=3.0
     )
 
-    # Filler count must be exactly 1.
-    assert agent._turn_filler_count == 1, (
-        f"Expected filler_count == 1, got {agent._turn_filler_count}"
+    # Fast LLM (filler) must be called exactly ONCE despite two timer fires.
+    assert agent._fast_llm.chat.completions.create.call_count == 1, (
+        f"Filler LLM should be called once across two timer fires; got "
+        f"{agent._fast_llm.chat.completions.create.call_count}"
     )
-
-    # session.say called exactly once.
     assert agent.session.say.call_count == 1
+    assert agent._turn_filler_count == 1
 
 
 # ── Test 4: chat_ctx write-back after filler ──────────────────────────────────
@@ -317,3 +342,52 @@ async def test_session_id_turn_id_propagated():
     assert len(captured_turn_id[0]) == 8, (
         f"Expected 8-char hex turn_id, got: {captured_turn_id[0]!r}"
     )
+
+
+# ── Test 6: F1 §8 case 4 — both fast AND slow LLMs invoked ───────────────────
+
+
+@pytest.mark.asyncio
+async def test_both_fast_and_slow_invoked_in_standard_path():
+    """F1 §8 case 4: standard path → fast LLM (filler) called once + slow LLM
+    called once.  The round-1 file dropped this case (no test exercised a
+    mocked ``slow_llm``), so this pins the contract.
+
+    The F5 skeleton's ``_run_slow`` is a stub; we override it with a thin shim
+    that calls ``slow_llm.chat`` to simulate F8 wiring.  The standard path
+    must produce: fast filler dispatched once + slow LLM exercised once +
+    write-back landed in chat_ctx.
+    """
+    filler_text = "嗯，我在听"
+    fast_llm = _make_fast_llm(filler_text)
+    slow_llm = MagicMock()
+    slow_llm.chat = AsyncMock(return_value="slow_v1 response")
+
+    agent = _make_agent(fast_llm=fast_llm, min_silence=0.02, filler_text=filler_text)
+
+    async def _real_run_slow(turn_ctx, session_id, turn_id):
+        await slow_llm.chat()
+
+    agent._run_slow = _real_run_slow  # type: ignore[method-assign]
+
+    ctx = _make_chat_context()
+    user_msg = _make_user_message()
+
+    await asyncio.wait_for(
+        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
+    )
+
+    # Fast LLM (filler) invoked exactly once.
+    assert fast_llm.chat.completions.create.call_count == 1, (
+        f"Fast LLM expected 1 call, got {fast_llm.chat.completions.create.call_count}"
+    )
+    # Slow LLM invoked exactly once.
+    assert slow_llm.chat.call_count == 1, (
+        f"Slow LLM expected 1 call, got {slow_llm.chat.call_count}"
+    )
+    # Filler dispatched + write-back landed.
+    assert agent.session.say.call_count == 1
+    assert agent._turn_filler_count == 1
+    assistant_msgs = [m for m in ctx.messages if m["role"] == "assistant"]
+    assert len(assistant_msgs) == 1
+    assert assistant_msgs[0]["content"] == filler_text
