@@ -30,20 +30,7 @@ from typing import Any
 from livekit.agents import Agent
 from livekit.agents.llm import ChatContext, ChatMessage
 
-# Import contextvars from F3 plugin (set by F5 so STT plugin can read them).
-# If the module hasn't been installed yet at import time (e.g. during tests
-# that stub the plugin), fall back to module-local ContextVars.
-try:
-    from backend.voice.plugins.xfyun_stt import voice_session_ctx, voice_turn_ctx
-except ImportError:  # pragma: no cover — only during isolated test without plugin
-    from contextvars import ContextVar
-
-    voice_session_ctx: ContextVar[str | None] = ContextVar(  # type: ignore[no-redef]
-        "voice_session_ctx", default=None
-    )
-    voice_turn_ctx: ContextVar[str | None] = ContextVar(  # type: ignore[no-redef]
-        "voice_turn_ctx", default=None
-    )
+from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 
 logger = logging.getLogger("voice.fast_slow_agent")
 
