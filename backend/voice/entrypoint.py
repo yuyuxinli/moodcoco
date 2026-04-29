@@ -30,13 +30,10 @@ from livekit.agents import AgentSession, JobContext, RoomInputOptions, stt as _a
 from livekit.plugins import silero as _silero
 from openai import AsyncOpenAI
 
-from backend.voice.decisions import continue_decider as _continue_decider_mod
-from backend.voice.decisions import merged_decision as _merged_decision_mod
 from backend.voice.fast_slow_agent import FastSlowAgent
 from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 from backend.voice.plugins.minimax_tts import MinimaxTTSPlugin
 from backend.voice.plugins.xfyun_stt import XfyunSTTPlugin
-from backend.voice.skill_router import SJTUSkillRouter
 
 logger = logging.getLogger("voice.entrypoint")
 
@@ -135,21 +132,9 @@ async def voice_entrypoint(ctx: JobContext) -> None:
         vad = _silero.VAD.load()
         stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
         tts_plugin = MinimaxTTSPlugin()
-        fast_client = _build_fast_client()
         slow_llm = _build_slow_llm()
-        slow_client = _build_slow_client()
-        skill_router = SJTUSkillRouter()
 
-        agent = FastSlowAgent(
-            instructions=_DEFAULT_INSTRUCTIONS,
-            fast_llm=fast_client,
-            slow_llm=slow_llm,
-            slow_llm_model=os.environ.get("OPENAI_MODEL", _DEFAULT_SLOW_MODEL),
-            merged_decision_fn=_merged_decision_mod.decide,
-            continue_decider_fn=_continue_decider_mod.should_continue,
-            skill_router=skill_router,
-            slow_client=slow_client,
-        )
+        agent = FastSlowAgent(instructions=_DEFAULT_INSTRUCTIONS)
 
         session = AgentSession(
             stt=stt_plugin,

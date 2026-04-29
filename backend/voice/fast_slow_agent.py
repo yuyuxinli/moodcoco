@@ -5,6 +5,9 @@ always flows through the real LiveKit TTS pipeline and back into the room.
 Unit tests can still inject ``slow_llm_chat_fn`` to keep the fast, hermetic
 behaviour from earlier F5/F8 work.
 """
+# DEPRECATED in F-2.0a: on_user_turn_completed replaced by pydantic-ai bridge.
+# Old helper methods are retained because 48 voice tests still call them.
+# To be deleted in F-2.0b.
 from __future__ import annotations
 
 import asyncio
@@ -75,7 +78,7 @@ class FastSlowAgent(Agent):
         self,
         *,
         instructions: str,
-        fast_llm: Any,
+        fast_llm: Any | None = None,
         slow_llm: Any | None = None,
         min_silence_before_kicking: float = MIN_SILENCE_BEFORE_KICKING_MS / 1000,
         fast_filler_max_count: int = FAST_FILLER_MAX_COUNT,
@@ -88,9 +91,6 @@ class FastSlowAgent(Agent):
         slow_client: Any | None = None,
         **kwargs: Any,
     ) -> None:
-        if fast_llm is None:
-            raise ValueError("fast_llm must be provided")
-
         agent_kwargs: dict[str, Any] = {"instructions": instructions}
         if slow_llm is not None:
             agent_kwargs["llm"] = slow_llm
@@ -123,6 +123,13 @@ class FastSlowAgent(Agent):
         self._slow_v1_text: str = ""
         self._session_hooks_registered = False
         self._speech_meta: dict[str, dict[str, Any]] = {}
+        self._fast_history: list[Any] = []
+        self._slow_history: list[Any] = []
+        self._slow_state: dict[str, Any] = {
+            "reasoning_trail": [],
+            "search_cache": {},
+            "pending_actions": [],
+        }
 
     async def stt_node(
         self,
@@ -171,148 +178,163 @@ class FastSlowAgent(Agent):
     async def on_user_turn_completed(
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
-        """Run the full fast/slow pipeline and suppress LiveKit default reply."""
-        stage_e_started_at = time.monotonic()
+        """Bridge LiveKit user turns into pydantic-ai Fast and Slow agents."""
+        from backend.fast import FastThinkDeps, fast_agent
+        from backend.llm_provider import PROJECT_ROOT
+        from backend.slow import SlowThinkDeps, slow_agent
+
+        started_at = time.monotonic()
+        user_text = (getattr(new_message, "text_content", "") or "").strip()
         logger.info(
             "[STAGE_E] HOOK on_user_turn_completed entered",
             extra={
                 "session_id": voice_session_ctx.get() or "unknown",
                 "turn_id": voice_turn_ctx.get() or "pre-turn",
                 "phase": "turn",
-                "user_text_preview": (
-                    getattr(new_message, "text_content", "") or ""
-                )[:40],
+                "user_text_preview": user_text[:40],
             },
         )
+        if not user_text:
+            return
+
         self._turn_filler_count = 0
         self._slow_first_token_emitted = False
         self._slow_v1_text = ""
         self._ensure_session_hooks_registered()
 
         room_name = self._resolve_room_name()
-        session_id = (
-            voice_session_ctx.get()
-            or room_name
-            or "unknown"
-        )
-        turn_id = voice_turn_ctx.get() or uuid.uuid4().hex[:8]
+        session_id = voice_session_ctx.get() or room_name or "unknown"
+        turn_id = uuid.uuid4().hex[:8]
         voice_session_ctx.set(session_id)
         voice_turn_ctx.set(turn_id)
 
-        user_text = getattr(new_message, "text_content", "") or ""
-        logger.info("voice.fa…low_agent turn_started")
         logger.info(
-            "turn_started",
+            "fast_agent_run_started",
             extra={
                 "session_id": session_id,
                 "turn_id": turn_id,
-                "phase": "turn",
-                "user_msg_len": len(user_text),
+                "phase": "fast",
+            },
+        )
+        logger.info(
+            "slow_agent_run_started",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "slow",
             },
         )
 
-        turn_started_at = stage_e_started_at
-        recent_ctx = self._clip_history(
-            self._snapshot_recent_ctx(turn_ctx),
+        memory_file = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
+        guidance_file = PROJECT_ROOT / "backend" / "state" / "SLOW_GUIDANCE.md"
+        memory_text = memory_file.read_text(encoding="utf-8") if memory_file.exists() else ""
+        slow_guidance = (
+            guidance_file.read_text(encoding="utf-8").strip()
+            if guidance_file.exists()
+            else ""
+        )
+
+        fast_deps = FastThinkDeps(
             session_id=session_id,
-            turn_id=turn_id,
-            phase="decision",
+            memory_text=memory_text,
+            slow_guidance=slow_guidance,
+            voice_session=self.session,
+        )
+        slow_deps = SlowThinkDeps(
+            session_id=session_id,
+            user_message=user_text,
+            fast_reply_text="",
+            fast_deps=fast_deps,
+            reasoning_trail=self._slow_state["reasoning_trail"],
+            search_cache=self._slow_state["search_cache"],
+            pending_actions=self._slow_state["pending_actions"],
         )
 
-        logger.info(
-            "merged_decision_dispatched",
-            extra={
-                "session_id": session_id,
-                "turn_id": turn_id,
-                "phase": "decision",
-            },
+        fast_task = asyncio.create_task(
+            fast_agent.run(user_text, deps=fast_deps, message_history=self._fast_history)
         )
-        decision_task: asyncio.Task[MergedDecisionResult] = asyncio.create_task(
-            self._run_merged_decision_safe(user_text, recent_ctx, session_id, turn_id)
-        )
-        slow_v1_task = asyncio.create_task(
-            self._run_slow(turn_ctx, session_id, turn_id)
-        )
-        filler_timer_task = asyncio.create_task(
-            self._maybe_filler(turn_ctx, session_id, turn_id)
+        slow_task = asyncio.create_task(
+            slow_agent.run(user_text, deps=slow_deps, message_history=self._slow_history)
         )
 
-        def _log_fast_filler_skipped_after_slow() -> None:
+        def _on_slow_done(task: asyncio.Task[Any]) -> None:
+            latency_ms = round((time.monotonic() - started_at) * 1000)
+            try:
+                result = task.result()
+            except Exception:
+                logger.error(
+                    "slow_agent_run_failed",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "latency_ms": latency_ms,
+                    },
+                    exc_info=True,
+                )
+                return
+
+            self._slow_history = result.all_messages()
+            self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
+            self._slow_state["search_cache"] = slow_deps.search_cache
+            self._slow_state["pending_actions"] = slow_deps.pending_actions
             logger.info(
-                "fast_filler_sent",
+                "slow_agent_run_completed",
                 extra={
                     "session_id": session_id,
                     "turn_id": turn_id,
-                    "phase": "filler",
-                    "filler_text": "",
-                    "outcome": "skipped_slow_first",
-                    "reason": "slow_v1_first_token_within_grace",
+                    "phase": "slow",
+                    "iter_used": len(self._slow_history),
+                    "mutations_made": slow_deps.mutation_count_this_iter,
+                    "latency_ms": latency_ms,
                 },
             )
 
-        await slow_v1_task
-        if self._slow_first_token_emitted and not filler_timer_task.done():
+        slow_task.add_done_callback(_on_slow_done)
+
+        try:
+            fast_result = await fast_task
+        except Exception:
+            latency_ms = round((time.monotonic() - started_at) * 1000)
+            logger.error(
+                "fast_agent_run_failed",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "fast",
+                    "latency_ms": latency_ms,
+                },
+                exc_info=True,
+            )
             try:
-                await asyncio.wait_for(
-                    asyncio.shield(filler_timer_task),
-                    timeout=FILLER_GRACE_AFTER_SLOW_S,
-                )
-            except TimeoutError:
-                filler_timer_task.cancel()
+                fallback = self.session.say("嗯，我在这儿听着，慢慢说。", add_to_chat_ctx=True)
+                if inspect.isawaitable(fallback):
+                    await fallback
+            except Exception:
                 logger.info(
-                    "filler_cancelled_after_slow",
+                    "fast_agent_fallback_say_failed",
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
-                        "phase": "filler",
-                        "timeout_s": FILLER_GRACE_AFTER_SLOW_S,
+                        "phase": "fast",
                     },
+                    exc_info=True,
                 )
-                _log_fast_filler_skipped_after_slow()
         else:
-            try:
-                await filler_timer_task
-            except asyncio.CancelledError:
-                logger.info(
-                    "filler_cancelled_after_slow",
-                    extra={
-                        "session_id": session_id,
-                        "turn_id": turn_id,
-                        "phase": "filler",
-                    },
-                )
-                _log_fast_filler_skipped_after_slow()
+            self._fast_history = fast_result.all_messages()
+            latency_ms = round((time.monotonic() - started_at) * 1000)
+            logger.info(
+                "fast_agent_run_completed",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "fast",
+                    "iter_used": len(self._fast_history),
+                    "latency_ms": latency_ms,
+                },
+            )
 
-        path = await self._run_dp_continue_and_v2(
-            turn_ctx, recent_ctx, decision_task, session_id, turn_id
-        )
-
-        latency_ms = round((time.monotonic() - turn_started_at) * 1000)
-        logger.info(
-            "[STAGE_E] HOOK on_user_turn_completed exited",
-            extra={
-                "session_id": session_id,
-                "turn_id": turn_id,
-                "phase": "turn",
-                "path": path,
-                "latency_ms": latency_ms,
-            },
-        )
-        logger.info("voice.fa…low_agent turn_complete")
-        logger.info(
-            "turn_complete",
-            extra={
-                "session_id": session_id,
-                "turn_id": turn_id,
-                "phase": "turn",
-                "path": path,
-                "path_label": _PATH_LABELS[path],
-                "latency_ms": latency_ms,
-            },
-        )
-
-        if self._slow_client is not None and self._slow_llm_chat_fn is None:
-            raise StopResponse()
+        raise StopResponse()
 
     @staticmethod
     def _snapshot_recent_ctx(turn_ctx: ChatContext) -> list[dict]:
