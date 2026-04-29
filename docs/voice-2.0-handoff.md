@@ -1,12 +1,14 @@
-# Voice 2.0 Handoff (F-2.0a + F-2.0b complete)
+# Voice 2.0 Handoff
 
-**Branch**: `evolve/livekit-fast-slow`
+**Branch**: `evolve/livekit-fast-slow`（已 push origin）
 **Date**: 2026-04-29
-**Status**: ✅ Both features pass. Voice 2.0 DONE.
+**Status**: 架构 + 单测 ✅ DONE / 真实演练发现 3 个待修 BUG（P0/P1/P2）
 
 ## TL;DR
 
-Voice 2.0 用 pydantic-ai 双 agent（fast + slow）替换 r5 的 hardcoded fast/slow 序列。Slow 后台 mutate Fast.context（4 distinct tools, cross-turn carryover），Fast 主线对用户唯一出声。**净减 1953 行 r5 死代码**，pipeline 更清爽。
+- ✅ **完成**：Voice 2.0 用 pydantic-ai 双 agent（fast + slow）替换 r5 的 hardcoded fast/slow 序列。8 维全 pass，净减 1953 行 r5 死代码。
+- ⚠️ **待修**：真实浏览器演练发现 5 个问题，P0/P1/P2 是 "AI 回复非常短" 的根因，都是 1-3 行改动，建议 F-2.0c 一并修。
+- 📝 **接手**：直接读"真实浏览器演练发现的 BUG"那段，按修复杠杆表的顺序动手。
 
 ## Trajectory
 
@@ -89,22 +91,82 @@ DELETED:
 NET: +1150 / -2657 = -1507 lines code
 ```
 
-## Known Issues / Phase 2
+## 真实浏览器演练发现的 BUG（P0–P4）
+
+8 维测试全 pass 后跑了一次真实端到端浏览器对话（persona ↔ coco，~110s 音频），扒日志发现 5 个问题。**P0/P1/P2 是导致"AI 回复非常短"的根因**，P3 是 P0 副作用，P4 是 by-design。
+
+### P0 — STT 把一句话切成 36 段（最严重）
+
+**根因**：`backend/voice/entrypoint.py:132-133`
+```python
+vad = _silero.VAD.load()  # 用默认 min_silence_duration ≈ 0.55s
+stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
+```
+
+**机制**：人说话中间自然停顿（吸气、想词）≥0.55s 就被 VAD 当 turn 结束，触发 `on_user_turn_completed`。一句"我和我妈昨天吵架了 我有点难受 不想说话"被切成 5-7 个独立 turn。叠加 Xfyun WPGS partial→final 模式，turn `8a3b5647` 实测 **53 条 stt_transcript_final**，多数 text 长度=0。
+
+**后果**：每段都跑一次 fast+slow，AI 只来得及回 1-2 字"嗯""我懂"。
+
+**修法**（一行）：`_silero.VAD.load(min_silence_duration=1.2)` 或加 STT debouncer 合并 same-turn finals。
+
+### P1 — Slow 注入累积 6316 字（短回复次因）
+
+**根因**：`backend/voice/bridge_agent.py:244-245`
+```python
+self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]  # 有 cap
+self._slow_state["carryover_skills"] = slow_deps.carryover_skills        # 没 cap，无限累积
+```
+
+**机制**：F-2.0a r2 加了跨 turn carryover，但 `skill_bundle` 漏写 LRU。Slow 一次 `slow_attach_skill_to_fast("listen")` 就把 3505 字 SJTU SKILL.md 永久挂上。实测 24× inject + 1× attach_skill = **6316 字** 永远在 Fast 系统提示里。
+
+**后果**：Fast prompt 越涨越大 → minimax-m2.7 流式吐字越来越慢。
+
+**修法**（一行）：`bridge_agent.py:245` 改 `[-2:]`。
+
+### P2 — Fast latency p90=15s（架构偏差）
+
+**根因**：`backend/llm_provider.py:49-56` Fast 和 Slow 共用同一个 `create_agent_model()`，都跑 `minimax/minimax-m2.7` thinking 模式。
+
+**偏差**：原始设计是 `Fast = no-thinking + Slow = thinking`，**这个区分在代码里没落地**。`backend/fast.py:73` 和 `backend/slow.py:90` 都调 `create_agent_model()` —— 完全相同。
+
+**后果**：每条用户说话 Fast 也走完整 reasoning，叠加 P1 那 6316 字 prompt → 单 say latency p50=6873ms / p90=15185ms / max=21221ms，30% 单 say >10s。
+
+**修法**：`llm_provider.py` 拆 `create_fast_model()` / `create_slow_model()`，Fast 用 `extra_body={"reasoning_effort":"none"}` 或换成 minimax-m2.5 / doubao-lite。
+
+### P3 — Xfyun WS timeout 37 次（P0 副作用）
+
+**根因**：`backend/voice/_vendor/psy/stt/streaming_stt_manager.py:133` 每个 STT recognize 调用开新 WebSocket。P0 把 1 句切成 36 turn → 36× 新 WS → 累积 37 次 timeout。
+
+**修法**：P0 修了 P3 自动跟着修。
+
+### P4 — bridge_no_mutation fallback 4 次（by-design）
+
+**根因**：`bridge_agent.py:208-232` Slow 偶尔 thinking 不 emit tool_call，bridge 兜底注入 fallback hint。17% 触发率，**这是设计内的兜底，不是 bug**。
+
+### 修复杠杆排序
+
+| Fix | 改动 | 一行核心 | 预期影响 |
+|---|---|---|---|
+| **P2** | `llm_provider.py` 拆双 model | `extra_body={"reasoning_effort":"none"}` 或换 minimax-m2.5 | Fast latency 减半 |
+| **P0** | `entrypoint.py:132` VAD 参数 | `min_silence_duration=1.2` | 36 段 → 3-5 段 |
+| **P1** | `bridge_agent.py:245` 加 cap | `[-2:]` 一行 | prompt 6316→2000 字 |
+| P0b | STT debouncer 合并 same-turn finals | ~30 行 | P0 兜底 |
+
+P2 + P0 + P1 三处都是 1-3 行改动，建议一并 F-2.0c 跑一轮 evolve 验证。
+
+## 其他遗留问题（非演练发现）
 
 ### 1. ai_message 仍同时支持文字 + voice 模式
-合并 OQ §8.1 default = B：voice 模式调 `session.say()`，文字模式写 chat history。代码里有个 `if voice_session != None` 分支，可以维持不动。如果未来要分两个 agent（一个 voice-only 一个 chat-only），需要拆 deps。
+合并 OQ §8.1 default = B：voice 模式调 `session.say()`，文字模式写 chat history。`if voice_session != None` 分支可以维持不动。未来要分两个 agent（voice-only / chat-only）需要拆 deps。
 
-### 2. minimax-m2.7 streaming 偶发空流仍存在
-F-2.0a/F-2.0b 没专门处理。Pydantic-ai 内部 retry 机制部分覆盖，加 `result_retries=3` 后实测 R2 跑 3 turn 都正常出 token。如果未来用更长对话观测到回归，需要回到 r5 STAGE_K retry+fallback 那个机制。
+### 2. Slow 跨 turn 状态目前 in-memory（OQ §8.2 default A）
+死了 session 就丢。要持久化到 memU 或 Redis 留 phase 3。
 
-### 3. Slow 跨 turn 状态目前 in-memory（OQ §8.2 default A）
-死了 session 就丢。如果要持久化到 memU 或 Redis，未来 phase 3 再做。
+### 3. browser-audio-flowing checker 仍依赖 Chrome MCP
+C 跑评分时用 `mcp__claude-in-chrome__*` 取 sample 写 `/tmp/browser_audio_sample.json`。
 
-### 4. browser-audio-flowing checker 仍依赖 Chrome MCP
-C 跑评分时用 `mcp__claude-in-chrome__*` 取 sample 写 `/tmp/browser_audio_sample.json`。已有 sample 在 r3-r5 跑通。
-
-### 5. cross-turn-memory 4 分（不是 5 分）
-要拿 5 分需要：`pending_actions` 真被消费跨 turn。目前只 reasoning_trail / inject / skill / retrieval 跨 turn，pending_actions 字段定义了但 slow LLM 没主动用。
+### 4. cross-turn-memory 4 分（不是 5 分）
+要拿 5 分需要：`pending_actions` 真被消费跨 turn。目前只 reasoning_trail / inject / skill / retrieval 跨 turn，`pending_actions` 字段定义了但 slow LLM 没主动用。
 
 ## How to Run It
 
@@ -132,7 +194,7 @@ uv run --group voice --group test pytest tests/ -q                       # 90/90
 
 ## 30 秒接手指南
 
-1. 跑 e2e + 浏览器，确认本地能听到双 AI 真对话（不是 r5 fallback echo）
+1. 跑 e2e + 浏览器（见 How to Run It），确认本地能听到双 AI 真对话
 2. 看 `/tmp/moodcoco-agent.log` 一个 turn 的 `fast_agent_run_*` `slow_tool_call: slow_*` 日志结构
-3. **可以直接 PR 到 main**：13 commits + 8 维评分 + 45/45 测试 + 净减 1507 行
+3. **先动 P0/P1/P2 三处 BUG**（修复杠杆表）→ 跑一轮 evolve 验证 → 再 PR 到 main
 4. Phase 3 候选：memU 持久化 / pending_actions 消费 / 长对话稳定性
