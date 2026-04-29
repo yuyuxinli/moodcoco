@@ -238,7 +238,6 @@ async def _call_doubao(*, slow_v1_text: str, recent_ctx: list[dict]) -> str:
                 ),
             },
         ],
-        response_format={"type": "json_object"},
         temperature=0,
     )
     content = response.choices[0].message.content
