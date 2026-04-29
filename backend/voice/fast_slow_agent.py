@@ -286,6 +286,24 @@ class FastSlowAgent(Agent):
                 return
 
             self._slow_history = result.all_messages()
+            if slow_deps.mutation_count_this_iter == 0 and slow_deps.fast_deps is not None:
+                fallback_hint = "Slow 本轮未发现需要额外展开的策略；Fast 继续轻量承接用户情绪。"
+                slow_deps.fast_deps.dynamic_inject.append(fallback_hint)
+                slow_deps.reasoning_trail.append("bridge_default_inject")
+                slow_deps.mutation_count_this_iter += 1
+                logger.info(
+                    "slow_tool_call",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "tool": "slow_inject_to_fast",
+                        "text_len": len(fallback_hint),
+                        "latency_ms": latency_ms,
+                        "mutations_made": slow_deps.mutation_count_this_iter,
+                        "fallback": "bridge_no_mutation",
+                    },
+                )
             self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
             self._slow_state["search_cache"] = slow_deps.search_cache
             self._slow_state["pending_actions"] = slow_deps.pending_actions

@@ -58,6 +58,9 @@ Fast 已经先接住了用户。你现在只做 3 件事：
 - `slow_set_fast_retrieval(block)`：把检索/背景补充给 Fast
 - `slow_attach_skill_to_fast(skill_name)`：读取一个 skill 并附给 Fast
 
+只要你判断本轮有任何可帮助 Fast 的线索，至少调用一次 mutation tool。哪怕只是确认
+"继续轻量承接，不展开分析"，也可以用 `slow_inject_to_fast` 写成一句短指导。
+
 如果你上一 iter 没调用任何 mutation tool（`slow_inject_to_fast` /
 `slow_set_fast_retrieval` / `slow_attach_skill_to_fast`），且本 iter 也不打算调用，
 请直接 stop，输出空 text；不要为了继续而继续。
