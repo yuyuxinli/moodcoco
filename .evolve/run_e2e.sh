@@ -69,6 +69,6 @@ cd /Users/jianghongwei/Documents/moodcoco
 uv run --group voice python tools/voice_e2e/persona_agent.py > /tmp/moodcoco-persona.log 2>&1 &
 echo "persona PID=$!"
 
-echo "=== let it run 90s ==="
-sleep 90
+echo "=== let it run 150s ==="
+sleep 150
 echo "=== done; capture logs ==="
