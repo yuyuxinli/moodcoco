@@ -20,6 +20,7 @@ livekit-server --dev --bind 0.0.0.0 > /tmp/moodcoco-livekit.log 2>&1 &
 sleep 3
 
 echo "=== agent worker (single instance) ==="
+export FILLER_GRACE_AFTER_SLOW_S=0.0
 uv run --group voice python -c "import os; from dotenv import load_dotenv; load_dotenv('/Users/jianghongwei/Documents/moodcoco/.env'); from backend.voice.entrypoint import voice_entrypoint; from livekit.agents import cli, WorkerOptions; print(f\"[wrapper] LIVEKIT_URL={os.environ.get('LIVEKIT_URL')}\"); print('[wrapper] agent_name=moodcoco-coco'); cli.run_app(WorkerOptions(entrypoint_fnc=voice_entrypoint, agent_name='moodcoco-coco'))" start > /tmp/moodcoco-agent.log 2>&1 &
 # wait for registration
 for i in {1..30}; do

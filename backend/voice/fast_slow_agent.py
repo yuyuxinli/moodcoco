@@ -237,6 +237,19 @@ class FastSlowAgent(Agent):
             self._maybe_filler(turn_ctx, session_id, turn_id)
         )
 
+        def _log_fast_filler_skipped_after_slow() -> None:
+            logger.info(
+                "fast_filler_sent",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "filler",
+                    "filler_text": "",
+                    "outcome": "skipped_slow_first",
+                    "reason": "slow_v1_first_token_within_grace",
+                },
+            )
+
         await slow_v1_task
         if self._slow_first_token_emitted and not filler_timer_task.done():
             try:
@@ -255,6 +268,7 @@ class FastSlowAgent(Agent):
                         "timeout_s": FILLER_GRACE_AFTER_SLOW_S,
                     },
                 )
+                _log_fast_filler_skipped_after_slow()
         else:
             try:
                 await filler_timer_task
@@ -267,6 +281,7 @@ class FastSlowAgent(Agent):
                         "phase": "filler",
                     },
                 )
+                _log_fast_filler_skipped_after_slow()
 
         path = await self._run_dp_continue_and_v2(
             turn_ctx, recent_ctx, decision_task, session_id, turn_id
