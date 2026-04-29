@@ -703,7 +703,13 @@ class FastSlowAgent(Agent):
                     stream=True,
                 )
                 async for chunk in stream:
-                    delta = chunk.choices[0].delta.content or ""
+                    d = chunk.choices[0].delta
+                    # Reasoning models (e.g. minimax-m2.7) emit text in
+                    # reasoning_content during the thinking phase, then
+                    # often emit the final answer in content. Use whichever
+                    # is non-empty so we never drop tokens.
+                    delta = (getattr(d, "content", None) or
+                             getattr(d, "reasoning_content", None) or "")
                     if not delta:
                         continue
                     collected.append(delta)

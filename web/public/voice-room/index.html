@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>moodcoco · 语音房间（实时听 persona ↔ coco）</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 720px;
+         margin: 40px auto; padding: 16px; color: #1f2937; }
+  h1 { font-size: 18px; margin: 0 0 6px; }
+  .meta { color: #6b7280; font-size: 12px; margin-bottom: 16px; }
+  button { font-size: 15px; padding: 8px 16px; border: 0; border-radius: 8px;
+           background: #14b8a6; color: #fff; cursor: pointer; margin-right: 8px; }
+  button.danger { background: #ef4444; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .controls { margin-bottom: 16px; }
+  .status { font-size: 13px; padding: 8px 12px; border-radius: 6px;
+            background: #f3f4f6; color: #374151; margin-bottom: 16px;
+            font-family: ui-monospace, monospace; }
+  .participant { padding: 10px 14px; border-radius: 10px; margin: 8px 0; }
+  .persona { background: #fdf2f8; border-left: 4px solid #ec4899; }
+  .coco    { background: #ecfeff; border-left: 4px solid #14b8a6; }
+  .name    { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .indicator { display: inline-block; width: 10px; height: 10px;
+               border-radius: 50%; background: #d1d5db; margin-right: 6px;
+               vertical-align: middle; }
+  .indicator.live { background: #10b981; box-shadow: 0 0 6px #10b981; }
+  ul.log { list-style: none; padding: 0; margin: 0;
+           font-family: ui-monospace, monospace; font-size: 12px;
+           color: #6b7280; max-height: 240px; overflow-y: auto;
+           background: #f9fafb; padding: 8px; border-radius: 6px; }
+  ul.log li { padding: 2px 0; }
+</style>
+</head>
+<body>
+<h1>moodcoco · 语音房间</h1>
+<p class="meta">
+  浏览器只听不说。点「加入房间」之后会同时订阅 persona 和 coco 的音频，
+  自动播放。点「结束」会断开连接并通知 persona 端停止。
+</p>
+
+<div class="status" id="status">尚未连接</div>
+
+<div class="controls">
+  <button id="join">加入房间</button>
+  <button id="leave" class="danger" disabled>结束并断开</button>
+</div>
+
+<div class="participant persona">
+  <div class="name"><span class="indicator" id="ind-persona"></span>🌸 persona-yuyu（玉玉）</div>
+  <audio id="audio-persona" autoplay></audio>
+</div>
+
+<div class="participant coco">
+  <div class="name"><span class="indicator" id="ind-coco"></span>💚 coco（AI 心理陪伴）</div>
+  <audio id="audio-coco" autoplay></audio>
+</div>
+
+<h3 style="font-size:14px;margin-top:24px;">事件日志</h3>
+<ul class="log" id="log"></ul>
+
+<script type="module">
+import {
+  Room, RoomEvent, Track
+} from "./livekit-client.esm.mjs";
+
+const $ = (id) => document.getElementById(id);
+const log = (msg) => {
+  const li = document.createElement("li");
+  li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  $("log").prepend(li);
+};
+const setStatus = (s) => { $("status").textContent = s; };
+
+let room = null;
+
+async function fetchToken() {
+  const apiBase = "http://localhost:8000";
+  const r = await fetch(`${apiBase}/api/voice/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: "browser-listener" }),
+  });
+  if (!r.ok) {
+    throw new Error(`token request failed: ${r.status} ${await r.text()}`);
+  }
+  return await r.json();
+}
+
+function attachTrack(track, participant) {
+  // Persona uses identity prefix "persona-"; coco is kind=AGENT.
+  const isPersona = participant.identity.startsWith("persona");
+  const isCoco = participant.kind === "agent" || participant.identity.startsWith("agent-");
+  if (isPersona) {
+    track.attach($("audio-persona"));
+    $("ind-persona").classList.add("live");
+    log(`[persona] track attached: ${participant.identity}`);
+  } else if (isCoco) {
+    track.attach($("audio-coco"));
+    $("ind-coco").classList.add("live");
+    log(`[coco] track attached: ${participant.identity}`);
+  } else {
+    log(`[other] ignoring participant ${participant.identity}`);
+  }
+}
+
+function detachTrack(track, participant) {
+  const isPersona = participant.identity.startsWith("persona");
+  const isCoco = participant.kind === "agent" || participant.identity.startsWith("agent-");
+  if (isPersona) {
+    $("ind-persona").classList.remove("live");
+    log(`[persona] track detached`);
+  } else if (isCoco) {
+    $("ind-coco").classList.remove("live");
+    log(`[coco] track detached`);
+  }
+  track.detach();
+}
+
+async function join() {
+  $("join").disabled = true;
+  setStatus("拉 token …");
+  try {
+    const { token, ws_url, room_name } = await fetchToken();
+    log(`token ok, room=${room_name}, ws=${ws_url}`);
+
+    room = new Room({ adaptiveStream: false, dynacast: false });
+    room
+      .on(RoomEvent.ConnectionStateChanged, (state) => {
+        setStatus(`连接状态: ${state}`);
+        log(`state → ${state}`);
+      })
+      .on(RoomEvent.ParticipantConnected, (p) => log(`participant joined: ${p.identity}`))
+      .on(RoomEvent.ParticipantDisconnected, (p) => log(`participant left: ${p.identity}`))
+      .on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+        if (track.kind === Track.Kind.Audio) attachTrack(track, participant);
+      })
+      .on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
+        if (track.kind === Track.Kind.Audio) detachTrack(track, participant);
+      })
+      .on(RoomEvent.Disconnected, () => {
+        setStatus("已断开");
+        $("ind-persona").classList.remove("live");
+        $("ind-coco").classList.remove("live");
+        $("join").disabled = false;
+        $("leave").disabled = true;
+      });
+
+    await room.connect(ws_url, token, { autoSubscribe: true });
+    setStatus(`已连接 (${room_name})`);
+    $("leave").disabled = false;
+    log("connected");
+
+    // attach already-subscribed tracks (in case we joined late)
+    for (const participant of room.remoteParticipants.values()) {
+      for (const pub of participant.audioTrackPublications.values()) {
+        if (pub.track) attachTrack(pub.track, participant);
+      }
+    }
+  } catch (err) {
+    setStatus(`错误: ${err.message}`);
+    log(`error: ${err.message}`);
+    $("join").disabled = false;
+  }
+}
+
+async function leave() {
+  $("leave").disabled = true;
+  if (room) {
+    log("disconnecting…");
+    try { await room.disconnect(); } catch (e) { log(`disconnect error: ${e.message}`); }
+    room = null;
+  }
+  // Tell persona_agent to stop the loop.
+  try {
+    await fetch("http://localhost:8000/api/voice/persona-stop", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ identity: "persona-yuyu" }),
+    });
+    log("persona stop signal sent");
+  } catch (e) {
+    log(`persona stop signal failed: ${e.message}`);
+  }
+  $("join").disabled = false;
+}
+
+$("join").addEventListener("click", join);
+$("leave").addEventListener("click", leave);
+</script>
+</body>
+</html>

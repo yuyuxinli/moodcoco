@@ -26,7 +26,7 @@ import logging
 import os
 from typing import Any
 
-from livekit.agents import AgentSession, JobContext, stt as _agent_stt
+from livekit.agents import AgentSession, JobContext, RoomInputOptions, stt as _agent_stt
 from livekit.plugins import silero as _silero
 from openai import AsyncOpenAI
 
@@ -167,7 +167,13 @@ async def voice_entrypoint(ctx: JobContext) -> None:
             },
         )
 
-        await session.start(agent=agent, room=ctx.room)
+        # close_on_disconnect=False so the session survives subscriber-only
+        # participants (e.g. browser listeners) leaving and rejoining.
+        await session.start(
+            agent=agent,
+            room=ctx.room,
+            room_input_options=RoomInputOptions(close_on_disconnect=False),
+        )
 
         logger.info(
             "voice_session_started",

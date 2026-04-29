@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import uuid
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException
@@ -274,19 +275,23 @@ async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
     # (e.g., in environments that only run the text chat).
     from livekit.api import AccessToken, VideoGrants
 
+    # Browser listeners (session_id="browser-listener") only need to subscribe;
+    # giving them can_publish=True confuses LiveKit AgentSession's auto-pick of
+    # the user-input track when there are multiple publishers in the room.
+    is_browser_listener = (req.session_id or "").startswith("browser-listener")
+    grants_kwargs = dict(
+        room_join=True,
+        room=room_name,
+        can_subscribe=True,
+        can_publish=not is_browser_listener,
+    )
+
     try:
         token = (
             AccessToken(lk_api_key, lk_api_secret)
             .with_identity(participant_identity)
             .with_name(participant_identity)
-            .with_grants(
-                VideoGrants(
-                    room_join=True,
-                    room=room_name,
-                    can_publish=True,
-                    can_subscribe=True,
-                )
-            )
+            .with_grants(VideoGrants(**grants_kwargs))
             .to_jwt()
         )
     except ValueError as exc:
@@ -315,3 +320,18 @@ async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
         room_name=room_name,
         participant_identity=participant_identity,
     )
+
+
+# F-e2e — persona stop signal (used by /voice-room/index.html "结束" button)
+class _PersonaStopReq(BaseModel):
+    identity: str = "persona-yuyu"
+
+
+@app.post("/api/voice/persona-stop")
+async def voice_persona_stop(req: _PersonaStopReq) -> dict[str, str]:
+    """Touch /tmp/{identity}.stop so persona_agent's loop exits cleanly."""
+    safe = "".join(ch for ch in req.identity if ch.isalnum() or ch in ("-", "_"))
+    if not safe:
+        raise HTTPException(status_code=400, detail="invalid identity")
+    Path(f"/tmp/{safe}.stop").touch()
+    return {"status": "ok", "stop_file": f"/tmp/{safe}.stop"}

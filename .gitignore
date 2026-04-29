@@ -70,3 +70,4 @@ Moodcoco_data/
 .agents/
 .evolve/
 /web/public/voice-demo/
+/web/public/voice-room/livekit-client.esm.mjs
