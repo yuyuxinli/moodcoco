@@ -192,6 +192,7 @@ class FastSlowAgent(Agent):
         voice_turn_ctx.set(turn_id)
 
         user_text = getattr(new_message, "text_content", "") or ""
+        logger.info("voice.fa…low_agent turn_started")
         logger.info(
             "turn_started",
             extra={
@@ -241,6 +242,7 @@ class FastSlowAgent(Agent):
                 "latency_ms": latency_ms,
             },
         )
+        logger.info("voice.fa…low_agent turn_complete")
         logger.info(
             "turn_complete",
             extra={
@@ -833,10 +835,11 @@ class FastSlowAgent(Agent):
         )
         started_at = time.monotonic()
         first_token_ms: int | None = None
+        logged_delta_shape = False
         reply_text_fut: asyncio.Future[str] = asyncio.get_event_loop().create_future()
 
         async def _reply_stream() -> AsyncIterable[str]:
-            nonlocal first_token_ms
+            nonlocal first_token_ms, logged_delta_shape
             collected: list[str] = []
             try:
                 stream = await self._slow_client.chat.completions.create(
@@ -846,6 +849,32 @@ class FastSlowAgent(Agent):
                 )
                 async for chunk in stream:
                     d = chunk.choices[0].delta
+                    if not logged_delta_shape:
+                        logged_delta_shape = True
+                        logger.info(
+                            "[STAGE_J] llm_delta_shape",
+                            extra={
+                                "session_id": session_id,
+                                "turn_id": turn_id,
+                                "phase": phase,
+                                "model": model,
+                                "delta_attrs": [
+                                    a for a in dir(d) if not a.startswith("_")
+                                ],
+                                "content_type": type(
+                                    getattr(d, "content", None)
+                                ).__name__,
+                                "content_repr": repr(
+                                    getattr(d, "content", None)
+                                )[:200],
+                                "reasoning_content_repr": repr(
+                                    getattr(d, "reasoning_content", None)
+                                )[:200],
+                                "tool_calls": repr(
+                                    getattr(d, "tool_calls", None)
+                                )[:80],
+                            },
+                        )
                     # Reasoning models (e.g. minimax-m2.7) emit text in
                     # reasoning_content during the thinking phase, then
                     # often emit the final answer in content. Use whichever
