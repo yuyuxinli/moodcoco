@@ -164,6 +164,7 @@ class FastSlowAgent(Agent):
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
         """Run the full fast/slow pipeline and suppress LiveKit default reply."""
+        stage_e_started_at = time.monotonic()
         logger.info(
             "[STAGE_E] HOOK on_user_turn_completed entered",
             extra={
@@ -201,7 +202,7 @@ class FastSlowAgent(Agent):
             },
         )
 
-        turn_started_at = time.monotonic()
+        turn_started_at = stage_e_started_at
         recent_ctx = self._snapshot_recent_ctx(turn_ctx)
 
         logger.info(
@@ -230,6 +231,16 @@ class FastSlowAgent(Agent):
         )
 
         latency_ms = round((time.monotonic() - turn_started_at) * 1000)
+        logger.info(
+            "[STAGE_E] HOOK on_user_turn_completed exited",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "turn",
+                "path": path,
+                "latency_ms": latency_ms,
+            },
+        )
         logger.info(
             "turn_complete",
             extra={
@@ -333,6 +344,20 @@ class FastSlowAgent(Agent):
     async def _maybe_filler(
         self, turn_ctx: ChatContext, session_id: str, turn_id: str
     ) -> None:
+        stage_f_started_at = time.monotonic()
+
+        def _log_stage_f_exit(exit_reason: str) -> None:
+            logger.info(
+                "[STAGE_F] _maybe_filler exited",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "filler",
+                    "exit_reason": exit_reason,
+                    "latency_ms": round((time.monotonic() - stage_f_started_at) * 1000),
+                },
+            )
+
         logger.info(
             "[STAGE_F] _maybe_filler entered",
             extra={
@@ -353,6 +378,7 @@ class FastSlowAgent(Agent):
                     "phase": "filler",
                 },
             )
+            _log_stage_f_exit("slow_first_token_emitted")
             return
 
         if self._turn_filler_count >= self.fast_filler_max_count:
@@ -365,6 +391,7 @@ class FastSlowAgent(Agent):
                     "max_count": self.fast_filler_max_count,
                 },
             )
+            _log_stage_f_exit("max_count")
             return
 
         self._turn_filler_count += 1
@@ -412,6 +439,7 @@ class FastSlowAgent(Agent):
             self.session.say(_fast_llm_reply(), add_to_chat_ctx=False)
             filler_text = await filler_text_fut
         except Exception:
+            _log_stage_f_exit("llm_failed")
             return
 
         if not filler_text:
@@ -423,6 +451,7 @@ class FastSlowAgent(Agent):
                     "phase": "filler",
                 },
             )
+            _log_stage_f_exit("empty_response")
             return
 
         latency_ms = round((time.monotonic() - started_at) * 1000)
@@ -436,11 +465,26 @@ class FastSlowAgent(Agent):
                 "latency_ms": latency_ms,
             },
         )
+        _log_stage_f_exit("sent")
         self._write_back_assistant_message(turn_ctx, filler_text)
 
     async def _run_slow(
         self, turn_ctx: ChatContext, session_id: str, turn_id: str
     ) -> None:
+        stage_g_started_at = time.monotonic()
+
+        def _log_stage_g_exit(exit_reason: str) -> None:
+            logger.info(
+                "[STAGE_G] _run_slow exited",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "slow_v1",
+                    "exit_reason": exit_reason,
+                    "latency_ms": round((time.monotonic() - stage_g_started_at) * 1000),
+                },
+            )
+
         logger.info(
             "[STAGE_G] _run_slow entered",
             extra={
@@ -466,6 +510,7 @@ class FastSlowAgent(Agent):
                     "latency_ms": latency_ms,
                 },
             )
+            _log_stage_g_exit("chat_fn_completed")
             return
 
         if self._slow_client is None:
@@ -477,6 +522,7 @@ class FastSlowAgent(Agent):
                     "phase": "slow_v1",
                 },
             )
+            _log_stage_g_exit("delegated")
             return
 
         messages = self._build_messages(turn_ctx, system_prompt=self._instructions)
@@ -501,6 +547,7 @@ class FastSlowAgent(Agent):
                 "text_len": len(reply.text),
             },
         )
+        _log_stage_g_exit("stream_completed")
 
     async def _run_dp_continue_and_v2(
         self,
@@ -510,6 +557,20 @@ class FastSlowAgent(Agent):
         session_id: str,
         turn_id: str,
     ) -> str:
+        stage_h_started_at = time.monotonic()
+
+        def _log_stage_h_exit(exit_reason: str) -> None:
+            logger.info(
+                "[STAGE_H] _run_dp_continue_and_v2 exited",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "continue_decider",
+                    "exit_reason": exit_reason,
+                    "latency_ms": round((time.monotonic() - stage_h_started_at) * 1000),
+                },
+            )
+
         logger.info(
             "[STAGE_H] _run_dp_continue_and_v2 entered",
             extra={
@@ -573,7 +634,9 @@ class FastSlowAgent(Agent):
                         },
                         exc_info=True,
                     )
-            return "short" if self._turn_filler_count == 0 else "standard"
+            path = "short" if self._turn_filler_count == 0 else "standard"
+            _log_stage_h_exit(path)
+            return path
 
         logger.info(
             "dp_continue_yes",
@@ -615,6 +678,7 @@ class FastSlowAgent(Agent):
             session_id=session_id,
             turn_id=turn_id,
         )
+        _log_stage_h_exit("long")
         return "long"
 
     def _load_skill_content_safe(

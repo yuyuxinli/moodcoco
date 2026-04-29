@@ -182,7 +182,7 @@ class XfyunSTTPlugin(STT):
                 LiveKit base class retry logic triggers correctly.
         """
         logger.info(
-            "[STAGE_B] STT recognize_impl ENTERED - silero VAD just sliced audio",
+            "[STAGE_B] [STT] recognize_impl entered — silero VAD passed audio",
             extra={
                 "session_id": voice_session_ctx.get() or "unknown",
                 "turn_id": voice_turn_ctx.get() or "pre-turn",
