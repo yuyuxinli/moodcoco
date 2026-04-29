@@ -53,7 +53,26 @@ class SlowThinkDeps:
     reasoning_trail: list[str] = field(default_factory=list)
     search_cache: dict[str, str] = field(default_factory=dict)
     pending_actions: list[dict] = field(default_factory=list)
+    carryover_inject: list[str] = field(default_factory=list)
+    carryover_skills: list[str] = field(default_factory=list)
+    carryover_retrieval: str = ""
     mutation_count_this_iter: int = 0
+
+
+VOICE_MUTATION_TOOL_GUIDE = """
+## Voice 模式工具选用指南
+
+When in voice mode (fast_deps available):
+- Use slow_attach_skill_to_fast(name) when the conversation needs a SJTU skill
+  (listen / validation / face-decision / relationship-guide / etc).
+- Use slow_set_fast_retrieval(text) when you've gathered context that should
+  replace the retrieval block (compact, <=200 chars).
+- Use slow_inject_to_fast(text) for short notes that augment but don't replace.
+- Across iters in one turn, prefer using >=2 distinct tools to enrich Fast.
+- For non-trivial emotional or relationship turns, the strongest default is:
+  attach the most relevant skill, set a compact retrieval block, then inject one
+  short next-step note. Do not route every turn through only slow_inject_to_fast.
+"""
 
 
 SLOW_SYSTEM_PROMPT = "\n\n".join(
@@ -62,6 +81,7 @@ SLOW_SYSTEM_PROMPT = "\n\n".join(
         load_prompt("backend/prompts/IDENTITY.md"),
         load_prompt("backend/prompts/AGENTS.md"),
         load_prompt("backend/prompts/slow-instructions.md"),
+        VOICE_MUTATION_TOOL_GUIDE,
     ]
 )
 
@@ -108,12 +128,23 @@ def _log_slow_tool_call(
         extra={
             "session_id": ctx.deps.session_id,
             "turn_id": _turn_id(),
+            "phase": "slow",
             "tool": tool,
             "text_len": text_len,
             "latency_ms": round((time.monotonic() - started_at) * 1000),
             "mutations_made": ctx.deps.mutation_count_this_iter,
         },
     )
+
+
+def _append_lru(items: list[str], value: str, *, limit: int) -> None:
+    normalized = value.strip()
+    if not normalized:
+        return
+    if normalized in items:
+        items.remove(normalized)
+    items.append(normalized)
+    del items[:-limit]
 
 
 @slow_agent.tool
@@ -187,6 +218,7 @@ async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) 
         )
         return "skipped: fast_deps unavailable"
     ctx.deps.fast_deps.dynamic_inject.append(system_text)
+    _append_lru(ctx.deps.carryover_inject, system_text, limit=3)
     ctx.deps.reasoning_trail.append(f"inject:{system_text[:80]}")
     ctx.deps.mutation_count_this_iter += 1
     _log_slow_tool_call(
@@ -203,23 +235,27 @@ async def slow_set_fast_retrieval(ctx: RunContext[SlowThinkDeps], block: str) ->
     """Replace the voice Fast agent's same-turn retrieval block."""
     started_at = time.monotonic()
     ctx.deps.tool_call_history.append("slow_set_fast_retrieval")
+    compact_block = block.strip()
+    if len(compact_block) > 200:
+        compact_block = compact_block[:197].rstrip() + "..."
     if ctx.deps.fast_deps is None:
         ctx.deps.mutation_count_this_iter += 1
         _log_slow_tool_call(
             ctx,
             tool="slow_set_fast_retrieval",
             started_at=started_at,
-            text_len=len(block),
+            text_len=len(compact_block),
         )
         return "skipped: fast_deps unavailable"
-    ctx.deps.fast_deps.retrieval_block = block
-    ctx.deps.search_cache[ctx.deps.user_message] = block
+    ctx.deps.fast_deps.retrieval_block = compact_block
+    ctx.deps.carryover_retrieval = compact_block
+    ctx.deps.search_cache[ctx.deps.user_message] = compact_block
     ctx.deps.mutation_count_this_iter += 1
     _log_slow_tool_call(
         ctx,
         tool="slow_set_fast_retrieval",
         started_at=started_at,
-        text_len=len(block),
+        text_len=len(compact_block),
     )
     return "retrieval block set"
 
@@ -249,6 +285,8 @@ async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: 
         )
         return "skipped: fast_deps unavailable"
     ctx.deps.fast_deps.skill_bundle.append(skill_text)
+    if skill_text not in ctx.deps.carryover_skills:
+        ctx.deps.carryover_skills.append(skill_text)
     ctx.deps.reasoning_trail.append(f"skill:{skill_name}")
     ctx.deps.mutation_count_this_iter += 1
     _log_slow_tool_call(
