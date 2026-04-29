@@ -36,7 +36,7 @@ MERGED_DECISION_DRAIN_TIMEOUT_S: float = float(
     os.getenv("MERGED_DECISION_DRAIN_TIMEOUT_S", "0.2")
 )
 FILLER_GRACE_AFTER_SLOW_S: float = float(os.getenv("FILLER_GRACE_AFTER_SLOW_S", "2.0"))
-FAST_FILLER_LLM_TIMEOUT_S: float = float(os.getenv("FAST_FILLER_LLM_TIMEOUT_S", "2.0"))
+FAST_FILLER_LLM_TIMEOUT_S: float = float(os.getenv("FAST_FILLER_LLM_TIMEOUT_S", "4.0"))
 FAST_FILLER_FALLBACK = "我在这里听你说"
 SLOW_V1_EMPTY_FALLBACK = "嗯，我在这儿听着，慢慢说。"
 
@@ -212,7 +212,12 @@ class FastSlowAgent(Agent):
         )
 
         turn_started_at = stage_e_started_at
-        recent_ctx = self._snapshot_recent_ctx(turn_ctx)
+        recent_ctx = self._clip_history(
+            self._snapshot_recent_ctx(turn_ctx),
+            session_id=session_id,
+            turn_id=turn_id,
+            phase="decision",
+        )
 
         logger.info(
             "merged_decision_dispatched",
@@ -329,7 +334,13 @@ class FastSlowAgent(Agent):
         turn_id: str,
     ) -> MergedDecisionResult:
         try:
-            result = await self._merged_decision_fn(user_text, recent_ctx)
+            clipped_ctx = self._clip_history(
+                recent_ctx,
+                session_id=session_id,
+                turn_id=turn_id,
+                phase="decision",
+            )
+            result = await self._merged_decision_fn(user_text, clipped_ctx)
         except Exception as exc:
             logger.warning(
                 "merged_decision_unexpected_error",
@@ -437,15 +448,21 @@ class FastSlowAgent(Agent):
 
         async def _collect_fast_filler() -> str:
             collected: list[str] = []
-            stream = await self._fast_llm.chat.completions.create(
-                model=self._fast_llm_model,
-                messages=[
+            messages = self._clip_history(
+                [
                     {"role": "system", "content": FILLER_PROMPT},
                     {
                         "role": "user",
                         "content": self._latest_user_message(turn_ctx),
                     },
                 ],
+                session_id=session_id,
+                turn_id=turn_id,
+                phase="filler",
+            )
+            stream = await self._fast_llm.chat.completions.create(
+                model=self._fast_llm_model,
+                messages=messages,
                 stream=True,
                 max_tokens=30,
             )
@@ -542,7 +559,12 @@ class FastSlowAgent(Agent):
             },
         )
         if self._slow_llm_chat_fn is not None:
-            messages = self._build_messages(turn_ctx, system_prompt=self._instructions)
+            messages = self._clip_history(
+                self._build_messages(turn_ctx, system_prompt=self._instructions),
+                session_id=session_id,
+                turn_id=turn_id,
+                phase="slow_v1",
+            )
             started_at = time.monotonic()
             self._slow_v1_text = await self._slow_llm_chat_fn(messages)
             latency_ms = round((time.monotonic() - started_at) * 1000)
@@ -571,7 +593,12 @@ class FastSlowAgent(Agent):
             _log_stage_g_exit("delegated")
             return
 
-        messages = self._build_messages(turn_ctx, system_prompt=self._instructions)
+        messages = self._clip_history(
+            self._build_messages(turn_ctx, system_prompt=self._instructions),
+            session_id=session_id,
+            turn_id=turn_id,
+            phase="slow_v1",
+        )
         reply = await self._stream_model_reply(
             messages=messages,
             model=self._slow_llm_model,
@@ -645,6 +672,12 @@ class FastSlowAgent(Agent):
                 "phase": "continue_decider",
                 "slow_v1_text_len": len(self._slow_v1_text or ""),
             },
+        )
+        recent_ctx = self._clip_history(
+            recent_ctx,
+            session_id=session_id,
+            turn_id=turn_id,
+            phase="continue_decider",
         )
         try:
             decision = await self._continue_decider_fn(self._slow_v1_text, recent_ctx)
@@ -836,7 +869,12 @@ class FastSlowAgent(Agent):
         )
 
         if self._slow_llm_chat_fn is not None:
-            messages = self._build_messages(turn_ctx, system_prompt=system_prompt)
+            messages = self._clip_history(
+                self._build_messages(turn_ctx, system_prompt=system_prompt),
+                session_id=session_id,
+                turn_id=turn_id,
+                phase="slow_v2",
+            )
             started_at = time.monotonic()
             text = await self._slow_llm_chat_fn(messages)
             self._write_back_assistant_message(turn_ctx, text)
@@ -869,7 +907,12 @@ class FastSlowAgent(Agent):
             )
             return
 
-        messages = self._build_messages(turn_ctx, system_prompt=system_prompt)
+        messages = self._clip_history(
+            self._build_messages(turn_ctx, system_prompt=system_prompt),
+            session_id=session_id,
+            turn_id=turn_id,
+            phase="slow_v2",
+        )
         reply = await self._stream_model_reply(
             messages=messages,
             model=self._slow_llm_model,
@@ -902,6 +945,12 @@ class FastSlowAgent(Agent):
         turn_id: str,
         max_tokens: int | None = None,
     ) -> StreamedReply:
+        messages = self._clip_history(
+            messages,
+            session_id=session_id,
+            turn_id=turn_id,
+            phase=phase,
+        )
         logger.info(
             f"{phase}_streaming_start",
             extra={
@@ -1025,6 +1074,12 @@ class FastSlowAgent(Agent):
         session_id: str,
         turn_id: str,
     ) -> str:
+        messages = self._clip_history(
+            messages,
+            session_id=session_id,
+            turn_id=turn_id,
+            phase="slow_v1_retry",
+        )
         logger.warning(
             "[STAGE_K] slow_v1_empty_retry",
             extra={
@@ -1147,6 +1202,43 @@ class FastSlowAgent(Agent):
         if isinstance(content, list):
             return "".join(str(item) for item in content).strip()
         return str(content or "").strip()
+
+    @staticmethod
+    def _clip_history(
+        messages: list[dict],
+        *,
+        max_pairs: int = 4,
+        session_id: str | None = None,
+        turn_id: str | None = None,
+        phase: str = "llm",
+    ) -> list[dict]:
+        if max_pairs <= 0:
+            max_non_system = 0
+        else:
+            max_non_system = max_pairs * 2
+
+        system_messages: list[dict] = []
+        history_messages: list[dict] = []
+        for message in messages:
+            if str(message.get("role", "")) == "system":
+                system_messages.append(message)
+            else:
+                history_messages.append(message)
+
+        clipped = system_messages + history_messages[-max_non_system:]
+        if len(clipped) < len(messages):
+            logger.info(
+                "[STAGE_L] history_clipped",
+                extra={
+                    "session_id": session_id or voice_session_ctx.get() or "unknown",
+                    "turn_id": turn_id or voice_turn_ctx.get() or "unknown",
+                    "phase": phase,
+                    "from": len(messages),
+                    "to": len(clipped),
+                    "max_pairs": max_pairs,
+                },
+            )
+        return clipped
 
     def _compose_slow_v2_system_prompt(
         self, skill_content: str, retrieved: str
