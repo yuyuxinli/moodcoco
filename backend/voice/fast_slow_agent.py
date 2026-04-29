@@ -116,6 +116,45 @@ class FastSlowAgent(Agent):
         self._session_hooks_registered = False
         self._speech_meta: dict[str, dict[str, Any]] = {}
 
+    async def stt_node(
+        self,
+        audio: "AsyncIterable[Any]",
+        model_settings: Any,
+    ):
+        """Count audio frames entering the default STT pipeline."""
+        session_id = voice_session_ctx.get() or "unknown"
+        frame_count = 0
+        sample_total = 0
+        last_log_at = time.monotonic()
+
+        async def _counting_audio():
+            nonlocal frame_count, sample_total, last_log_at
+            async for frame in audio:
+                frame_count += 1
+                samples_per_channel = getattr(frame, "samples_per_channel", 0) or 0
+                sample_rate = getattr(frame, "sample_rate", 0) or 0
+                sample_total += samples_per_channel
+                now = time.monotonic()
+                if frame_count == 1 or (now - last_log_at) >= 1.0:
+                    logger.info(
+                        "[STAGE_A] stt_node_audio_frames",
+                        extra={
+                            "session_id": session_id,
+                            "turn_id": voice_turn_ctx.get() or "pre-turn",
+                            "phase": "stt_node",
+                            "frame_count": frame_count,
+                            "sample_total": sample_total,
+                            "approx_seconds": round(
+                                sample_total / max(sample_rate, 1), 2
+                            ),
+                        },
+                    )
+                    last_log_at = now
+                yield frame
+
+        async for ev in Agent.default.stt_node(self, _counting_audio(), model_settings):
+            yield ev
+
     def _get_skill_router(self) -> SJTUSkillRouter:
         if self._skill_router is None:
             self._skill_router = SJTUSkillRouter()
@@ -125,6 +164,17 @@ class FastSlowAgent(Agent):
         self, turn_ctx: ChatContext, new_message: ChatMessage
     ) -> None:
         """Run the full fast/slow pipeline and suppress LiveKit default reply."""
+        logger.info(
+            "[STAGE_E] HOOK on_user_turn_completed entered",
+            extra={
+                "session_id": voice_session_ctx.get() or "unknown",
+                "turn_id": voice_turn_ctx.get() or "pre-turn",
+                "phase": "turn",
+                "user_text_preview": (
+                    getattr(new_message, "text_content", "") or ""
+                )[:40],
+            },
+        )
         self._turn_filler_count = 0
         self._slow_first_token_emitted = False
         self._slow_v1_text = ""
@@ -283,6 +333,15 @@ class FastSlowAgent(Agent):
     async def _maybe_filler(
         self, turn_ctx: ChatContext, session_id: str, turn_id: str
     ) -> None:
+        logger.info(
+            "[STAGE_F] _maybe_filler entered",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "filler",
+                "min_silence_s": self.min_silence_before_kicking,
+            },
+        )
         await asyncio.sleep(self.min_silence_before_kicking)
 
         if self._slow_first_token_emitted:
@@ -382,6 +441,16 @@ class FastSlowAgent(Agent):
     async def _run_slow(
         self, turn_ctx: ChatContext, session_id: str, turn_id: str
     ) -> None:
+        logger.info(
+            "[STAGE_G] _run_slow entered",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "slow_v1",
+                "has_slow_chat_fn": self._slow_llm_chat_fn is not None,
+                "has_slow_client": self._slow_client is not None,
+            },
+        )
         if self._slow_llm_chat_fn is not None:
             messages = self._build_messages(turn_ctx, system_prompt=self._instructions)
             started_at = time.monotonic()
@@ -441,6 +510,15 @@ class FastSlowAgent(Agent):
         session_id: str,
         turn_id: str,
     ) -> str:
+        logger.info(
+            "[STAGE_H] _run_dp_continue_and_v2 entered",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "continue_decider",
+                "slow_v1_text_len": len(self._slow_v1_text or ""),
+            },
+        )
         try:
             decision = await self._continue_decider_fn(self._slow_v1_text, recent_ctx)
         except Exception as exc:

@@ -181,6 +181,15 @@ class XfyunSTTPlugin(STT):
             APIConnectionError: Re-raised from ``XfyunSTTNetworkError`` so that the
                 LiveKit base class retry logic triggers correctly.
         """
+        logger.info(
+            "[STAGE_B] STT recognize_impl ENTERED - silero VAD just sliced audio",
+            extra={
+                "session_id": voice_session_ctx.get() or "unknown",
+                "turn_id": voice_turn_ctx.get() or "pre-turn",
+                "phase": "stt",
+                "buffer_type": type(buffer).__name__,
+            },
+        )
         session_id = voice_session_ctx.get()
         turn_id = voice_turn_ctx.get() or uuid.uuid4().hex[:8]
         voice_turn_ctx.set(turn_id)
@@ -371,6 +380,15 @@ class XfyunSTTPlugin(STT):
         ``apd`` frame (often a trailing punctuation) silently truncates the
         whole transcript to a single character.  We rebuild the text below.
         """
+        logger.info(
+            "[STAGE_C] STT vendor call starting",
+            extra={
+                "session_id": voice_session_ctx.get() or "unknown",
+                "turn_id": voice_turn_ctx.get() or "pre-turn",
+                "phase": "stt",
+                "tmp_path": tmp_path,
+            },
+        )
         vendor_logger = logging.getLogger(
             "backend.voice._vendor.psy.stt.speech_to_text_xfyun_service"
         )

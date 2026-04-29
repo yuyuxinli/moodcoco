@@ -167,12 +167,52 @@ async def voice_entrypoint(ctx: JobContext) -> None:
             },
         )
 
-        # close_on_disconnect=False so the session survives subscriber-only
-        # participants (e.g. browser listeners) leaving and rejoining.
+        def _on_track_subscribed(track, publication, participant):
+            logger.info(
+                "[STAGE_I1] room_track_subscribed",
+                extra={
+                    "session_id": room_name,
+                    "phase": "room_io",
+                    "participant": getattr(participant, "identity", None),
+                    "participant_kind": str(getattr(participant, "kind", None)),
+                    "track_kind": str(getattr(track, "kind", None)),
+                    "track_sid": getattr(publication, "sid", None),
+                    "track_source": str(getattr(publication, "source", None)),
+                },
+            )
+
+        ctx.room.on("track_subscribed", _on_track_subscribed)
+
+        def _on_participant_connected(participant):
+            logger.info(
+                "[STAGE_I2] room_participant_connected",
+                extra={
+                    "session_id": room_name,
+                    "phase": "room_io",
+                    "identity": getattr(participant, "identity", None),
+                    "kind": str(getattr(participant, "kind", None)),
+                },
+            )
+
+        ctx.room.on("participant_connected", _on_participant_connected)
+
         await session.start(
             agent=agent,
             room=ctx.room,
             room_input_options=RoomInputOptions(close_on_disconnect=False),
+        )
+
+        logger.info(
+            "[STAGE_D] session_start_completed_state",
+            extra={
+                "session_id": room_name,
+                "phase": "room_io",
+                "session_input": type(getattr(session, "input", None)).__name__,
+                "room_io": type(getattr(session, "_room_io", None)).__name__,
+                "remote_participants": list(
+                    getattr(ctx.room, "remote_participants", {}).keys()
+                ),
+            },
         )
 
         logger.info(
