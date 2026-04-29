@@ -26,6 +26,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from livekit.agents import StopResponse
 
 from backend.voice.decisions.continue_decider import ContinueDecision
 from backend.voice.decisions.merged_decision import MergedDecisionResult
@@ -135,305 +136,171 @@ def _make_agent(
     return agent
 
 
-# ── Test 1: dp_continue=yes triggers slow_v2 with skill content ─────────────
+class _BridgeRunResult:
+    def __init__(self, messages: list[dict], output: str = "ok") -> None:
+        self._messages = messages
+        self.output = output
+
+    def all_messages(self) -> list[dict]:
+        return self._messages
+
+
+def _patch_bridge_agents(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    fast_text: str = "嗯，我在听你说。",
+    slow_mutation: str = "inject",
+) -> dict[str, list]:
+    import backend.fast as fast_mod
+    import backend.slow as slow_mod
+
+    calls: dict[str, list] = {"fast": [], "slow": []}
+
+    async def _fake_fast_run(user_msg, *, deps, message_history=None):
+        calls["fast"].append(
+            {
+                "user_msg": user_msg,
+                "deps": deps,
+                "message_history": list(message_history or []),
+            }
+        )
+        deps.collected_tool_calls.append(
+            {
+                "name": "ai_message",
+                "args": {"messages": [fast_text], "needs_deep_analysis": True},
+            }
+        )
+        deps.voice_session.say(fast_text, add_to_chat_ctx=True)
+        return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
+
+    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+        calls["slow"].append(
+            {
+                "user_msg": user_msg,
+                "deps": deps,
+                "message_history": list(message_history or []),
+            }
+        )
+        deps.fast_deps.dynamic_inject.append(slow_mutation)
+        deps.mutation_count_this_iter += 1
+        return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
+
+    monkeypatch.setattr(fast_mod.fast_agent, "run", _fake_fast_run)
+    monkeypatch.setattr(slow_mod.slow_agent, "run", _fake_slow_run)
+    return calls
+
+
+# ── F-2.0a bridge tests ──────────────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_dp_continue_yes_triggers_slow_v2():
-    """F1 §8 F8 case 1: continue=yes → slow_v2 invoked with skill content."""
-    skill_content = "## Listen Skill\n承接情绪，不急着分析。"
-    skill_router = _make_skill_router_mock(skill_content=skill_content)
-
-    merged_decision_fn = AsyncMock(
-        return_value=MergedDecisionResult(skill="listen", latency_ms=12.0)
-    )
-    continue_decider_fn = AsyncMock(
-        return_value=ContinueDecision(yes=True, reason="too_shallow", latency_ms=20.0)
-    )
-
-    slow_outputs = ["slow_v1 reply", "slow_v2 deeper reply"]
-    captured_messages: list[list[dict]] = []
-
-    async def _slow_chat(messages: list[dict]) -> str:
-        captured_messages.append(messages)
-        return slow_outputs[len(captured_messages) - 1]
-
+async def test_bridge_starts_fast_and_slow_in_parallel(monkeypatch: pytest.MonkeyPatch):
+    calls = _patch_bridge_agents(monkeypatch)
     agent = _make_agent(
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=continue_decider_fn,
-        slow_llm_chat_fn=_slow_chat,
-        skill_router=skill_router,
+        merged_decision_fn=AsyncMock(),
+        continue_decider_fn=AsyncMock(),
+        slow_llm_chat_fn=AsyncMock(),
         min_silence=0.02,
     )
 
     ctx = _make_chat_context()
     user_msg = _make_user_message("我和我妈又吵了")
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
-    )
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
+    await asyncio.sleep(0)
 
-    # slow LLM called twice (v1 + v2).
-    assert len(captured_messages) == 2, (
-        f"Expected slow_llm called twice, got {len(captured_messages)}"
-    )
-    # slow_v2 system prompt must contain the skill content text.
-    slow_v2_system = captured_messages[1][0]
-    assert slow_v2_system["role"] == "system"
-    assert skill_content in slow_v2_system["content"], (
-        f"slow_v2 system prompt missing skill content. Got:\n{slow_v2_system['content']!r}"
-    )
-    # The skill router was asked for the listen skill.
-    skill_router.load_skill_content.assert_called_once_with("listen")
-    # Continue decider was called with slow_v1 text.
-    continue_decider_fn.assert_awaited_once()
-    args, _ = continue_decider_fn.call_args
-    assert args[0] == "slow_v1 reply"
-
-
-# ── Test 2: dp_continue=no skips slow_v2; path = standard ───────────────────
+    assert [c["user_msg"] for c in calls["fast"]] == ["我和我妈又吵了"]
+    assert [c["user_msg"] for c in calls["slow"]] == ["我和我妈又吵了"]
+    assert agent.session.say.call_count == 1
 
 
 @pytest.mark.asyncio
-async def test_dp_continue_no_skips_slow_v2(caplog: pytest.LogCaptureFixture):
-    """F1 §8 F8 case 2: continue=no → slow_llm called once (v1 only),
-    turn marked ``standard`` (filler fired)."""
-    caplog.set_level("INFO", logger="voice.fast_slow_agent")
-
-    merged_decision_fn = AsyncMock(return_value=MergedDecisionResult())
-    continue_decider_fn = AsyncMock(
-        return_value=ContinueDecision(yes=False, reason="ok", latency_ms=15.0)
-    )
-
-    slow_calls = 0
-
-    async def _slow_chat(messages: list[dict]) -> str:
-        nonlocal slow_calls
-        slow_calls += 1
-        return "slow_v1 only"
-
+async def test_bridge_does_not_call_deprecated_deciders(monkeypatch: pytest.MonkeyPatch):
+    _patch_bridge_agents(monkeypatch)
+    merged_decision_fn = AsyncMock()
+    continue_decider_fn = AsyncMock()
+    slow_llm_chat_fn = AsyncMock()
     agent = _make_agent(
         merged_decision_fn=merged_decision_fn,
         continue_decider_fn=continue_decider_fn,
-        slow_llm_chat_fn=_slow_chat,
-        min_silence=0.02,  # filler fires → "standard" path
-    )
-
-    ctx = _make_chat_context()
-    user_msg = _make_user_message()
-
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
-    )
-
-    # slow LLM called only once (v1, no v2).
-    assert slow_calls == 1, f"Expected slow_llm called once (v1 only), got {slow_calls}"
-
-    # turn_complete log must be emitted with path == "standard".
-    turn_complete_records = [
-        r for r in caplog.records if r.getMessage() == "turn_complete"
-    ]
-    assert turn_complete_records, "turn_complete log missing"
-    assert getattr(turn_complete_records[-1], "path", None) == "standard", (
-        f"Expected path='standard', got "
-        f"{getattr(turn_complete_records[-1], 'path', None)!r}"
-    )
-
-    # dp_continue_no log was emitted.
-    dp_no_records = [r for r in caplog.records if r.getMessage() == "dp_continue_no"]
-    assert dp_no_records, "dp_continue_no log missing"
-
-
-# ── Test 3: dp_continue timeout → treated as no ─────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_dp_continue_timeout_treated_as_no(monkeypatch, caplog):
-    """F1 §8 F8 case 3: continue_decider blocks > 200 ms hard timeout.
-
-    We use the REAL ``should_continue`` so the asyncio.wait_for timeout path
-    fires, with ``_call_doubao`` patched to a 500 ms sleep.  The fallback must
-    be ``yes=False, reason='timeout'`` — slow_v2 must NOT run.
-    """
-    monkeypatch.setenv("DOUBAO_BASE_URL", "https://example.test/v1")
-    monkeypatch.setenv("DOUBAO_API_KEY", "test-key")
-    caplog.set_level("ERROR", logger="voice.decisions.continue_decider")
-
-    from backend.voice.decisions import continue_decider as cd_mod
-
-    async def _slow_call(**kwargs):
-        await asyncio.sleep(0.5)  # 500 ms — well past the 200 ms hard timeout
-        return '{"yes": true, "reason": "should not arrive"}'
-
-    monkeypatch.setattr(cd_mod, "_call_doubao", _slow_call)
-    monkeypatch.setattr(cd_mod, "DP_CONTINUE_TIMEOUT_MS", 100)
-    # Note: ``should_continue`` reads DP_CONTINUE_TIMEOUT_MS at call time, so
-    # the patched 100 ms takes effect immediately.
-
-    merged_decision_fn = AsyncMock(return_value=MergedDecisionResult())
-
-    slow_calls = 0
-
-    async def _slow_chat(messages: list[dict]) -> str:
-        nonlocal slow_calls
-        slow_calls += 1
-        return "slow_v1"
-
-    agent = _make_agent(
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=cd_mod.should_continue,
-        slow_llm_chat_fn=_slow_chat,
+        slow_llm_chat_fn=slow_llm_chat_fn,
         min_silence=0.02,
     )
 
-    ctx = _make_chat_context()
-    user_msg = _make_user_message()
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(
+            agent.on_user_turn_completed(_make_chat_context(), _make_user_message()),
+            timeout=3.0,
+        )
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
-    )
-
-    # slow LLM called only once — slow_v2 must NOT have run.
-    assert slow_calls == 1, (
-        f"slow_v2 must NOT run on DP-continue timeout; got slow_calls={slow_calls}"
-    )
-
-    # ContinueDecider logged the timeout fallback at ERROR level.
-    timeout_records = [
-        r for r in caplog.records if r.getMessage() == "continue_decider_timeout"
-    ]
-    assert timeout_records, "continue_decider_timeout log missing"
-
-
-# ── Test 4: slow_v2 system prompt embeds skill text from merged_decision ────
+    merged_decision_fn.assert_not_awaited()
+    continue_decider_fn.assert_not_awaited()
+    slow_llm_chat_fn.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-async def test_slow_v2_uses_skill_from_merged_decision():
-    """F1 §8 F8 case 4: skill_router.load_skill_content is invoked with the
-    merged-decision skill name and its return value is embedded in the slow_v2
-    system prompt."""
-    skill_content = "FAKE_LISTEN_SKILL_BODY_TOKEN_42"
-    skill_router = _make_skill_router_mock(skill_content=skill_content)
-
-    merged_decision_fn = AsyncMock(
-        return_value=MergedDecisionResult(skill="listen", latency_ms=10.0)
-    )
-    continue_decider_fn = AsyncMock(
-        return_value=ContinueDecision(yes=True, reason="needs_deeper", latency_ms=18.0)
-    )
-
-    captured_v2_system: dict[str, str] = {}
-    call_idx = 0
-
-    async def _slow_chat(messages: list[dict]) -> str:
-        nonlocal call_idx
-        call_idx += 1
-        if call_idx == 2:  # second call is slow_v2
-            captured_v2_system["content"] = messages[0]["content"]
-        return f"slow_response_{call_idx}"
-
+async def test_bridge_logs_fast_and_slow_completion(monkeypatch, caplog):
+    _patch_bridge_agents(monkeypatch)
+    caplog.set_level("INFO", logger="voice.fast_slow_agent")
     agent = _make_agent(
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=continue_decider_fn,
-        slow_llm_chat_fn=_slow_chat,
-        skill_router=skill_router,
+        merged_decision_fn=AsyncMock(),
+        continue_decider_fn=AsyncMock(),
+        slow_llm_chat_fn=AsyncMock(),
         min_silence=0.02,
     )
 
-    ctx = _make_chat_context()
-    user_msg = _make_user_message()
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(
+            agent.on_user_turn_completed(_make_chat_context(), _make_user_message()),
+            timeout=3.0,
+        )
+    await asyncio.sleep(0)
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
-    )
-
-    skill_router.load_skill_content.assert_called_once_with("listen")
-    assert "content" in captured_v2_system, "slow_v2 was not invoked"
-    assert skill_content in captured_v2_system["content"], (
-        f"Skill content not injected into slow_v2 system prompt. "
-        f"Got:\n{captured_v2_system['content']!r}"
-    )
-    # Base instructions still present (skill is appended, not replacing).
-    assert "You are a helpful assistant." in captured_v2_system["content"]
-
-
-# ── Test 5: short path — filler skipped, decisions still run ────────────────
+    messages = [record.getMessage() for record in caplog.records]
+    assert "fast_agent_run_started" in messages
+    assert "fast_agent_run_completed" in messages
+    assert "slow_agent_run_started" in messages
+    assert "slow_agent_run_completed" in messages
 
 
 @pytest.mark.asyncio
-async def test_short_path_skips_filler_but_runs_decisions(caplog):
-    """F1 §8 F8 case 5: slow_v1 fast → filler skipped, but merged_decision still
-    runs in parallel (logged) AND continue_decider STILL called after slow_v1.
-    """
-    caplog.set_level("INFO", logger="voice.fast_slow_agent")
-
-    merged_decision_fn = AsyncMock(return_value=MergedDecisionResult())
-    continue_decider_fn = AsyncMock(
-        return_value=ContinueDecision(yes=False, reason="ok", latency_ms=18.0)
-    )
-
-    async def _fast_slow_chat(messages: list[dict]) -> str:
-        # No await — slow_v1 returns immediately, simulating a < 0.4 s TTFT.
-        return "slow_v1 fast"
-
-    fast_llm = _make_fast_llm("不应触发的填充语")
-
+async def test_bridge_slow_mutates_fast_deps(monkeypatch: pytest.MonkeyPatch):
+    calls = _patch_bridge_agents(monkeypatch, slow_mutation="read relationship-guide")
     agent = _make_agent(
-        fast_llm=fast_llm,
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=continue_decider_fn,
-        slow_llm_chat_fn=_fast_slow_chat,
-        min_silence=0.5,  # 500 ms window so slow finishing immediately wins
+        merged_decision_fn=AsyncMock(),
+        continue_decider_fn=AsyncMock(),
+        slow_llm_chat_fn=AsyncMock(),
+        min_silence=0.02,
     )
 
-    # Custom _run_slow that flips the first-token flag fast (simulating LiveKit
-    # streaming contract): so _maybe_filler will skip when the timer fires.
-    real_run_slow = agent._run_slow
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(
+            agent.on_user_turn_completed(_make_chat_context(), _make_user_message()),
+            timeout=3.0,
+        )
+    await asyncio.sleep(0)
 
-    async def _flagging_run_slow(turn_ctx, session_id, turn_id):
-        agent._slow_first_token_emitted = True
-        await real_run_slow(turn_ctx, session_id, turn_id)
+    fast_deps = calls["fast"][0]["deps"]
+    slow_deps = calls["slow"][0]["deps"]
+    assert fast_deps.dynamic_inject == ["read relationship-guide"]
+    assert slow_deps.mutation_count_this_iter == 1
 
-    agent._run_slow = _flagging_run_slow  # type: ignore[method-assign]
 
-    ctx = _make_chat_context()
-    user_msg = _make_user_message()
+@pytest.mark.asyncio
+async def test_bridge_empty_user_message_returns_without_stop(monkeypatch: pytest.MonkeyPatch):
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent(
+        merged_decision_fn=AsyncMock(),
+        continue_decider_fn=AsyncMock(),
+        slow_llm_chat_fn=AsyncMock(),
+        min_silence=0.02,
+    )
 
     await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
+        agent.on_user_turn_completed(_make_chat_context(), _make_user_message("   ")),
+        timeout=3.0,
     )
 
-    # Filler must NOT have fired — fast LLM (filler) call_count == 0 and
-    # session.say not invoked.
-    assert fast_llm.chat.completions.create.call_count == 0, (
-        "Filler LLM must not be called on the short path"
-    )
-    assert agent.session.say.call_count == 0, (
-        "session.say must not be called on the short path"
-    )
-    assert agent._turn_filler_count == 0
-
-    # merged_decision STILL ran in parallel.
-    merged_decision_fn.assert_awaited_once()
-    merged_dispatched = [
-        r for r in caplog.records if r.getMessage() == "merged_decision_dispatched"
-    ]
-    assert merged_dispatched, "merged_decision_dispatched log missing"
-    merged_done = [
-        r for r in caplog.records if r.getMessage() == "merged_decision_done"
-    ]
-    assert merged_done, "merged_decision_done log missing"
-
-    # continue_decider STILL called after slow_v1 (regardless of fast path).
-    continue_decider_fn.assert_awaited_once()
-
-    # Path is "short" since no filler fired AND continue=no.
-    turn_complete_records = [
-        r for r in caplog.records if r.getMessage() == "turn_complete"
-    ]
-    assert turn_complete_records, "turn_complete log missing"
-    assert getattr(turn_complete_records[-1], "path", None) == "short", (
-        f"Expected path='short', got "
-        f"{getattr(turn_complete_records[-1], 'path', None)!r}"
-    )
+    assert calls["fast"] == []
+    assert calls["slow"] == []

@@ -261,6 +261,17 @@ class FastSlowAgent(Agent):
             latency_ms = round((time.monotonic() - started_at) * 1000)
             try:
                 result = task.result()
+            except asyncio.CancelledError:
+                logger.info(
+                    "slow_agent_run_cancelled",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "latency_ms": latency_ms,
+                    },
+                )
+                return
             except Exception:
                 logger.error(
                     "slow_agent_run_failed",

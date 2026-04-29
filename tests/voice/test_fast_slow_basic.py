@@ -15,6 +15,7 @@ from typing import AsyncIterator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from livekit.agents import StopResponse
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -116,81 +117,114 @@ def _make_agent(
     return agent
 
 
+class _BridgeRunResult:
+    def __init__(self, messages: list[dict]) -> None:
+        self._messages = messages
+        self.output = "ok"
+
+    def all_messages(self) -> list[dict]:
+        return self._messages
+
+
+def _patch_bridge_agents(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    fast_text: str = "嗯，我在听你说。",
+    slow_inject: str = "下一轮继续承接情绪。",
+) -> dict[str, list]:
+    """Patch pydantic-ai agents so bridge tests stay hermetic."""
+    import backend.fast as fast_mod
+    import backend.slow as slow_mod
+    from backend.voice.fast_slow_agent import voice_session_ctx, voice_turn_ctx
+
+    calls: dict[str, list] = {
+        "fast": [],
+        "slow": [],
+        "session_ids": [],
+        "turn_ids": [],
+    }
+
+    async def _fake_fast_run(user_msg, *, deps, message_history=None):
+        calls["fast"].append(
+            {
+                "user_msg": user_msg,
+                "deps": deps,
+                "message_history": list(message_history or []),
+            }
+        )
+        calls["session_ids"].append(voice_session_ctx.get())
+        calls["turn_ids"].append(voice_turn_ctx.get())
+        deps.collected_tool_calls.append(
+            {
+                "name": "ai_message",
+                "args": {"messages": [fast_text], "needs_deep_analysis": False},
+            }
+        )
+        deps.voice_session.say(fast_text, add_to_chat_ctx=True)
+        return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
+
+    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+        calls["slow"].append(
+            {
+                "user_msg": user_msg,
+                "deps": deps,
+                "message_history": list(message_history or []),
+            }
+        )
+        deps.fast_deps.dynamic_inject.append(slow_inject)
+        deps.reasoning_trail.append("inject")
+        deps.search_cache[user_msg] = "cached"
+        deps.pending_actions.append({"kind": "followup"})
+        deps.mutation_count_this_iter += 1
+        return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
+
+    monkeypatch.setattr(fast_mod.fast_agent, "run", _fake_fast_run)
+    monkeypatch.setattr(slow_mod.slow_agent, "run", _fake_slow_run)
+    return calls
+
+
 # ── Test 1: filler fires after silence ────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_filler_fires_after_silence():
-    """Mock slow LLM never sets first-token flag; filler must fire after silence window.
-
-    F1 §8 F5 case 2 (standard path): slow delays > min_silence → filler sent once,
-    turn_ctx has assistant filler message.
-    """
-    filler_text = "嗯，听起来不太好受"
-    agent = _make_agent(min_silence=0.02, filler_text=filler_text)  # 20 ms silence window
+async def test_bridge_fast_says_and_stops_livekit_reply(monkeypatch: pytest.MonkeyPatch):
+    """F-2.0a: bridge runs Fast, lets ai_message speak, then raises StopResponse."""
+    fast_text = "嗯，我在听你说。"
+    calls = _patch_bridge_agents(monkeypatch, fast_text=fast_text)
+    agent = _make_agent(min_silence=0.02)
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
 
-    # _run_slow will be a no-op (default impl just yields and logs).
-    # slow_first_token_emitted stays False so filler fires.
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
+    await asyncio.sleep(0)
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg),
-        timeout=3.0,
-    )
-
-    # session.say must have been called exactly once (for the filler).
     session_say = agent.session.say
-    assert session_say.call_count == 1, (
-        f"Expected session.say called once for filler, got {session_say.call_count}"
-    )
-
-    # filler count incremented to 1.
-    assert agent._turn_filler_count == 1
-
-    # chat_ctx must have one assistant message with filler text (OQ-13).
-    assistant_msgs = [m for m in ctx.messages if m["role"] == "assistant"]
-    assert len(assistant_msgs) == 1
-    assert filler_text in assistant_msgs[0]["content"] or assistant_msgs[0]["content"] in filler_text
+    assert session_say.call_count == 1
+    session_say.assert_called_with(fast_text, add_to_chat_ctx=True)
+    assert len(calls["fast"]) == 1
+    assert len(calls["slow"]) == 1
 
 
 # ── Test 2: filler skipped if slow emits first token quickly ─────────────────
 
 
 @pytest.mark.asyncio
-async def test_filler_skipped_if_slow_fast():
-    """Slow LLM emits first token flag within the silence window → filler NOT called.
-
-    F1 §8 F5 case 1 (short path): slow fast enough → session.say not invoked.
-    """
-    agent = _make_agent(min_silence=0.1)  # 100 ms window
+async def test_bridge_passes_voice_session_to_fast(monkeypatch: pytest.MonkeyPatch):
+    """F-2.0a: FastThinkDeps carries the LiveKit AgentSession reference."""
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent(min_silence=0.1)
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
 
-    # Simulate slow_v1 setting the flag within 30 ms (before the 100 ms timer).
-    original_run_slow = agent._run_slow
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
 
-    async def _fast_slow(*args, **kwargs):
-        await asyncio.sleep(0.03)  # 30 ms — before 100 ms filler timer
-        agent._slow_first_token_emitted = True
-        await original_run_slow(*args, **kwargs)
-
-    agent._run_slow = _fast_slow  # type: ignore[method-assign]
-
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg),
-        timeout=3.0,
-    )
-
-    # session.say must NOT have been called (filler was skipped).
-    session_say = agent.session.say
-    assert session_say.call_count == 0, (
-        f"Expected session.say NOT called (slow was fast), got {session_say.call_count}"
-    )
-
-    assert agent._turn_filler_count == 0
+    fast_deps = calls["fast"][0]["deps"]
+    assert fast_deps.voice_session is agent.session
+    assert fast_deps.voice_system_extras()
 
 
 # ── Test 3: filler max count = 1 (strengthened) ─────────────────────────────
@@ -252,95 +286,62 @@ async def test_filler_max_count_one():
 
 
 @pytest.mark.asyncio
-async def test_chat_ctx_writeback_after_filler():
-    """After filler emitted, turn_ctx must have an assistant message with filler content.
-
-    F1 §8 F5 case 5 / OQ-13 contract: write-back ordering is maintained.
-    """
-    filler_text = "稍等一下，让我想想"
-    agent = _make_agent(min_silence=0.01, filler_text=filler_text)
+async def test_bridge_collects_slow_state(monkeypatch: pytest.MonkeyPatch):
+    """F-2.0a: slow done callback writes history and cross-turn state back."""
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent(min_silence=0.01)
 
     ctx = _make_chat_context()
     user_msg = _make_user_message("我有些担心")
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg),
-        timeout=3.0,
-    )
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
+    await asyncio.sleep(0)
 
-    # Verify the filler was written into the chat context.
-    assistant_msgs = [m for m in ctx.messages if m["role"] == "assistant"]
-    assert len(assistant_msgs) >= 1, "Expected at least one assistant message in turn_ctx"
-
-    # The first assistant message should contain the filler text (or part of it).
-    first_content = assistant_msgs[0]["content"]
-    assert filler_text in first_content or first_content in filler_text, (
-        f"Filler text not found in chat_ctx. Got: {first_content!r}, expected: {filler_text!r}"
-    )
+    assert agent._slow_history
+    assert agent._slow_state["reasoning_trail"] == ["inject"]
+    assert agent._slow_state["search_cache"][user_msg.text_content] == "cached"
+    assert agent._slow_state["pending_actions"] == [{"kind": "followup"}]
+    assert calls["slow"][0]["deps"].fast_deps.dynamic_inject
 
 
 # ── Test 5: session_id and turn_id propagated via contextvars ─────────────────
 
 
 @pytest.mark.asyncio
-async def test_session_id_turn_id_propagated():
+async def test_session_id_turn_id_propagated(monkeypatch: pytest.MonkeyPatch):
     """voice_session_ctx and voice_turn_ctx must be set inside the agent turn.
 
     F1 §8 F5 case 4 / OQ-14 contract: contextvars set by FastSlowAgent for F3 plugin.
     We spy on the contextvars from inside the filler generator.
     """
-    from backend.voice.fast_slow_agent import voice_session_ctx, voice_turn_ctx
-
-    captured_session_id: list[str | None] = []
-    captured_turn_id: list[str | None] = []
-
-    fast_llm = MagicMock()
-    fast_llm.chat = MagicMock()
-    fast_llm.chat.completions = MagicMock()
-
-    async def _spy_create(**kwargs):
-        # Capture contextvar values when the filler LLM is called.
-        captured_session_id.append(voice_session_ctx.get())
-        captured_turn_id.append(voice_turn_ctx.get())
-
-        async def _gen():
-            chunk = MagicMock()
-            chunk.choices = [MagicMock()]
-            chunk.choices[0].delta.content = "好的"
-            yield chunk
-
-        return _gen()
-
-    fast_llm.chat.completions.create = AsyncMock(side_effect=_spy_create)
-
-    agent = _make_agent(fast_llm=fast_llm, min_silence=0.01)
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent(min_silence=0.01)
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg),
-        timeout=3.0,
-    )
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
 
     # The contextvar must have been set before the filler LLM was called.
-    assert len(captured_session_id) >= 1, (
+    assert len(calls["session_ids"]) >= 1, (
         "Filler LLM was not called (voice_session_ctx not captured). "
         "Ensure filler fired (min_silence short enough)."
     )
-    assert captured_session_id[0] is not None, (
-        f"voice_session_ctx was None inside filler; expected room name. Got: {captured_session_id}"
+    assert calls["session_ids"][0] is not None, (
+        f"voice_session_ctx was None inside bridge. Got: {calls['session_ids']}"
     )
-    assert captured_turn_id[0] is not None, (
-        f"voice_turn_ctx was None inside filler; expected turn_id hex. Got: {captured_turn_id}"
+    assert calls["turn_ids"][0] is not None, (
+        f"voice_turn_ctx was None inside bridge. Got: {calls['turn_ids']}"
     )
     # session_id should be the room name set by the mock.
-    assert captured_session_id[0] == "test-room-001", (
-        f"Expected session_id='test-room-001', got: {captured_session_id[0]!r}"
+    assert calls["session_ids"][0] == "test-room-001", (
+        f"Expected session_id='test-room-001', got: {calls['session_ids'][0]!r}"
     )
     # turn_id should be an 8-char hex string.
-    assert len(captured_turn_id[0]) == 8, (
-        f"Expected 8-char hex turn_id, got: {captured_turn_id[0]!r}"
+    assert len(calls["turn_ids"][0]) == 8, (
+        f"Expected 8-char hex turn_id, got: {calls['turn_ids'][0]!r}"
     )
 
 
@@ -348,46 +349,21 @@ async def test_session_id_turn_id_propagated():
 
 
 @pytest.mark.asyncio
-async def test_both_fast_and_slow_invoked_in_standard_path():
-    """F1 §8 case 4: standard path → fast LLM (filler) called once + slow LLM
-    called once.  The round-1 file dropped this case (no test exercised a
-    mocked ``slow_llm``), so this pins the contract.
-
-    The F5 skeleton's ``_run_slow`` is a stub; we override it with a thin shim
-    that calls ``slow_llm.chat`` to simulate F8 wiring.  The standard path
-    must produce: fast filler dispatched once + slow LLM exercised once +
-    write-back landed in chat_ctx.
-    """
-    filler_text = "嗯，我在听"
-    fast_llm = _make_fast_llm(filler_text)
-    slow_llm = MagicMock()
-    slow_llm.chat = AsyncMock(return_value="slow_v1 response")
-
-    agent = _make_agent(fast_llm=fast_llm, min_silence=0.02, filler_text=filler_text)
-
-    async def _real_run_slow(turn_ctx, session_id, turn_id):
-        await slow_llm.chat()
-
-    agent._run_slow = _real_run_slow  # type: ignore[method-assign]
+async def test_bridge_preserves_message_history(monkeypatch: pytest.MonkeyPatch):
+    """F-2.0a: Fast and Slow message histories are fed back on later turns."""
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent(min_silence=0.02)
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
 
-    await asyncio.wait_for(
-        agent.on_user_turn_completed(ctx, user_msg), timeout=3.0
-    )
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
+    await asyncio.sleep(0)
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
 
-    # Fast LLM (filler) invoked exactly once.
-    assert fast_llm.chat.completions.create.call_count == 1, (
-        f"Fast LLM expected 1 call, got {fast_llm.chat.completions.create.call_count}"
-    )
-    # Slow LLM invoked exactly once.
-    assert slow_llm.chat.call_count == 1, (
-        f"Slow LLM expected 1 call, got {slow_llm.chat.call_count}"
-    )
-    # Filler dispatched + write-back landed.
-    assert agent.session.say.call_count == 1
-    assert agent._turn_filler_count == 1
-    assistant_msgs = [m for m in ctx.messages if m["role"] == "assistant"]
-    assert len(assistant_msgs) == 1
-    assert assistant_msgs[0]["content"] == filler_text
+    assert calls["fast"][0]["message_history"] == []
+    assert calls["slow"][0]["message_history"] == []
+    assert calls["fast"][1]["message_history"]
+    assert calls["slow"][1]["message_history"]
