@@ -30,7 +30,7 @@ from livekit.agents import AgentSession, JobContext, RoomInputOptions, stt as _a
 from livekit.plugins import silero as _silero
 from openai import AsyncOpenAI
 
-from backend.voice.fast_slow_agent import FastSlowAgent
+from backend.voice.bridge_agent import VoiceBridgeAgent
 from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 from backend.voice.plugins.minimax_tts import MinimaxTTSPlugin
 from backend.voice.plugins.xfyun_stt import XfyunSTTPlugin
@@ -134,7 +134,7 @@ async def voice_entrypoint(ctx: JobContext) -> None:
         tts_plugin = MinimaxTTSPlugin()
         slow_llm = _build_slow_llm()
 
-        agent = FastSlowAgent(instructions=_DEFAULT_INSTRUCTIONS)
+        agent = VoiceBridgeAgent(instructions=_DEFAULT_INSTRUCTIONS)
 
         session = AgentSession(
             stt=stt_plugin,
