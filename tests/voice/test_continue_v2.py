@@ -1,29 +1,8 @@
-"""Unit tests for FastSlowAgent F8 extension — DP-continue + slow_v2.
-
-5 cases per F1 §8 F8.  All async via pytest-asyncio; LLM calls and
-``session.say`` are mocked.  No network.
-
-Coverage map (F1 §8 F8):
-1. ``test_dp_continue_yes_triggers_slow_v2`` — yes → slow_v2 invoked, skill
-   content present in slow_v2 system prompt.
-2. ``test_dp_continue_no_skips_slow_v2`` — no → slow_v2 NOT invoked, path
-   marked ``standard`` (filler fired).
-3. ``test_dp_continue_timeout_treated_as_no`` — DP-continue blocked >200 ms
-   real timeout → fallback yes=False, slow_v2 NOT invoked, log carries
-   ``timeout`` reason.
-4. ``test_slow_v2_uses_skill_from_merged_decision`` — merged_decision returns
-   ``skill="listen"``; skill router stub returns deterministic text → slow_v2
-   system prompt contains that text verbatim.
-5. ``test_short_path_skips_filler_but_runs_decisions`` — slow_v1 emits first
-   token < 0.4 s (mocked by setting the flag inside ``_run_slow``); filler
-   skipped AND merged_decision still ran in parallel (logged) AND
-   continue_decider STILL called after slow_v1 (per design §1).
-"""
+"""Bridge-focused voice tests for the pydantic-ai Fast and Slow handoff."""
 from __future__ import annotations
 
 import asyncio
-from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 from livekit.agents import StopResponse
@@ -55,59 +34,11 @@ def _make_user_message(text: str = "我最近压力很大") -> MagicMock:
     return msg
 
 
-def _make_fast_llm(filler_text: str = "嗯，我在听") -> MagicMock:
-    """Mock openai.AsyncOpenAI-compatible fast_llm with streaming chunks."""
-    fast_llm = MagicMock()
+def _make_agent():
+    """Build a voice bridge agent with a mocked session.say attached."""
+    from backend.voice.bridge_agent import FastSlowAgent
 
-    async def _fake_stream_iter():
-        for piece in [filler_text[: len(filler_text) // 2], filler_text[len(filler_text) // 2 :]]:
-            chunk = MagicMock()
-            chunk.choices = [MagicMock()]
-            chunk.choices[0].delta.content = piece
-            yield chunk
-
-    async def _fake_create(**kwargs: Any):
-        return _fake_stream_iter()
-
-    fast_llm.chat = MagicMock()
-    fast_llm.chat.completions = MagicMock()
-    fast_llm.chat.completions.create = AsyncMock(side_effect=_fake_create)
-    return fast_llm
-
-
-def _make_skill_router_mock(skill_content: str = "FAKE_SKILL_CONTENT") -> MagicMock:
-    router = MagicMock()
-    router.load_skill_content = MagicMock(return_value=skill_content)
-    return router
-
-
-def _make_agent(
-    *,
-    merged_decision_fn,
-    continue_decider_fn,
-    slow_llm_chat_fn,
-    skill_router=None,
-    fast_llm=None,
-    min_silence: float = 0.05,
-    fast_filler_max_count: int = 1,
-    filler_text: str = "嗯，我在听",
-):
-    """Build a FastSlowAgent wired for F8 tests with all hooks mocked."""
-    from backend.voice.fast_slow_agent import FastSlowAgent
-
-    if fast_llm is None:
-        fast_llm = _make_fast_llm(filler_text)
-
-    agent = FastSlowAgent(
-        instructions="You are a helpful assistant.",
-        fast_llm=fast_llm,
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=continue_decider_fn,
-        skill_router=skill_router,
-        slow_llm_chat_fn=slow_llm_chat_fn,
-        min_silence_before_kicking=min_silence,
-        fast_filler_max_count=fast_filler_max_count,
-    )
+    agent = FastSlowAgent(instructions="You are a helpful assistant.")
 
     # Attach mock session (drains any async-iterable handed to session.say).
     session_mock = MagicMock()
@@ -192,12 +123,7 @@ def _patch_bridge_agents(
 @pytest.mark.asyncio
 async def test_bridge_starts_fast_and_slow_in_parallel(monkeypatch: pytest.MonkeyPatch):
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(
-        merged_decision_fn=AsyncMock(),
-        continue_decider_fn=AsyncMock(),
-        slow_llm_chat_fn=AsyncMock(),
-        min_silence=0.02,
-    )
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message("我和我妈又吵了")
@@ -212,17 +138,9 @@ async def test_bridge_starts_fast_and_slow_in_parallel(monkeypatch: pytest.Monke
 
 
 @pytest.mark.asyncio
-async def test_bridge_does_not_call_deprecated_deciders(monkeypatch: pytest.MonkeyPatch):
-    _patch_bridge_agents(monkeypatch)
-    merged_decision_fn = AsyncMock()
-    continue_decider_fn = AsyncMock()
-    slow_llm_chat_fn = AsyncMock()
-    agent = _make_agent(
-        merged_decision_fn=merged_decision_fn,
-        continue_decider_fn=continue_decider_fn,
-        slow_llm_chat_fn=slow_llm_chat_fn,
-        min_silence=0.02,
-    )
+async def test_bridge_runs_without_legacy_hooks(monkeypatch: pytest.MonkeyPatch):
+    calls = _patch_bridge_agents(monkeypatch)
+    agent = _make_agent()
 
     with pytest.raises(StopResponse):
         await asyncio.wait_for(
@@ -230,21 +148,15 @@ async def test_bridge_does_not_call_deprecated_deciders(monkeypatch: pytest.Monk
             timeout=3.0,
         )
 
-    merged_decision_fn.assert_not_awaited()
-    continue_decider_fn.assert_not_awaited()
-    slow_llm_chat_fn.assert_not_awaited()
+    assert len(calls["fast"]) == 1
+    assert len(calls["slow"]) == 1
 
 
 @pytest.mark.asyncio
 async def test_bridge_logs_fast_and_slow_completion(monkeypatch, caplog):
     _patch_bridge_agents(monkeypatch)
-    caplog.set_level("INFO", logger="voice.fast_slow_agent")
-    agent = _make_agent(
-        merged_decision_fn=AsyncMock(),
-        continue_decider_fn=AsyncMock(),
-        slow_llm_chat_fn=AsyncMock(),
-        min_silence=0.02,
-    )
+    caplog.set_level("INFO", logger="voice.bridge_agent")
+    agent = _make_agent()
 
     with pytest.raises(StopResponse):
         await asyncio.wait_for(
@@ -263,12 +175,7 @@ async def test_bridge_logs_fast_and_slow_completion(monkeypatch, caplog):
 @pytest.mark.asyncio
 async def test_bridge_slow_mutates_fast_deps(monkeypatch: pytest.MonkeyPatch):
     calls = _patch_bridge_agents(monkeypatch, slow_mutation="read relationship-guide")
-    agent = _make_agent(
-        merged_decision_fn=AsyncMock(),
-        continue_decider_fn=AsyncMock(),
-        slow_llm_chat_fn=AsyncMock(),
-        min_silence=0.02,
-    )
+    agent = _make_agent()
 
     with pytest.raises(StopResponse):
         await asyncio.wait_for(
@@ -286,12 +193,7 @@ async def test_bridge_slow_mutates_fast_deps(monkeypatch: pytest.MonkeyPatch):
 @pytest.mark.asyncio
 async def test_bridge_empty_user_message_returns_without_stop(monkeypatch: pytest.MonkeyPatch):
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(
-        merged_decision_fn=AsyncMock(),
-        continue_decider_fn=AsyncMock(),
-        slow_llm_chat_fn=AsyncMock(),
-        min_silence=0.02,
-    )
+    agent = _make_agent()
 
     await asyncio.wait_for(
         agent.on_user_turn_completed(_make_chat_context(), _make_user_message("   ")),

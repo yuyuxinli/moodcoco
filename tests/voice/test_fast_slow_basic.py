@@ -1,18 +1,12 @@
-"""Unit tests for FastSlowAgent skeleton — F5 test cases (5 cases per F1 §8).
+"""Unit tests for the pydantic-ai voice bridge.
 
 All tests are async (pytest-asyncio strict mode).
-No network calls — fast_llm and session.say are mocked throughout.
-
-OQ resolution coverage:
-  OQ-12: _slow_first_token_emitted flag gates filler dispatch.
-  OQ-13: chat_ctx write-back happens after session.say filler_fut resolves.
-  OQ-14: contextvars (voice_session_ctx, voice_turn_ctx) are set during the turn.
+No network calls — Fast/Slow agents and session.say are mocked throughout.
 """
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncIterator
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from livekit.agents import StopResponse
@@ -44,51 +38,11 @@ def _make_user_message(text: str = "我最近压力很大") -> MagicMock:
     return msg
 
 
-def _make_fast_llm(filler_text: str = "嗯，听起来不太好受") -> MagicMock:
-    """Build a mock openai.AsyncOpenAI-compatible fast_llm client.
+def _make_agent(**_ignored: object) -> "FastSlowAgent":
+    """Build a voice bridge agent with a mocked session.say attached."""
+    from backend.voice.bridge_agent import FastSlowAgent
 
-    The mock simulates async streaming: chat.completions.create returns an
-    async iterable where each item has choices[0].delta.content == filler chunk.
-    """
-    fast_llm = MagicMock()
-
-    async def _fake_stream_iter():
-        # Yield filler text in two chunks to test accumulation.
-        for chunk_text in [filler_text[:len(filler_text)//2], filler_text[len(filler_text)//2:]]:
-            chunk = MagicMock()
-            chunk.choices = [MagicMock()]
-            chunk.choices[0].delta.content = chunk_text
-            yield chunk
-
-    async def _fake_create(**kwargs):
-        return _fake_stream_iter()
-
-    fast_llm.chat = MagicMock()
-    fast_llm.chat.completions = MagicMock()
-    fast_llm.chat.completions.create = AsyncMock(side_effect=_fake_create)
-    return fast_llm
-
-
-def _make_agent(
-    fast_llm=None,
-    slow_llm=None,
-    min_silence: float = 0.05,  # very short for fast tests
-    fast_filler_max_count: int = 1,
-    filler_text: str = "嗯，听起来不太好受",
-) -> "FastSlowAgent":
-    """Build a FastSlowAgent with a mocked session.say attached."""
-    from backend.voice.fast_slow_agent import FastSlowAgent
-
-    if fast_llm is None:
-        fast_llm = _make_fast_llm(filler_text)
-
-    agent = FastSlowAgent(
-        instructions="You are a helpful assistant.",
-        fast_llm=fast_llm,
-        slow_llm=slow_llm,
-        min_silence_before_kicking=min_silence,
-        fast_filler_max_count=fast_filler_max_count,
-    )
+    agent = FastSlowAgent(instructions="You are a helpful assistant.")
 
     # Attach a mock session so self.session.say and self.session.room work.
     # session.say drains its async-iterable arg in a background task — without
@@ -135,7 +89,7 @@ def _patch_bridge_agents(
     """Patch pydantic-ai agents so bridge tests stay hermetic."""
     import backend.fast as fast_mod
     import backend.slow as slow_mod
-    from backend.voice.fast_slow_agent import voice_session_ctx, voice_turn_ctx
+    from backend.voice.bridge_agent import voice_session_ctx, voice_turn_ctx
 
     calls: dict[str, list] = {
         "fast": [],
@@ -183,7 +137,7 @@ def _patch_bridge_agents(
     return calls
 
 
-# ── Test 1: filler fires after silence ────────────────────────────────────────
+# ── Test 1: Fast speaks and stops LiveKit reply ───────────────────────────────
 
 
 @pytest.mark.asyncio
@@ -191,7 +145,7 @@ async def test_bridge_fast_says_and_stops_livekit_reply(monkeypatch: pytest.Monk
     """F-2.0a: bridge runs Fast, lets ai_message speak, then raises StopResponse."""
     fast_text = "嗯，我在听你说。"
     calls = _patch_bridge_agents(monkeypatch, fast_text=fast_text)
-    agent = _make_agent(min_silence=0.02)
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
@@ -207,14 +161,14 @@ async def test_bridge_fast_says_and_stops_livekit_reply(monkeypatch: pytest.Monk
     assert len(calls["slow"]) == 1
 
 
-# ── Test 2: filler skipped if slow emits first token quickly ─────────────────
+# ── Test 2: voice session is passed to Fast ───────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_bridge_passes_voice_session_to_fast(monkeypatch: pytest.MonkeyPatch):
     """F-2.0a: FastThinkDeps carries the LiveKit AgentSession reference."""
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(min_silence=0.1)
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
@@ -227,14 +181,14 @@ async def test_bridge_passes_voice_session_to_fast(monkeypatch: pytest.MonkeyPat
     assert fast_deps.voice_system_extras()
 
 
-# ── Test 4: chat_ctx write-back after filler ──────────────────────────────────
+# ── Test 3: slow state is collected ───────────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_bridge_collects_slow_state(monkeypatch: pytest.MonkeyPatch):
     """F-2.0a: slow done callback writes history and cross-turn state back."""
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(min_silence=0.01)
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message("我有些担心")
@@ -257,11 +211,10 @@ async def test_bridge_collects_slow_state(monkeypatch: pytest.MonkeyPatch):
 async def test_session_id_turn_id_propagated(monkeypatch: pytest.MonkeyPatch):
     """voice_session_ctx and voice_turn_ctx must be set inside the agent turn.
 
-    F1 §8 F5 case 4 / OQ-14 contract: contextvars set by FastSlowAgent for F3 plugin.
-    We spy on the contextvars from inside the filler generator.
+    We spy on the contextvars from inside the patched Fast run.
     """
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(min_silence=0.01)
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()
@@ -269,10 +222,9 @@ async def test_session_id_turn_id_propagated(monkeypatch: pytest.MonkeyPatch):
     with pytest.raises(StopResponse):
         await asyncio.wait_for(agent.on_user_turn_completed(ctx, user_msg), timeout=3.0)
 
-    # The contextvar must have been set before the filler LLM was called.
+    # The contextvar must have been set before the patched Fast run was called.
     assert len(calls["session_ids"]) >= 1, (
-        "Filler LLM was not called (voice_session_ctx not captured). "
-        "Ensure filler fired (min_silence short enough)."
+        "Fast run was not called (voice_session_ctx not captured)."
     )
     assert calls["session_ids"][0] is not None, (
         f"voice_session_ctx was None inside bridge. Got: {calls['session_ids']}"
@@ -290,14 +242,14 @@ async def test_session_id_turn_id_propagated(monkeypatch: pytest.MonkeyPatch):
     )
 
 
-# ── Test 6: F1 §8 case 4 — both fast AND slow LLMs invoked ───────────────────
+# ── Test 5: message history is preserved ─────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_bridge_preserves_message_history(monkeypatch: pytest.MonkeyPatch):
     """F-2.0a: Fast and Slow message histories are fed back on later turns."""
     calls = _patch_bridge_agents(monkeypatch)
-    agent = _make_agent(min_silence=0.02)
+    agent = _make_agent()
 
     ctx = _make_chat_context()
     user_msg = _make_user_message()

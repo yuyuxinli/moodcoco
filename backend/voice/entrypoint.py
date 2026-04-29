@@ -11,8 +11,8 @@ the LiveKit Agents framework invokes for every accepted job.  The entrypoint:
 
 3. Constructs an ``SJTUSkillRouter`` (F7) so slow_v2 can inject SKILL.md
    content per the merged decision.
-4. Instantiates ``FastSlowAgent`` (F8) with merged_decision + continue_decider
-   passed as DI hooks (per agent constructor contract).
+4. Instantiates ``VoiceBridgeAgent`` to hand each user turn to the pydantic-ai
+   Fast and Slow agents.
 5. Starts an ``AgentSession`` bound to the room.
 
 Failures in plugin construction are logged at ERROR with structured
