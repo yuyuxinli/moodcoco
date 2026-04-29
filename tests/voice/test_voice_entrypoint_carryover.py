@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
+
 import pytest
 from livekit.agents import StopResponse
 
@@ -107,3 +109,34 @@ async def test_bridge_skips_fallback_when_slow_called_any_tool(
     assert fast_deps.dynamic_inject == []
     assert slow_deps.mutation_count_this_iter == 0
     assert agent._slow_state["carryover_inject"] == []
+
+
+@pytest.mark.asyncio
+async def test_slow_inject_auto_completes_voice_context_for_emotional_turn() -> None:
+    from backend.fast import FastThinkDeps
+    from backend.slow import SlowThinkDeps, slow_inject_to_fast
+
+    fast_deps = FastThinkDeps(
+        session_id="test-session",
+        memory_text="",
+        voice_session=object(),
+    )
+    slow_deps = SlowThinkDeps(
+        session_id="test-session",
+        user_message="我和我妈昨天大吵了一架，我感觉特别委屈。",
+        fast_deps=fast_deps,
+    )
+    ctx = SimpleNamespace(deps=slow_deps)
+
+    await slow_inject_to_fast(ctx, "下一轮先承接委屈，不急着给建议。")
+
+    assert "slow_inject_to_fast" in slow_deps.tool_call_history
+    assert "slow_set_fast_retrieval" in slow_deps.tool_call_history
+    assert any(
+        item.startswith("slow_attach_skill_to_fast(")
+        for item in slow_deps.tool_call_history
+    )
+    assert fast_deps.dynamic_inject == ["下一轮先承接委屈，不急着给建议。"]
+    assert fast_deps.skill_bundle
+    assert fast_deps.retrieval_block.startswith("本轮用户线索：")
+    assert slow_deps.mutation_count_this_iter == 3

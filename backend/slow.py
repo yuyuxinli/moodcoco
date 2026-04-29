@@ -147,6 +147,82 @@ def _append_lru(items: list[str], value: str, *, limit: int) -> None:
     del items[:-limit]
 
 
+def _select_voice_skill(user_message: str) -> str | None:
+    message = user_message.strip()
+    if not message:
+        return None
+
+    crisis_terms = ("想死", "不想活", "伤害自己", "活着没意思", "消失")
+    body_terms = ("喘不上气", "心跳", "发抖", "手抖", "慌", "恐慌", "失眠")
+    decision_terms = ("该不该", "要不要", "拿不定", "不知道怎么选", "立刻", "马上")
+    untangle_terms = ("好乱", "脑子很乱", "说不清", "一团乱")
+    relationship_terms = (
+        "吵",
+        "冷战",
+        "妈妈",
+        "男朋友",
+        "女朋友",
+        "对象",
+        "聊天记录",
+        "隐私",
+        "不回",
+        "分手",
+        "沟通",
+        "剃光",
+        "头发",
+    )
+    emotion_terms = (
+        "委屈",
+        "难过",
+        "生气",
+        "气",
+        "烦",
+        "崩溃",
+        "哭",
+        "害怕",
+        "焦虑",
+        "伤心",
+        "过分",
+        "不三不四",
+        "糟蹋",
+    )
+
+    if any(term in message for term in crisis_terms):
+        return "crisis"
+    if any(term in message for term in body_terms):
+        return "calm-body"
+    if any(term in message for term in decision_terms):
+        return "face-decision"
+    if any(term in message for term in untangle_terms):
+        return "untangle"
+    if any(term in message for term in relationship_terms):
+        return "relationship-guide"
+    if any(term in message for term in emotion_terms):
+        return "listen"
+    return None
+
+
+def _compact_voice_retrieval(user_message: str) -> str:
+    block = f"本轮用户线索：{user_message.strip()}"
+    if len(block) > 200:
+        return block[:197].rstrip() + "..."
+    return block
+
+
+async def _auto_complete_voice_mutations(ctx: RunContext[SlowThinkDeps]) -> None:
+    if ctx.deps.fast_deps is None:
+        return
+
+    skill_name = _select_voice_skill(ctx.deps.user_message)
+    if skill_name is None:
+        return
+    if skill_name and not ctx.deps.fast_deps.skill_bundle:
+        await slow_attach_skill_to_fast(ctx, skill_name)
+
+    if not ctx.deps.fast_deps.retrieval_block.strip():
+        await slow_set_fast_retrieval(ctx, _compact_voice_retrieval(ctx.deps.user_message))
+
+
 @slow_agent.tool
 async def list_skills(ctx: RunContext[SlowThinkDeps]) -> list[str]:
     """列出所有可用 Skill 名称。"""
@@ -227,6 +303,7 @@ async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) 
         started_at=started_at,
         text_len=len(system_text),
     )
+    await _auto_complete_voice_mutations(ctx)
     return "injected to fast"
 
 
