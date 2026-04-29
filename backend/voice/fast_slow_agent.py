@@ -31,6 +31,14 @@ logger = logging.getLogger("voice.fast_slow_agent")
 
 MIN_SILENCE_BEFORE_KICKING_MS: int = int(os.getenv("FAST_SLOW_MIN_SILENCE_MS", "400"))
 FAST_FILLER_MAX_COUNT: int = int(os.getenv("FAST_SLOW_FILLER_MAX_COUNT", "1"))
+SLOW_V1_STREAM_MAX_TOKENS: int = int(os.getenv("SLOW_V1_STREAM_MAX_TOKENS", "200"))
+MERGED_DECISION_DRAIN_TIMEOUT_S: float = float(
+    os.getenv("MERGED_DECISION_DRAIN_TIMEOUT_S", "0.2")
+)
+FILLER_GRACE_AFTER_SLOW_S: float = float(os.getenv("FILLER_GRACE_AFTER_SLOW_S", "2.0"))
+FAST_FILLER_LLM_TIMEOUT_S: float = float(os.getenv("FAST_FILLER_LLM_TIMEOUT_S", "2.0"))
+FAST_FILLER_FALLBACK = "我在这里听你说"
+SLOW_V1_EMPTY_FALLBACK = "嗯，我在这儿听着，慢慢说。"
 
 FILLER_PROMPT = (
     "你是一个中文情绪陪伴助手。"
@@ -224,8 +232,36 @@ class FastSlowAgent(Agent):
             self._maybe_filler(turn_ctx, session_id, turn_id)
         )
 
-        await filler_timer_task
         await slow_v1_task
+        if self._slow_first_token_emitted and not filler_timer_task.done():
+            try:
+                await asyncio.wait_for(
+                    asyncio.shield(filler_timer_task),
+                    timeout=FILLER_GRACE_AFTER_SLOW_S,
+                )
+            except TimeoutError:
+                filler_timer_task.cancel()
+                logger.info(
+                    "filler_cancelled_after_slow",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "filler",
+                        "timeout_s": FILLER_GRACE_AFTER_SLOW_S,
+                    },
+                )
+        else:
+            try:
+                await filler_timer_task
+            except asyncio.CancelledError:
+                logger.info(
+                    "filler_cancelled_after_slow",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "filler",
+                    },
+                )
 
         path = await self._run_dp_continue_and_v2(
             turn_ctx, recent_ctx, decision_task, session_id, turn_id
@@ -398,49 +434,56 @@ class FastSlowAgent(Agent):
 
         self._turn_filler_count += 1
         started_at = time.monotonic()
-        filler_text_fut: asyncio.Future[str] = asyncio.get_event_loop().create_future()
 
-        async def _fast_llm_reply() -> AsyncIterable[str]:
+        async def _collect_fast_filler() -> str:
             collected: list[str] = []
-            try:
-                stream = await self._fast_llm.chat.completions.create(
-                    model=self._fast_llm_model,
-                    messages=[
-                        {"role": "system", "content": FILLER_PROMPT},
-                        {
-                            "role": "user",
-                            "content": self._latest_user_message(turn_ctx),
-                        },
-                    ],
-                    stream=True,
-                    max_tokens=30,
-                )
-                async for chunk in stream:
-                    delta = chunk.choices[0].delta.content or ""
-                    if delta:
-                        collected.append(delta)
-                        yield delta
-                if not filler_text_fut.done():
-                    filler_text_fut.set_result("".join(collected))
-            except Exception as exc:
-                logger.warning(
-                    "filler_llm_failed",
-                    extra={
-                        "session_id": session_id,
-                        "turn_id": turn_id,
-                        "phase": "filler",
-                        "error": str(exc),
-                        "error_class": exc.__class__.__name__,
+            stream = await self._fast_llm.chat.completions.create(
+                model=self._fast_llm_model,
+                messages=[
+                    {"role": "system", "content": FILLER_PROMPT},
+                    {
+                        "role": "user",
+                        "content": self._latest_user_message(turn_ctx),
                     },
-                    exc_info=True,
-                )
-                if not filler_text_fut.done():
-                    filler_text_fut.set_exception(exc)
+                ],
+                stream=True,
+                max_tokens=30,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    collected.append(delta)
+            return "".join(collected).strip()
 
         try:
-            self.session.say(_fast_llm_reply(), add_to_chat_ctx=False)
-            filler_text = await filler_text_fut
-        except Exception:
+            filler_text = await asyncio.wait_for(
+                _collect_fast_filler(),
+                timeout=FAST_FILLER_LLM_TIMEOUT_S,
+            )
+        except TimeoutError:
+            filler_text = FAST_FILLER_FALLBACK
+            logger.warning(
+                "filler_llm_timeout_fallback",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "filler",
+                    "timeout_s": FAST_FILLER_LLM_TIMEOUT_S,
+                    "fallback_text": filler_text,
+                },
+            )
+        except Exception as exc:
+            logger.warning(
+                "filler_llm_failed",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "filler",
+                    "error": str(exc),
+                    "error_class": exc.__class__.__name__,
+                },
+                exc_info=True,
+            )
             _log_stage_f_exit("llm_failed")
             return
 
@@ -457,6 +500,7 @@ class FastSlowAgent(Agent):
             return
 
         latency_ms = round((time.monotonic() - started_at) * 1000)
+        self.session.say(filler_text, add_to_chat_ctx=False)
         logger.info(
             "fast_filler_sent",
             extra={
@@ -535,7 +579,27 @@ class FastSlowAgent(Agent):
             turn_ctx=turn_ctx,
             session_id=session_id,
             turn_id=turn_id,
+            max_tokens=SLOW_V1_STREAM_MAX_TOKENS,
         )
+        if not reply.text.strip():
+            retry_text = await self._retry_empty_slow_v1(
+                messages=messages,
+                model=self._slow_llm_model,
+                session_id=session_id,
+                turn_id=turn_id,
+            )
+            self._speak_phase_text(
+                turn_ctx,
+                retry_text,
+                phase="slow_v1",
+                session_id=session_id,
+                turn_id=turn_id,
+            )
+            reply = StreamedReply(
+                text=retry_text,
+                first_token_ms=reply.first_token_ms,
+                latency_ms=round((time.monotonic() - stage_g_started_at) * 1000),
+            )
         self._slow_v1_text = reply.text
         logger.info(
             "slow_v1_completed",
@@ -623,7 +687,20 @@ class FastSlowAgent(Agent):
             )
             if not decision_task.done():
                 try:
-                    await decision_task
+                    await asyncio.wait_for(
+                        asyncio.shield(decision_task),
+                        timeout=MERGED_DECISION_DRAIN_TIMEOUT_S,
+                    )
+                except TimeoutError:
+                    logger.info(
+                        "merged_decision_drain_timeout",
+                        extra={
+                            "session_id": session_id,
+                            "turn_id": turn_id,
+                            "phase": "decision",
+                            "timeout_s": MERGED_DECISION_DRAIN_TIMEOUT_S,
+                        },
+                    )
                 except Exception as exc:
                     logger.warning(
                         "merged_decision_drain_failed",
@@ -823,6 +900,7 @@ class FastSlowAgent(Agent):
         turn_ctx: ChatContext,
         session_id: str,
         turn_id: str,
+        max_tokens: int | None = None,
     ) -> StreamedReply:
         logger.info(
             f"{phase}_streaming_start",
@@ -831,6 +909,7 @@ class FastSlowAgent(Agent):
                 "turn_id": turn_id,
                 "phase": phase,
                 "model": model,
+                "max_tokens": max_tokens,
             },
         )
         started_at = time.monotonic()
@@ -842,11 +921,14 @@ class FastSlowAgent(Agent):
             nonlocal first_token_ms, logged_delta_shape
             collected: list[str] = []
             try:
-                stream = await self._slow_client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    stream=True,
-                )
+                create_kwargs: dict[str, Any] = {
+                    "model": model,
+                    "messages": messages,
+                    "stream": True,
+                }
+                if max_tokens is not None:
+                    create_kwargs["max_tokens"] = max_tokens
+                stream = await self._slow_client.chat.completions.create(**create_kwargs)
                 async for chunk in stream:
                     d = chunk.choices[0].delta
                     if not logged_delta_shape:
@@ -934,6 +1016,137 @@ class FastSlowAgent(Agent):
             self._speech_meta[speech_id]["text_len"] = len(text)
 
         return StreamedReply(text=text, first_token_ms=first_token_ms, latency_ms=latency_ms)
+
+    async def _retry_empty_slow_v1(
+        self,
+        *,
+        messages: list[dict],
+        model: str,
+        session_id: str,
+        turn_id: str,
+    ) -> str:
+        logger.warning(
+            "[STAGE_K] slow_v1_empty_retry",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "slow_v1_retry",
+                "model": model,
+                "attempt": 1,
+                "outcome": "started",
+            },
+        )
+        retry_text = ""
+        retry_started_at = time.monotonic()
+        try:
+            retry_resp = await self._slow_client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=False,
+                max_tokens=200,
+            )
+            retry_text = self._extract_message_text(retry_resp)
+            logger.info(
+                "[STAGE_K] slow_v1_empty_retry_result",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "slow_v1_retry",
+                    "model": model,
+                    "attempt": 1,
+                    "outcome": "recovered" if retry_text else "empty",
+                    "retry_chars": len(retry_text),
+                    "latency_ms": round((time.monotonic() - retry_started_at) * 1000),
+                },
+            )
+        except Exception as exc:
+            logger.error(
+                "[STAGE_K] slow_v1_retry_failed",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "slow_v1_retry",
+                    "model": model,
+                    "attempt": 1,
+                    "outcome": "failed",
+                    "error": str(exc),
+                    "error_class": exc.__class__.__name__,
+                    "latency_ms": round((time.monotonic() - retry_started_at) * 1000),
+                },
+                exc_info=True,
+            )
+
+        if retry_text:
+            return retry_text
+
+        logger.warning(
+            "[STAGE_K] slow_v1_fallback_used",
+            extra={
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": "slow_v1_retry",
+                "model": model,
+                "attempt": 1,
+                "outcome": "fallback_used",
+                "fallback_text": SLOW_V1_EMPTY_FALLBACK,
+                "fallback_chars": len(SLOW_V1_EMPTY_FALLBACK),
+            },
+        )
+        return SLOW_V1_EMPTY_FALLBACK
+
+    def _speak_phase_text(
+        self,
+        turn_ctx: ChatContext,
+        text: str,
+        *,
+        phase: str,
+        session_id: str,
+        turn_id: str,
+    ) -> None:
+        if not text:
+            return
+        handle = self.session.say(text, add_to_chat_ctx=False)
+        if phase == "slow_v1":
+            self._slow_first_token_emitted = True
+        speech_id = getattr(handle, "id", "")
+        if speech_id:
+            self._speech_meta[speech_id] = {
+                "session_id": session_id,
+                "turn_id": turn_id,
+                "phase": phase,
+                "text_len": len(text),
+            }
+        self._write_back_assistant_message(turn_ctx, text)
+
+    @staticmethod
+    def _extract_message_text(response: Any) -> str:
+        choices = (
+            response.get("choices", [])
+            if isinstance(response, dict)
+            else getattr(response, "choices", [])
+        )
+        if not choices:
+            return ""
+        first_choice = choices[0]
+        message = (
+            first_choice.get("message", {})
+            if isinstance(first_choice, dict)
+            else getattr(first_choice, "message", None)
+        )
+        content = (
+            message.get("content", "")
+            if isinstance(message, dict)
+            else getattr(message, "content", "")
+        )
+        if not content:
+            content = (
+                message.get("reasoning_content", "")
+                if isinstance(message, dict)
+                else getattr(message, "reasoning_content", "")
+            )
+        if isinstance(content, list):
+            return "".join(str(item) for item in content).strip()
+        return str(content or "").strip()
 
     def _compose_slow_v2_system_prompt(
         self, skill_content: str, retrieved: str
