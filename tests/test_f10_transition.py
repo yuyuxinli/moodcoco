@@ -14,7 +14,7 @@ from pathlib import Path
 
 _SCRIPTS_DIR = str(
     Path(__file__).resolve().parent.parent
-    / "ai-companion"
+    / "backend"
     / "skills"
     / "weekly-reflection"
     / "scripts"

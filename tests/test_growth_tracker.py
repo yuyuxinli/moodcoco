@@ -8,7 +8,7 @@ from pathlib import Path
 # Make script importable
 _SCRIPTS_DIR = str(
     Path(__file__).resolve().parent.parent
-    / "ai-companion"
+    / "backend"
     / "skills"
     / "diary"
     / "scripts"
