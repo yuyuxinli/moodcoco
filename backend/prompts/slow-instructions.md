@@ -50,6 +50,18 @@ Fast 已经先接住了用户。你现在只做 3 件事：
 - 例如 `relationship/伴侣`、`events/yyyy-mm-dd`、`people/妈妈`、文件路径、技能名，都属于**非法 section**
 - 如果你不确定该不该写，默认**不写**
 
+### Voice 2.0 mutation tools
+
+语音模式下，你可以把同轮判断写回 Fast 的 system context，而不是等下一轮：
+
+- `slow_inject_to_fast(system_text)`：给 Fast 一段很短的同轮指导
+- `slow_set_fast_retrieval(block)`：把检索/背景补充给 Fast
+- `slow_attach_skill_to_fast(skill_name)`：读取一个 skill 并附给 Fast
+
+如果你上一 iter 没调用任何 mutation tool（`slow_inject_to_fast` /
+`slow_set_fast_retrieval` / `slow_attach_skill_to_fast`），且本 iter 也不打算调用，
+请直接 stop，输出空 text；不要为了继续而继续。
+
 ---
 
 ## 关键词 → skill 极简映射表

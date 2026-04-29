@@ -9,14 +9,19 @@ Agent loop：读 Skill → 写记忆 → 必要时多轮迭代，直到产出**�
 
 from __future__ import annotations
 
+import logging
 import os
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic_ai import Agent, RunContext
 
 from backend.llm_provider import PROJECT_ROOT, create_agent_model, load_prompt
+
+logger = logging.getLogger("backend.slow")
 
 
 def _resolve_skills_dir() -> Path:
@@ -44,6 +49,11 @@ class SlowThinkDeps:
     user_message: str
     fast_reply_text: str = ""  # 同轮 fast-think 回复，用于避免复读
     tool_call_history: list[str] = field(default_factory=list)
+    fast_deps: Any | None = None
+    reasoning_trail: list[str] = field(default_factory=list)
+    search_cache: dict[str, str] = field(default_factory=dict)
+    pending_actions: list[dict] = field(default_factory=list)
+    mutation_count_this_iter: int = 0
 
 
 SLOW_SYSTEM_PROMPT = "\n\n".join(
@@ -77,15 +87,48 @@ async def inject_context(ctx: RunContext[SlowThinkDeps]) -> str:
     return "\n\n".join(parts)
 
 
+def _turn_id() -> str:
+    try:
+        from backend.voice.plugins._context import voice_turn_ctx
+
+        return voice_turn_ctx.get() or "unknown"
+    except (ImportError, LookupError, RuntimeError):
+        return "unknown"
+
+
+def _log_slow_tool_call(
+    ctx: RunContext[SlowThinkDeps],
+    *,
+    tool: str,
+    started_at: float,
+    text_len: int = 0,
+) -> None:
+    logger.info(
+        "slow_tool_call",
+        extra={
+            "session_id": ctx.deps.session_id,
+            "turn_id": _turn_id(),
+            "tool": tool,
+            "text_len": text_len,
+            "latency_ms": round((time.monotonic() - started_at) * 1000),
+            "mutations_made": ctx.deps.mutation_count_this_iter,
+        },
+    )
+
+
 @slow_agent.tool
 async def list_skills(ctx: RunContext[SlowThinkDeps]) -> list[str]:
     """列出所有可用 Skill 名称。"""
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append("list_skills")
     if not SKILLS_DIR.exists():
+        _log_slow_tool_call(ctx, tool="list_skills", started_at=started_at)
         return []
-    return sorted(
+    skills = sorted(
         p.name for p in SKILLS_DIR.iterdir() if p.is_dir() and (p / "SKILL.md").exists()
     )
+    _log_slow_tool_call(ctx, tool="list_skills", started_at=started_at)
+    return skills
 
 
 @slow_agent.tool
@@ -95,14 +138,18 @@ async def read_skill(ctx: RunContext[SlowThinkDeps], skill_name: str) -> str:
     Args:
         skill_name: skill 目录名，如 "diary"、"breathing-ground"、"relationship-guide"。
     """
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append(f"read_skill({skill_name})")
     skill_path = SKILLS_DIR / skill_name / "SKILL.md"
     if not skill_path.exists():
         available = ", ".join(
             p.name for p in SKILLS_DIR.iterdir() if p.is_dir()
         )
+        _log_slow_tool_call(ctx, tool="read_skill", started_at=started_at)
         return f"Skill not found: {skill_name}. Available: {available}"
-    return skill_path.read_text(encoding="utf-8")
+    content = skill_path.read_text(encoding="utf-8")
+    _log_slow_tool_call(ctx, tool="read_skill", started_at=started_at, text_len=len(content))
+    return content
 
 
 @slow_agent.tool
@@ -118,9 +165,99 @@ async def write_memory(
             "## 核心信念变化轨迹"；如不存在会自动创建。
         content: 要追加的 Markdown 内容（建议一行 bullet，含日期标签）。
     """
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append(f"write_memory({section})")
     _append_to_memory_section(section, content, ctx.deps.session_id)
+    _log_slow_tool_call(ctx, tool="write_memory", started_at=started_at, text_len=len(content))
     return f"written to {section}"
+
+
+@slow_agent.tool
+async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) -> str:
+    """Inject short same-turn system guidance into the voice Fast agent."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_inject_to_fast")
+    if ctx.deps.fast_deps is None:
+        ctx.deps.mutation_count_this_iter += 1
+        _log_slow_tool_call(
+            ctx,
+            tool="slow_inject_to_fast",
+            started_at=started_at,
+            text_len=len(system_text),
+        )
+        return "skipped: fast_deps unavailable"
+    ctx.deps.fast_deps.dynamic_inject.append(system_text)
+    ctx.deps.reasoning_trail.append(f"inject:{system_text[:80]}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_inject_to_fast",
+        started_at=started_at,
+        text_len=len(system_text),
+    )
+    return "injected to fast"
+
+
+@slow_agent.tool
+async def slow_set_fast_retrieval(ctx: RunContext[SlowThinkDeps], block: str) -> str:
+    """Replace the voice Fast agent's same-turn retrieval block."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_set_fast_retrieval")
+    if ctx.deps.fast_deps is None:
+        ctx.deps.mutation_count_this_iter += 1
+        _log_slow_tool_call(
+            ctx,
+            tool="slow_set_fast_retrieval",
+            started_at=started_at,
+            text_len=len(block),
+        )
+        return "skipped: fast_deps unavailable"
+    ctx.deps.fast_deps.retrieval_block = block
+    ctx.deps.search_cache[ctx.deps.user_message] = block
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_set_fast_retrieval",
+        started_at=started_at,
+        text_len=len(block),
+    )
+    return "retrieval block set"
+
+
+@slow_agent.tool
+async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: str) -> str:
+    """Read one Skill and attach its content to the voice Fast agent."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append(f"slow_attach_skill_to_fast({skill_name})")
+    skill_text = await read_skill(ctx, skill_name)
+    if skill_text.startswith("Skill not found:"):
+        ctx.deps.mutation_count_this_iter += 1
+        _log_slow_tool_call(
+            ctx,
+            tool="slow_attach_skill_to_fast",
+            started_at=started_at,
+            text_len=len(skill_text),
+        )
+        return skill_text
+    if ctx.deps.fast_deps is None:
+        ctx.deps.mutation_count_this_iter += 1
+        _log_slow_tool_call(
+            ctx,
+            tool="slow_attach_skill_to_fast",
+            started_at=started_at,
+            text_len=len(skill_text),
+        )
+        return "skipped: fast_deps unavailable"
+    ctx.deps.fast_deps.skill_bundle.append(skill_text)
+    ctx.deps.reasoning_trail.append(f"skill:{skill_name}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_attach_skill_to_fast",
+        started_at=started_at,
+        text_len=len(skill_text),
+    )
+    return f"attached skill to fast: {skill_name}"
 
 
 def _append_to_memory_section(section: str, content: str, session_id: str) -> None:
