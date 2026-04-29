@@ -26,11 +26,14 @@ import logging
 import os
 from typing import Any
 
-from livekit.agents import AgentSession, JobContext
+from livekit.agents import AgentSession, JobContext, stt as _agent_stt
+from livekit.plugins import silero as _silero
+from openai import AsyncOpenAI
 
 from backend.voice.decisions import continue_decider as _continue_decider_mod
 from backend.voice.decisions import merged_decision as _merged_decision_mod
 from backend.voice.fast_slow_agent import FastSlowAgent
+from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 from backend.voice.plugins.minimax_tts import MinimaxTTSPlugin
 from backend.voice.plugins.xfyun_stt import XfyunSTTPlugin
 from backend.voice.skill_router import SJTUSkillRouter
@@ -50,7 +53,7 @@ _DEFAULT_INSTRUCTIONS = (
 
 
 def _build_fast_llm() -> Any:
-    """Build the Doubao lite LLM client used for filler + decisions.
+    """Build the Doubao lite LiveKit LLM client.
 
     Returns:
         ``livekit.plugins.openai.LLM`` configured with Doubao base URL.
@@ -69,7 +72,7 @@ def _build_fast_llm() -> Any:
 
 
 def _build_slow_llm() -> Any:
-    """Build the Minimax m2.7 LLM client used for slow_v1 / slow_v2.
+    """Build the Minimax m2.7 LiveKit LLM client.
 
     Returns:
         ``livekit.plugins.openai.LLM`` configured with OpenRouter base URL.
@@ -85,6 +88,22 @@ def _build_slow_llm() -> Any:
     base_url = os.environ.get("OPENAI_BASE_URL", _DEFAULT_OPENROUTER_BASE_URL)
     model = os.environ.get("OPENAI_MODEL", _DEFAULT_SLOW_MODEL)
     return lk_openai.LLM(model=model, base_url=base_url, api_key=api_key)
+
+
+def _build_fast_client() -> AsyncOpenAI:
+    api_key = os.environ.get("DOUBAO_API_KEY")
+    if not api_key:
+        raise ValueError("DOUBAO_API_KEY env var is required for fast LLM")
+    base_url = os.environ.get("DOUBAO_BASE_URL", _DEFAULT_DOUBAO_BASE_URL)
+    return AsyncOpenAI(base_url=base_url, api_key=api_key)
+
+
+def _build_slow_client() -> AsyncOpenAI:
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError("OPENAI_API_KEY env var is required for slow LLM")
+    base_url = os.environ.get("OPENAI_BASE_URL", _DEFAULT_OPENROUTER_BASE_URL)
+    return AsyncOpenAI(base_url=base_url, api_key=api_key)
 
 
 async def voice_entrypoint(ctx: JobContext) -> None:
@@ -104,24 +123,32 @@ async def voice_entrypoint(ctx: JobContext) -> None:
 
     try:
         await ctx.connect()
+        voice_session_ctx.set(room_name)
+        voice_turn_ctx.set(None)
         logger.info(
             "voice_entrypoint_connected",
             extra={"session_id": room_name, "room_name": room_name},
         )
 
-        stt_plugin = XfyunSTTPlugin()
+        # XfyunSTTPlugin is file-based; LiveKit 1.5 requires streaming STT
+        # to detect turn boundaries. Wrap with VAD + StreamAdapter.
+        vad = _silero.VAD.load()
+        stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
         tts_plugin = MinimaxTTSPlugin()
-        fast_llm = _build_fast_llm()
+        fast_client = _build_fast_client()
         slow_llm = _build_slow_llm()
+        slow_client = _build_slow_client()
         skill_router = SJTUSkillRouter()
 
         agent = FastSlowAgent(
             instructions=_DEFAULT_INSTRUCTIONS,
-            fast_llm=fast_llm,
+            fast_llm=fast_client,
             slow_llm=slow_llm,
+            slow_llm_model=os.environ.get("OPENAI_MODEL", _DEFAULT_SLOW_MODEL),
             merged_decision_fn=_merged_decision_mod.decide,
             continue_decider_fn=_continue_decider_mod.should_continue,
             skill_router=skill_router,
+            slow_client=slow_client,
         )
 
         session = AgentSession(
