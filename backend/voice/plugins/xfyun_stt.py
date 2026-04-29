@@ -10,11 +10,13 @@ pool via asyncio.to_thread() so the event loop is never stalled (OQ-11).
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 import re
 import tempfile
 import time
+import uuid
 
 from livekit.agents import APIConnectionError
 from livekit.agents.stt import (
@@ -180,7 +182,8 @@ class XfyunSTTPlugin(STT):
                 LiveKit base class retry logic triggers correctly.
         """
         session_id = voice_session_ctx.get()
-        turn_id = voice_turn_ctx.get()
+        turn_id = voice_turn_ctx.get() or uuid.uuid4().hex[:8]
+        voice_turn_ctx.set(turn_id)
 
         # Measure audio duration for logging.
         combined = combine_frames(buffer) if isinstance(buffer, list) else buffer
@@ -192,6 +195,7 @@ class XfyunSTTPlugin(STT):
             extra={
                 "session_id": session_id,
                 "turn_id": turn_id,
+                "phase": "stt",
                 "audio_duration_s": round(audio_duration_s, 3),
             },
         )
@@ -226,6 +230,7 @@ class XfyunSTTPlugin(STT):
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
+                        "phase": "stt",
                         "code": code,
                         "xfyun_message": message,
                         "latency_ms": latency_ms,
@@ -242,7 +247,9 @@ class XfyunSTTPlugin(STT):
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
+                        "phase": "stt",
                         "error": message,
+                        "error_class": "XfyunSTTAuthError",
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
@@ -255,7 +262,9 @@ class XfyunSTTPlugin(STT):
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
+                        "phase": "stt",
                         "error": message,
+                        "error_class": "XfyunSTTTimeoutError",
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
@@ -268,7 +277,9 @@ class XfyunSTTPlugin(STT):
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
+                        "phase": "stt",
                         "error": message,
+                        "error_class": "XfyunSTTRateLimitError",
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
@@ -282,7 +293,9 @@ class XfyunSTTPlugin(STT):
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
+                        "phase": "stt",
                         "error": message,
+                        "error_class": "XfyunSTTNetworkError",
                         "latency_ms": latency_ms,
                     },
                     exc_info=True,
@@ -296,8 +309,18 @@ class XfyunSTTPlugin(STT):
             if tmp_path is not None and os.path.exists(tmp_path):
                 try:
                     os.unlink(tmp_path)
-                except OSError:
-                    pass
+                except OSError as exc:
+                    logger.warning(
+                        "xfyun_stt_tempfile_cleanup_failed",
+                        extra={
+                            "session_id": session_id,
+                            "turn_id": turn_id,
+                            "phase": "stt",
+                            "error": str(exc),
+                            "error_class": exc.__class__.__name__,
+                        },
+                        exc_info=True,
+                    )
 
         latency_ms = round((time.monotonic() - t_start) * 1000)
 
@@ -307,15 +330,18 @@ class XfyunSTTPlugin(STT):
                 extra={
                     "session_id": session_id,
                     "turn_id": turn_id,
+                    "phase": "stt",
                     "latency_ms": latency_ms,
                 },
             )
         else:
             logger.info(
-                "xfyun_stt_recognize_done",
+                "stt_transcript_final",
                 extra={
                     "session_id": session_id,
                     "turn_id": turn_id,
+                    "phase": "stt",
+                    "transcript_text": result_text,
                     "text_len": len(result_text),
                     "latency_ms": latency_ms,
                 },
@@ -336,19 +362,51 @@ class XfyunSTTPlugin(STT):
         """No persistent connections to close (stateless per-recognize)."""
 
     def _recognize_with_vendor_errors(self, tmp_path: str) -> str:
-        """Call vendored recognizer and recover its swallowed non-zero code."""
+        """Call vendored recognizer and recover its swallowed non-zero code.
+
+        Also captures every base64-decoded wpgs frame and re-constructs the
+        full transcript respecting ``pgs="apd"`` (append) and ``pgs="rpl"``
+        (replace ``rg=[start,end]``) — vendor's ``on_message`` ignores ``pgs``
+        and overwrites ``final_result`` on every frame, so the very last
+        ``apd`` frame (often a trailing punctuation) silently truncates the
+        whole transcript to a single character.  We rebuild the text below.
+        """
         vendor_logger = logging.getLogger(
             "backend.voice._vendor.psy.stt.speech_to_text_xfyun_service"
         )
         handler = _XfyunErrorCaptureHandler()
         vendor_logger.addHandler(handler)
+
+        from backend.voice._vendor.psy.stt import (
+            speech_to_text_xfyun_service as _vendor_mod,
+        )
+
+        captured_frames: list[dict] = []
+        orig_b64decode = _vendor_mod.base64.b64decode
+
+        def _capture_b64decode(data, *args, **kwargs):
+            decoded = orig_b64decode(data, *args, **kwargs)
+            try:
+                payload = json.loads(decoded.decode("utf-8") if isinstance(decoded, bytes) else decoded)
+            except Exception:
+                payload = None
+            if isinstance(payload, dict) and "ws" in payload:
+                captured_frames.append(payload)
+            return decoded
+
+        _vendor_mod.base64.b64decode = _capture_b64decode
         try:
             result = self._asr.recognize(tmp_path)
         finally:
+            _vendor_mod.base64.b64decode = orig_b64decode
             vendor_logger.removeHandler(handler)
 
-        if result == "" and handler.error is not None:
+        if handler.error is not None:
             raise handler.error
+
+        rebuilt = _rebuild_wpgs_transcript(captured_frames)
+        if rebuilt:
+            return rebuilt
         return result
 
 
@@ -361,6 +419,52 @@ _VENDOR_ERROR_RE = re.compile(r"code=(?P<code>-?\d+), message=(?P<message>.*)")
 _AUTH_ERROR_CODES = {10105, 10106, 10107, 10110, 11200}
 _RATE_LIMIT_ERROR_CODES = {10114, 10162}
 _TIMEOUT_ERROR_CODES = {10165}
+
+
+def _rebuild_wpgs_transcript(frames: list[dict]) -> str:
+    """Reconstruct full transcript from Xfyun ``wpgs`` frames respecting ``pgs``.
+
+    Each frame's ``ws[].cw[].w`` are the words for that frame.  ``pgs="rpl"``
+    with ``rg=[start,end]`` means replace previously emitted segments
+    ``[start-1, end-1]`` (1-indexed inclusive); ``pgs="apd"`` (or missing)
+    means append.  Vendor's ``on_message`` ignores this and overwrites
+    ``final_result`` every frame, so a trailing ``apd`` punctuation frame
+    truncates the entire transcript.
+
+    Args:
+        frames: List of decoded result payloads in the order received.
+
+    Returns:
+        Rebuilt transcript string. Empty if no frames captured.
+    """
+    segments: list[str] = []
+
+    def _frame_segments(frame: dict) -> list[str]:
+        out: list[str] = []
+        for ws_item in frame.get("ws", []):
+            chunk = "".join(
+                cw.get("w", "")
+                for cw in ws_item.get("cw", [])
+                if cw.get("w")
+            )
+            if chunk:
+                out.append(chunk)
+        return out
+
+    for frame in frames:
+        new_segs = _frame_segments(frame)
+        if not new_segs:
+            continue
+        pgs = frame.get("pgs", "apd")
+        rg = frame.get("rg")
+        if pgs == "rpl" and isinstance(rg, list) and len(rg) == 2:
+            start = max(rg[0] - 1, 0)
+            end = max(rg[1], start)
+            segments[start:end] = new_segs
+        else:
+            segments.extend(new_segs)
+
+    return "".join(segments)
 
 
 class _XfyunErrorCaptureHandler(logging.Handler):
