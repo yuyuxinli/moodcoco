@@ -129,6 +129,9 @@ class FastSlowAgent(Agent):
             "reasoning_trail": [],
             "search_cache": {},
             "pending_actions": [],
+            "carryover_inject": [],
+            "carryover_skills": [],
+            "carryover_retrieval": "",
         }
 
     async def stt_node(
@@ -239,7 +242,26 @@ class FastSlowAgent(Agent):
             memory_text=memory_text,
             slow_guidance=slow_guidance,
             voice_session=self.session,
+            skill_bundle=list(self._slow_state["carryover_skills"]),
+            retrieval_block=str(self._slow_state["carryover_retrieval"]),
+            dynamic_inject=list(self._slow_state["carryover_inject"]),
         )
+        if (
+            fast_deps.dynamic_inject
+            or fast_deps.skill_bundle
+            or fast_deps.retrieval_block.strip()
+        ):
+            logger.info(
+                "[STAGE_E] cross_turn_carryover",
+                extra={
+                    "session_id": session_id,
+                    "turn_id": turn_id,
+                    "phase": "fast",
+                    "inject_count": len(fast_deps.dynamic_inject),
+                    "skills_count": len(fast_deps.skill_bundle),
+                    "retrieval_len": len(fast_deps.retrieval_block),
+                },
+            )
         slow_deps = SlowThinkDeps(
             session_id=session_id,
             user_message=user_text,
@@ -248,6 +270,9 @@ class FastSlowAgent(Agent):
             reasoning_trail=self._slow_state["reasoning_trail"],
             search_cache=self._slow_state["search_cache"],
             pending_actions=self._slow_state["pending_actions"],
+            carryover_inject=self._slow_state["carryover_inject"],
+            carryover_skills=self._slow_state["carryover_skills"],
+            carryover_retrieval=str(self._slow_state["carryover_retrieval"]),
         )
 
         fast_task = asyncio.create_task(
@@ -286,9 +311,16 @@ class FastSlowAgent(Agent):
                 return
 
             self._slow_history = result.all_messages()
-            if slow_deps.mutation_count_this_iter == 0 and slow_deps.fast_deps is not None:
+            slow_called_tool = bool(slow_deps.tool_call_history)
+            if (
+                slow_deps.mutation_count_this_iter == 0
+                and not slow_called_tool
+                and slow_deps.fast_deps is not None
+            ):
                 fallback_hint = "Slow 本轮未发现需要额外展开的策略；Fast 继续轻量承接用户情绪。"
                 slow_deps.fast_deps.dynamic_inject.append(fallback_hint)
+                slow_deps.carryover_inject.append(fallback_hint)
+                del slow_deps.carryover_inject[:-3]
                 slow_deps.reasoning_trail.append("bridge_default_inject")
                 slow_deps.mutation_count_this_iter += 1
                 logger.info(
@@ -307,6 +339,17 @@ class FastSlowAgent(Agent):
             self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
             self._slow_state["search_cache"] = slow_deps.search_cache
             self._slow_state["pending_actions"] = slow_deps.pending_actions
+            if slow_deps.fast_deps is not None:
+                for injected in slow_deps.fast_deps.dynamic_inject:
+                    if injected not in slow_deps.carryover_inject:
+                        slow_deps.carryover_inject.append(injected)
+                for skill_text in slow_deps.fast_deps.skill_bundle:
+                    if skill_text not in slow_deps.carryover_skills:
+                        slow_deps.carryover_skills.append(skill_text)
+                slow_deps.carryover_retrieval = slow_deps.fast_deps.retrieval_block
+            self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
+            self._slow_state["carryover_skills"] = slow_deps.carryover_skills
+            self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval
             logger.info(
                 "slow_agent_run_completed",
                 extra={
