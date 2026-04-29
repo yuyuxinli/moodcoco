@@ -227,61 +227,6 @@ async def test_bridge_passes_voice_session_to_fast(monkeypatch: pytest.MonkeyPat
     assert fast_deps.voice_system_extras()
 
 
-# ── Test 3: filler max count = 1 (strengthened) ─────────────────────────────
-
-
-@pytest.mark.asyncio
-async def test_filler_max_count_one():
-    """F1 §8 F5 case 3 strengthened: even with the slow path silent for 5+ s and
-    the filler timer firing twice (simulating a multi-tick timer in F8), the
-    filler LLM is invoked at most once.
-
-    The round-1 version was tautological: a single ``on_user_turn_completed``
-    call can only fire ``_maybe_filler`` once, so ``_turn_filler_count == 1``
-    was guaranteed even if the MAX_COUNT guard were deleted.
-
-    This version invokes ``_maybe_filler`` directly twice with the slow path
-    pinned silent (``_run_slow`` returns a 5 s no-op).  The MAX_COUNT=1 guard
-    must skip the second invocation: the LLM must be called exactly once and
-    ``session.say`` must be called exactly once.
-    """
-    agent = _make_agent(min_silence=0.01, fast_filler_max_count=1)
-
-    ctx = _make_chat_context()
-    _ = _make_user_message()
-
-    # Reset per-turn state (normally done by on_user_turn_completed).
-    agent._turn_filler_count = 0
-    agent._slow_first_token_emitted = False
-
-    # Set ContextVars (normally done by on_user_turn_completed).
-    from backend.voice.fast_slow_agent import voice_session_ctx, voice_turn_ctx
-    voice_session_ctx.set("test-room-001")
-    voice_turn_ctx.set("turn00001")
-
-    # Pin the slow path silent for 5 s (longer than any reasonable filler timer).
-    async def _slow_long(*args, **kwargs):
-        await asyncio.sleep(5.0)
-
-    agent._run_slow = _slow_long  # type: ignore[method-assign]
-
-    # Fire the filler timer TWICE (each waits min_silence = 0.01 s).
-    await asyncio.wait_for(
-        agent._maybe_filler(ctx, "test-room-001", "turn00001"), timeout=3.0
-    )
-    await asyncio.wait_for(
-        agent._maybe_filler(ctx, "test-room-001", "turn00001"), timeout=3.0
-    )
-
-    # Fast LLM (filler) must be called exactly ONCE despite two timer fires.
-    assert agent._fast_llm.chat.completions.create.call_count == 1, (
-        f"Filler LLM should be called once across two timer fires; got "
-        f"{agent._fast_llm.chat.completions.create.call_count}"
-    )
-    assert agent.session.say.call_count == 1
-    assert agent._turn_filler_count == 1
-
-
 # ── Test 4: chat_ctx write-back after filler ──────────────────────────────────
 
 

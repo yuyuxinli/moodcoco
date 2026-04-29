@@ -28,10 +28,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from livekit.agents import StopResponse
 
-from backend.voice.decisions.continue_decider import ContinueDecision
-from backend.voice.decisions.merged_decision import MergedDecisionResult
-
-
 # ── Helpers (mirror test_fast_slow_basic.py for compatibility) ──────────────
 
 
