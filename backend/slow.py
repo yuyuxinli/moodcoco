@@ -19,7 +19,7 @@ from typing import Any
 
 from pydantic_ai import Agent, RunContext
 
-from backend.llm_provider import PROJECT_ROOT, create_agent_model, load_prompt
+from backend.llm_provider import PROJECT_ROOT, create_slow_model, load_prompt
 
 logger = logging.getLogger("backend.slow")
 
@@ -87,7 +87,7 @@ SLOW_SYSTEM_PROMPT = "\n\n".join(
 
 
 slow_agent: Agent[SlowThinkDeps, str] = Agent(
-    create_agent_model(),
+    create_slow_model(),
     deps_type=SlowThinkDeps,
     output_type=str,
     system_prompt=SLOW_SYSTEM_PROMPT,

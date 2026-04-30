@@ -161,6 +161,43 @@ async def test_bridge_fast_says_and_stops_livekit_reply(monkeypatch: pytest.Monk
     assert len(calls["slow"]) == 1
 
 
+@pytest.mark.asyncio
+async def test_bridge_does_not_fallback_when_failed_fast_already_spoke(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Voice Fast may fail final output validation after ai_message already spoke."""
+    import backend.fast as fast_mod
+    import backend.slow as slow_mod
+
+    async def _fake_fast_run(user_msg, *, deps, message_history=None):
+        deps.collected_tool_calls.append(
+            {
+                "name": "ai_message",
+                "args": {"messages": ["我听见你的委屈了。"], "needs_deep_analysis": True},
+            }
+        )
+        deps.voice_session.say("我听见你的委屈了。", add_to_chat_ctx=True)
+        raise RuntimeError("Exceeded maximum retries for output validation")
+
+    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+        return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
+
+    monkeypatch.setattr(fast_mod.fast_agent, "run", _fake_fast_run)
+    monkeypatch.setattr(slow_mod.slow_agent, "run", _fake_slow_run)
+
+    agent = _make_agent()
+
+    with pytest.raises(StopResponse):
+        await asyncio.wait_for(
+            agent.on_user_turn_completed(_make_chat_context(), _make_user_message()),
+            timeout=3.0,
+        )
+    await asyncio.sleep(0)
+
+    assert agent.session.say.call_count == 1
+    agent.session.say.assert_called_once_with("我听见你的委屈了。", add_to_chat_ctx=True)
+
+
 # ── Test 2: voice session is passed to Fast ───────────────────────────────────
 
 

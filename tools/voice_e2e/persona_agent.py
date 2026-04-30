@@ -23,6 +23,7 @@ import asyncio
 import audioop
 import contextlib
 import json
+import logging
 import os
 import signal
 import sys
@@ -36,6 +37,9 @@ from dotenv import load_dotenv
 from livekit import rtc
 from livekit.api import AccessToken, VideoGrants
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+logging.getLogger("dotenv.main").setLevel(logging.ERROR)
 
 DEFAULT_ROOM = "moodcoco-voice"
 DEFAULT_IDENTITY = "persona-yuyu"
@@ -171,10 +175,17 @@ def stt_xfyun_via_plugin(pcm_16k: bytes) -> str:
 
 async def call_persona_llm(history: list[dict]) -> str:
     """Doubao lite chat completion for persona's next utterance."""
-    api_key = os.environ["DOUBAO_API_KEY"]
-    base_url = os.environ.get("DOUBAO_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
-    # Use lite for speed; fall back to whatever DOUBAO_MODEL is set if user prefers.
-    model = os.environ.get("PERSONA_LLM_MODEL", "doubao-seed-2-0-lite-260215")
+    api_key = os.environ.get("DOUBAO_API_KEY") or os.environ["OPENAI_API_KEY"]
+    base_url = (
+        os.environ.get("DOUBAO_BASE_URL")
+        or os.environ.get("OPENAI_BASE_URL")
+        or "https://ark.cn-beijing.volces.com/api/v3"
+    )
+    model = (
+        os.environ.get("PERSONA_LLM_MODEL")
+        or os.environ.get("DOUBAO_MODEL")
+        or "doubao-seed-2-0-pro-260215"
+    )
 
     body = {
         "model": model,
@@ -265,7 +276,7 @@ async def run_persona(
     opening: str,
     max_turns: int,
 ) -> None:
-    load_dotenv("/Users/jianghongwei/Documents/moodcoco/.env")
+    load_dotenv(PROJECT_ROOT / ".env", override=False)
     lk_url = os.environ.get("LIVEKIT_URL", "ws://localhost:7880")
     token = _build_token(room_name=room_name, identity=identity)
 

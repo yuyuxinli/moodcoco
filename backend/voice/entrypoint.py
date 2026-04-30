@@ -129,7 +129,7 @@ async def voice_entrypoint(ctx: JobContext) -> None:
 
         # XfyunSTTPlugin is file-based; LiveKit 1.5 requires streaming STT
         # to detect turn boundaries. Wrap with VAD + StreamAdapter.
-        vad = _silero.VAD.load()
+        vad = _silero.VAD.load(min_silence_duration=1.2)
         stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
         tts_plugin = MinimaxTTSPlugin()
         slow_llm = _build_slow_llm()

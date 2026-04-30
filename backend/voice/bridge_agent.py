@@ -242,7 +242,7 @@ class VoiceBridgeAgent(Agent):
                         slow_deps.carryover_skills.append(skill_text)
                 slow_deps.carryover_retrieval = slow_deps.fast_deps.retrieval_block
             self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
-            self._slow_state["carryover_skills"] = slow_deps.carryover_skills
+            self._slow_state["carryover_skills"] = slow_deps.carryover_skills[-2:]
             self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval
             logger.info(
                 "slow_agent_run_completed",
@@ -262,30 +262,48 @@ class VoiceBridgeAgent(Agent):
             fast_result = await fast_task
         except Exception:
             latency_ms = round((time.monotonic() - started_at) * 1000)
-            logger.error(
-                "fast_agent_run_failed",
-                extra={
-                    "session_id": session_id,
-                    "turn_id": turn_id,
-                    "phase": "fast",
-                    "latency_ms": latency_ms,
-                },
-                exc_info=True,
+            already_spoke = any(
+                call.get("name") == "ai_message"
+                and (call.get("args") or {}).get("messages")
+                for call in fast_deps.collected_tool_calls
             )
-            try:
-                fallback = self.session.say("嗯，我在这儿听着，慢慢说。", add_to_chat_ctx=True)
-                if inspect.isawaitable(fallback):
-                    await fallback
-            except Exception:
+            if already_spoke:
                 logger.info(
-                    "fast_agent_fallback_say_failed",
+                    "fast_agent_run_completed",
                     extra={
                         "session_id": session_id,
                         "turn_id": turn_id,
                         "phase": "fast",
+                        "iter_used": len(self._fast_history),
+                        "latency_ms": latency_ms,
+                        "completed_after_voice_ai_message": True,
+                    },
+                )
+            else:
+                logger.error(
+                    "fast_agent_run_failed",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "fast",
+                        "latency_ms": latency_ms,
                     },
                     exc_info=True,
                 )
+                try:
+                    fallback = self.session.say("嗯，我在这儿听着，慢慢说。", add_to_chat_ctx=True)
+                    if inspect.isawaitable(fallback):
+                        await fallback
+                except Exception:
+                    logger.info(
+                        "fast_agent_fallback_say_failed",
+                        extra={
+                            "session_id": session_id,
+                            "turn_id": turn_id,
+                            "phase": "fast",
+                        },
+                        exc_info=True,
+                    )
         else:
             self._fast_history = fast_result.all_messages()
             latency_ms = round((time.monotonic() - started_at) * 1000)

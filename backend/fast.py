@@ -14,10 +14,14 @@ from typing import Any, TypeAlias
 
 from pydantic_ai import Agent, RunContext
 
-from backend.llm_provider import create_agent_model, load_prompt
+from backend.llm_provider import create_fast_model, load_prompt
 
 AiOptionItem: TypeAlias = str | dict[str, str]
 logger = logging.getLogger("backend.fast")
+
+
+class VoiceAiMessageDelivered(Exception):
+    """Raised to stop the Fast agent loop after voice ai_message speaks."""
 
 
 @dataclass
@@ -70,7 +74,7 @@ SYSTEM_PROMPT = "\n\n".join(
 
 
 fast_agent: Agent[FastThinkDeps, str] = Agent(
-    create_agent_model(),
+    create_fast_model(),
     deps_type=FastThinkDeps,
     system_prompt=SYSTEM_PROMPT,
     retries=0,
@@ -173,6 +177,8 @@ async def ai_message(
             },
         )
     _log_fast_tool_call(ctx, tool="ai_message", started_at=started_at, text_len=len(text))
+    if ctx.deps.voice_session is not None and text:
+        raise VoiceAiMessageDelivered("voice ai_message delivered")
     return "消息已发送"
 
 
