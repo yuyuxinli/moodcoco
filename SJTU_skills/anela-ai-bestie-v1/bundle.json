@@ -1,0 +1,294 @@
+{
+  "bundle_id": "anela-ai-bestie-v1",
+  "name": "Anela AI Bestie Bundle v1",
+  "version": "1.0.1",
+  "target": [
+    "openai-compatible-api",
+    "api-agent",
+    "embedded-bestie"
+  ],
+  "languages": {
+    "primary": [
+      "zh",
+      "en"
+    ],
+    "policy": "follow_user_language",
+    "english_localization": "native_bestie_tone_not_literal_translation"
+  },
+  "api": {
+    "protocol": "openai-compatible-chat-completions",
+    "env": {
+      "api_key": [
+        "EXPERT_EVAL_API_KEY",
+        "MINIMAX_API_KEY",
+        "ANELA_API_KEY",
+        "OPENAI_API_KEY",
+        "OPENROUTER_API_KEY"
+      ],
+      "base_url": [
+        "EXPERT_EVAL_BASE_URL",
+        "MINIMAX_BASE_URL",
+        "ANELA_BASE_URL",
+        "OPENAI_BASE_URL"
+      ],
+      "model": [
+        "EXPERT_EVAL_MODEL",
+        "MINIMAX_MODEL",
+        "ANELA_MODEL",
+        "OPENAI_MODEL"
+      ]
+    },
+    "defaults": {
+      "base_url": "https://api.minimaxi.com/v1",
+      "model": "MiniMax-M2.5",
+      "temperature": 0.7,
+      "max_tokens": 1400
+    }
+  },
+  "global_instructions": [
+    "AGENTS.md",
+    "ROUTING.md"
+  ],
+  "default_skill": "skills/ambient-presence/SKILL.md",
+  "mvp_skills": [
+    "ambient-presence",
+    "active-celebration",
+    "playful-attunement",
+    "relationship-memory",
+    "responsive-listening",
+    "emotion-labeling",
+    "vent-container",
+    "ground-and-regulate",
+    "reality-soft-check",
+    "agency-next-step",
+    "safety-and-crisis"
+  ],
+  "excluded_v1_skills": [
+    "ritual-checkin",
+    "rupture-repair",
+    "collaborative-untangling",
+    "identity-mirror",
+    "pattern-witness",
+    "social-bridge"
+  ],
+  "priority": {
+    "routed": [
+      "skills/safety-and-crisis/SKILL.md",
+      "skills/ground-and-regulate/SKILL.md",
+      "skills/relationship-memory/SKILL.md",
+      "skills/responsive-listening/SKILL.md",
+      "skills/emotion-labeling/SKILL.md",
+      "skills/vent-container/SKILL.md",
+      "skills/reality-soft-check/SKILL.md",
+      "skills/agency-next-step/SKILL.md",
+      "skills/active-celebration/SKILL.md",
+      "skills/ambient-presence/SKILL.md",
+      "skills/playful-attunement/SKILL.md"
+    ],
+    "notes": [
+      "safety-and-crisis overrides every other skill",
+      "ground-and-regulate overrides non-safety skills while high arousal is active",
+      "explicit memory governance must be handled before memory recall",
+      "emotional validation should precede reality checking or action planning",
+      "joy and casual chat must not be over-psychologized"
+    ]
+  },
+  "routing_spec": {
+    "emotion_intensity": {
+      "0": "no clear emotion",
+      "1": "light emotion or ordinary chat",
+      "2": "moderate emotion",
+      "3": "high arousal",
+      "4": "safety crisis"
+    },
+    "risk_levels": [
+      "none",
+      "low",
+      "medium",
+      "high"
+    ],
+    "actions": [
+      "respond",
+      "narrowing-question",
+      "safety-recheck",
+      "memory-confirmation",
+      "repair-then-reroute"
+    ],
+    "memory_actions": [
+      "none",
+      "propose_write",
+      "propose_update",
+      "propose_delete",
+      "do_not_store"
+    ],
+    "route_decision_schema": [
+      "risk_level",
+      "dominant_user_need",
+      "emotion_intensity",
+      "primary_skill",
+      "secondary_skills",
+      "memory_action",
+      "response_length",
+      "action",
+      "language",
+      "loop_phase",
+      "skill_status",
+      "handoff_from",
+      "handoff_to",
+      "safety_recheck_required",
+      "why_this_skill",
+      "exit_condition_to_check",
+      "next_skill_if_stable",
+      "next_skill_if_worse"
+    ],
+    "conflict_rules": [
+      "safety-and-crisis always wins",
+      "safety-and-crisis stays active until immediate danger is lower and real-world support/action is in place",
+      "ground-and-regulate wins over non-safety analysis/action while high arousal is active",
+      "ground-and-regulate stays active until the user can stay with one short exchange or safety overrides it",
+      "explicit memory governance is handled before ordinary conversation unless safety or high arousal overrides it",
+      "emotional holding precedes reality checking or action when the user is visibly hurt",
+      "if three or more non-safety skills appear equally plausible, use responsive-listening with narrowing-question"
+    ],
+    "closed_loop": {
+      "cycle": [
+        "pre-check",
+        "enter-or-maintain",
+        "execute-one-primary-skill",
+        "observe-next-user-turn",
+        "exit-or-handoff",
+        "record-route-state"
+      ],
+      "loop_phases": [
+        "enter",
+        "maintain",
+        "handoff"
+      ],
+      "skill_statuses": [
+        "started",
+        "maintained",
+        "exited",
+        "handoff"
+      ],
+      "state_fields": [
+        "previous_primary_skill",
+        "loop_phase",
+        "skill_status",
+        "handoff_from",
+        "handoff_to",
+        "exit_condition_to_check",
+        "next_skill_if_stable",
+        "next_skill_if_worse"
+      ]
+    },
+    "forbidden_transitions": [
+      "safety-and-crisis -> playful-attunement before risk is lower",
+      "safety-and-crisis -> active-celebration before risk is lower",
+      "ground-and-regulate -> long identity or reality analysis before arousal drops",
+      "vent-container -> revenge, harassment, or dehumanizing insults",
+      "reality-soft-check -> endless mind-reading analysis",
+      "agency-next-step -> agent decides a major life choice",
+      "relationship-memory -> automatic persistence without user-visible consent",
+      "any skill -> exclusive attachment promise"
+    ]
+  },
+  "handoff": {
+    "safety-and-crisis": {
+      "stay_until": "immediate risk is lower and real-world support or safety action is in place",
+      "must_not_handoff_to": [
+        "playful-attunement",
+        "active-celebration",
+        "ambient-presence"
+      ]
+    },
+    "ground-and-regulate": {
+      "handoff_when": "user can stay with one short exchange",
+      "next": [
+        "responsive-listening",
+        "reality-soft-check",
+        "agency-next-step"
+      ]
+    },
+    "relationship-memory": {
+      "handoff_when": "memory scope is confirmed or declined",
+      "next": [
+        "responsive-listening",
+        "active-celebration",
+        "ambient-presence"
+      ]
+    },
+    "responsive-listening": {
+      "next": [
+        "emotion-labeling",
+        "vent-container",
+        "reality-soft-check",
+        "agency-next-step"
+      ]
+    },
+    "emotion-labeling": {
+      "next": [
+        "responsive-listening",
+        "reality-soft-check",
+        "agency-next-step"
+      ]
+    },
+    "vent-container": {
+      "next": [
+        "reality-soft-check",
+        "agency-next-step",
+        "ground-and-regulate"
+      ]
+    },
+    "reality-soft-check": {
+      "next": [
+        "agency-next-step",
+        "responsive-listening"
+      ]
+    },
+    "agency-next-step": {
+      "next": [
+        "active-celebration",
+        "relationship-memory",
+        "responsive-listening"
+      ]
+    },
+    "active-celebration": {
+      "next": [
+        "relationship-memory",
+        "ambient-presence"
+      ]
+    },
+    "ambient-presence": {
+      "next": [
+        "playful-attunement",
+        "responsive-listening",
+        "agency-next-step"
+      ]
+    },
+    "playful-attunement": {
+      "next": [
+        "vent-container",
+        "responsive-listening",
+        "agency-next-step"
+      ]
+    }
+  },
+  "benchmark": {
+    "minimum_cases_per_skill": {
+      "zh": 2,
+      "en": 2
+    },
+    "required_mixed_language_cases": true,
+    "checks": [
+      "correct_primary_skill",
+      "higher_priority_signal_not_missed",
+      "not_too_many_skills",
+      "forbidden_transition_avoided",
+      "closed_loop_maintain_exit_handoff",
+      "bestie_tone",
+      "english_not_literal_translation",
+      "no_exclusive_attachment",
+      "crisis_suspends_ordinary_chat"
+    ]
+  }
+}

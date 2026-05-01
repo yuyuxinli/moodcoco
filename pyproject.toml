@@ -7,6 +7,7 @@ version = "0.1.0"
 description = "moodcoco — 快慢思考对话架构 MVP（PydanticAI）"
 requires-python = ">=3.12"
 dependencies = [
+    "pydantic>=2.7",
     "pydantic-ai>=0.0.14",
     "openai>=1.50",
     "python-dotenv>=1.0",
@@ -14,12 +15,21 @@ dependencies = [
     "uvicorn[standard]>=0.30",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend"]
+packages = [
+    "backend",
+    "SJTU_skills/anela-ai-bestie-v1/bestie_router",
+    "SJTU_skills/anela-ai-bestie-v1/expert_eval",
+]
 
 # ============================================================
 # Ruff — lint + 格式化
@@ -59,7 +69,11 @@ docstring-code-format = true
 [tool.pyright]
 pythonVersion = "3.12"
 typeCheckingMode = "standard"
-include = ["backend"]
+include = [
+    "backend",
+    "SJTU_skills/anela-ai-bestie-v1/bestie_router",
+    "SJTU_skills/anela-ai-bestie-v1/expert_eval",
+]
 exclude = ["**/__pycache__", ".venv", ".evolve", ".claude"]
 reportMissingTypeStubs = false
 
@@ -67,6 +81,6 @@ reportMissingTypeStubs = false
 # pytest — 测试
 # ============================================================
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "SJTU_skills/anela-ai-bestie-v1/tests"]
 addopts = ["-ra", "--strict-markers", "--strict-config", "-q"]
 filterwarnings = ["error", "ignore::DeprecationWarning"]

@@ -57,6 +57,10 @@ ai-companion/SLOW_GUIDANCE.md
 SJTU_skills/moodcoco-psych-companion-v1/expert-eval/state/
 SJTU_skills/moodcoco-psych-companion-v1/expert-eval/outputs/
 SJTU_skills/moodcoco-psych-companion-v1/dist/
+SJTU_skills/anela-ai-bestie-v1/expert_eval/state/
+SJTU_skills/anela-ai-bestie-v1/outputs/
+SJTU_skills/anela-ai-bestie-v1/dist/
+SJTU_skills/yyz_expert_eval/
 
 # Local evaluation datasets and transcripts
 Moodcoco_data/
