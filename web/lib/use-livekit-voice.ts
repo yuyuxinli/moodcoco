@@ -15,7 +15,7 @@ import {
 } from "./livekit";
 import type { VoiceError, VoiceErrorCode, VoiceState } from "./voice-types";
 
-const AGENT_AUDIO_TIMEOUT_MS = 8000;
+const AGENT_AUDIO_TIMEOUT_MS = 60000;
 const MOCK_STATES: ReadonlySet<string> = new Set(["idle", "recording", "processing", "speaking", "error"]);
 const MOCK_ERRORS: ReadonlySet<string> = new Set([
   "MIC_PERMISSION_DENIED", "TOKEN_FETCH_FAILED", "ROOM_CONNECT_FAILED",
@@ -69,6 +69,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
 
   const handleRef = useRef<VoiceRoomHandle | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+  const attachedAudioTracksRef = useRef<WeakSet<RemoteAudioTrack>>(new WeakSet());
   const stateRef = useRef<VoiceState>(mockInit.state);
   const isMockRef = useRef<boolean>(mockInit.isMock);
 
@@ -91,15 +92,40 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
     try { el.pause(); el.srcObject = null; } catch { /* best-effort */ }
   }, []);
 
-  const attachAgentAudio = useCallback((track: RemoteAudioTrack) => {
+  const ensureAgentAudioElement = useCallback(() => {
     if (!audioElRef.current) {
-      audioElRef.current = document.createElement("audio");
-      audioElRef.current.autoplay = true;
+      const el = document.createElement("audio");
+      el.autoplay = true;
+      el.controls = true;
+      el.playsInline = true;
+      el.style.position = "fixed";
+      el.style.right = "12px";
+      el.style.bottom = "12px";
+      el.style.width = "280px";
+      el.style.zIndex = "9999";
+      el.style.opacity = "0.9";
+      document.body.appendChild(el);
+      audioElRef.current = el;
     }
-    track.attach(audioElRef.current);
+    return audioElRef.current;
+  }, []);
+
+  const attachAgentAudio = useCallback((track: RemoteAudioTrack) => {
+    if (attachedAudioTracksRef.current.has(track)) return;
+    attachedAudioTracksRef.current.add(track);
+    const el = ensureAgentAudioElement();
+    track.attach(el);
+    const playResult = el.play();
+    if (playResult) {
+      playResult.catch((err) => {
+        console.warn("[voice] agent audio play blocked", {
+          error: err instanceof Error ? err.message : String(err), sessionId,
+        });
+      });
+    }
     console.info("[voice] agent audio attached", { sessionId });
     transitionTo("speaking", "agent_audio_subscribed");
-  }, [sessionId, transitionTo]);
+  }, [ensureAgentAudioElement, sessionId, transitionTo]);
 
   useEffect(() => {
     if (!mockInit.isMock) return;
@@ -115,6 +141,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
       return;
     }
     setError(null);
+    ensureAgentAudioElement();
 
     // 1. Token first — fail fast on backend errors before grabbing the mic.
     let tokenResp;
@@ -153,6 +180,20 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
     }
 
     // 3. Wire disconnect handler for this connection.
+    console.info("[voice] audio playback status", {
+      canPlaybackAudio: handle.room.canPlaybackAudio, sessionId,
+    });
+    handle.room.on(RoomEvent.AudioPlaybackStatusChanged, (playing: boolean) => {
+      console.info("[voice] audio playback changed", {
+        playing, canPlaybackAudio: handle.room.canPlaybackAudio, sessionId,
+      });
+    });
+    handle.room.on(RoomEvent.TrackSubscribed, (track) => {
+      if (track instanceof RemoteAudioTrack) {
+        console.info("[voice] remote audio track subscribed", { sessionId });
+        attachAgentAudio(track);
+      }
+    });
     handle.room.on(RoomEvent.Disconnected, (reason: DisconnectReason | undefined) => {
       const reasonStr = reason !== undefined ? String(reason) : "unknown";
       if (handleRef.current === handle) handleRef.current = null;
@@ -183,7 +224,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
         }
       },
     );
-  }, [attachAgentAudio, detachAgentAudio, flagError, sessionId, transitionTo]);
+  }, [attachAgentAudio, detachAgentAudio, ensureAgentAudioElement, flagError, sessionId, transitionTo]);
 
   const stop = useCallback(async () => {
     if (isMockRef.current) return;

@@ -34,7 +34,7 @@ async def test_bridge_reseeds_fast_deps_with_slow_carryover(
         deps.voice_session.say("嗯，我在。", add_to_chat_ctx=True)
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append({"user_msg": user_msg, "deps": deps})
         if user_msg == "第一轮":
             deps.fast_deps.dynamic_inject.extend(["a", "b", "c", "d"])
@@ -87,7 +87,7 @@ async def test_bridge_caps_carryover_skills_to_recent_two(
         deps.voice_session.say("嗯，我在。", add_to_chat_ctx=True)
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append({"user_msg": user_msg, "deps": deps})
         if user_msg == "第一轮":
             deps.fast_deps.skill_bundle.extend(["skill-a", "skill-b", "skill-c"])
@@ -136,7 +136,7 @@ async def test_bridge_skips_fallback_when_slow_called_any_tool(
         deps.voice_session.say("嗯，我听着。", add_to_chat_ctx=True)
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append({"user_msg": user_msg, "deps": deps})
         deps.tool_call_history.append("list_skills")
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])

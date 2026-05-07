@@ -11,10 +11,13 @@ from typing import Any
 
 from livekit.agents import Agent, StopResponse
 from livekit.agents.llm import ChatContext, ChatMessage
+from pydantic_ai.usage import UsageLimitExceeded, UsageLimits
 
 from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
 
 logger = logging.getLogger("voice.bridge_agent")
+
+VOICE_SLOW_USAGE_LIMITS = UsageLimits(request_limit=4, tool_calls_limit=4)
 
 
 class VoiceBridgeAgent(Agent):
@@ -173,38 +176,17 @@ class VoiceBridgeAgent(Agent):
             fast_agent.run(user_text, deps=fast_deps, message_history=self._fast_history)
         )
         slow_task = asyncio.create_task(
-            slow_agent.run(user_text, deps=slow_deps, message_history=self._slow_history)
+            slow_agent.run(
+                user_text,
+                deps=slow_deps,
+                message_history=self._slow_history,
+                usage_limits=VOICE_SLOW_USAGE_LIMITS,
+            )
         )
 
-        def _on_slow_done(task: asyncio.Task[Any]) -> None:
-            latency_ms = round((time.monotonic() - started_at) * 1000)
-            try:
-                result = task.result()
-            except asyncio.CancelledError:
-                logger.info(
-                    "slow_agent_run_cancelled",
-                    extra={
-                        "session_id": session_id,
-                        "turn_id": turn_id,
-                        "phase": "slow",
-                        "latency_ms": latency_ms,
-                    },
-                )
-                return
-            except Exception:
-                logger.error(
-                    "slow_agent_run_failed",
-                    extra={
-                        "session_id": session_id,
-                        "turn_id": turn_id,
-                        "phase": "slow",
-                        "latency_ms": latency_ms,
-                    },
-                    exc_info=True,
-                )
-                return
-
-            self._slow_history = result.all_messages()
+        def _persist_slow_state(result: Any | None) -> None:
+            if result is not None:
+                self._slow_history = result.all_messages()
             slow_called_tool = bool(slow_deps.tool_call_history)
             if (
                 slow_deps.mutation_count_this_iter == 0
@@ -225,7 +207,7 @@ class VoiceBridgeAgent(Agent):
                         "phase": "slow",
                         "tool": "slow_inject_to_fast",
                         "text_len": len(fallback_hint),
-                        "latency_ms": latency_ms,
+                        "latency_ms": round((time.monotonic() - started_at) * 1000),
                         "mutations_made": slow_deps.mutation_count_this_iter,
                         "fallback": "bridge_no_mutation",
                     },
@@ -244,6 +226,52 @@ class VoiceBridgeAgent(Agent):
             self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
             self._slow_state["carryover_skills"] = slow_deps.carryover_skills[-2:]
             self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval
+
+        def _on_slow_done(task: asyncio.Task[Any]) -> None:
+            latency_ms = round((time.monotonic() - started_at) * 1000)
+            try:
+                result = task.result()
+            except asyncio.CancelledError:
+                logger.info(
+                    "slow_agent_run_cancelled",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "latency_ms": latency_ms,
+                    },
+                )
+                return
+            except UsageLimitExceeded:
+                _persist_slow_state(None)
+                logger.warning(
+                    "slow_agent_run_limited",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "latency_ms": latency_ms,
+                        "request_limit": VOICE_SLOW_USAGE_LIMITS.request_limit,
+                        "tool_calls_limit": VOICE_SLOW_USAGE_LIMITS.tool_calls_limit,
+                        "mutations_made": slow_deps.mutation_count_this_iter,
+                    },
+                    exc_info=True,
+                )
+                return
+            except Exception:
+                logger.error(
+                    "slow_agent_run_failed",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "phase": "slow",
+                        "latency_ms": latency_ms,
+                    },
+                    exc_info=True,
+                )
+                return
+
+            _persist_slow_state(result)
             logger.info(
                 "slow_agent_run_completed",
                 extra={

@@ -100,7 +100,7 @@ def _patch_bridge_agents(
         deps.voice_session.say(fast_text, add_to_chat_ctx=True)
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append(
             {
                 "user_msg": user_msg,

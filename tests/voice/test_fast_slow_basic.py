@@ -117,12 +117,13 @@ def _patch_bridge_agents(
         deps.voice_session.say(fast_text, add_to_chat_ctx=True)
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append(
             {
                 "user_msg": user_msg,
                 "deps": deps,
                 "message_history": list(message_history or []),
+                "usage_limits": usage_limits,
             }
         )
         deps.fast_deps.dynamic_inject.append(slow_inject)
@@ -159,6 +160,8 @@ async def test_bridge_fast_says_and_stops_livekit_reply(monkeypatch: pytest.Monk
     session_say.assert_called_with(fast_text, add_to_chat_ctx=True)
     assert len(calls["fast"]) == 1
     assert len(calls["slow"]) == 1
+    assert calls["slow"][0]["usage_limits"].request_limit == 4
+    assert calls["slow"][0]["usage_limits"].tool_calls_limit == 4
 
 
 @pytest.mark.asyncio
@@ -179,7 +182,7 @@ async def test_bridge_does_not_fallback_when_failed_fast_already_spoke(
         deps.voice_session.say("我听见你的委屈了。", add_to_chat_ctx=True)
         raise RuntimeError("Exceeded maximum retries for output validation")
 
-    async def _fake_slow_run(user_msg, *, deps, message_history=None):
+    async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
     monkeypatch.setattr(fast_mod.fast_agent, "run", _fake_fast_run)

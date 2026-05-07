@@ -80,6 +80,7 @@ export async function connectToVoiceRoom(
 
   try {
     await room.connect(wsUrl, token);
+    await room.startAudio();
   } catch (err) {
     micTrack.stop();
     const msg = err instanceof Error ? err.message : String(err);
