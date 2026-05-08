@@ -11,7 +11,11 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from typing import Any
+
+from pydantic_ai.usage import UsageLimitExceeded, UsageLimits
 
 from backend.fast import FastThinkDeps, fast_agent
 from backend.llm_provider import PROJECT_ROOT
@@ -19,6 +23,10 @@ from backend.slow import SlowThinkDeps, slow_agent
 
 MEMORY_FILE = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
 GUIDANCE_FILE = PROJECT_ROOT / "backend" / "state" / "SLOW_GUIDANCE.md"
+logger = logging.getLogger("backend.coordinator")
+TEXT_FAST_TIMEOUT_SECONDS = 45.0
+TEXT_SLOW_USAGE_LIMITS = UsageLimits(request_limit=4, tool_calls_limit=4)
+TEXT_SLOW_TIMEOUT_SECONDS = 20.0
 
 
 def _format_tool_call(tc: dict[str, Any]) -> str:
@@ -78,7 +86,34 @@ async def run_turn(user_msg: str, session_id: str = "demo-session") -> dict[str,
         memory_text=memory_text,
         slow_guidance=prior_guidance,
     )
-    await fast_agent.run(user_msg, deps=fast_deps)
+    try:
+        await asyncio.wait_for(
+            fast_agent.run(user_msg, deps=fast_deps),
+            timeout=TEXT_FAST_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        if not fast_deps.collected_tool_calls:
+            raise
+        logger.warning(
+            "fast_agent_run_timeout_after_tool_call",
+            extra={
+                "session_id": session_id,
+                "tool_count": len(fast_deps.collected_tool_calls),
+                "timeout_seconds": TEXT_FAST_TIMEOUT_SECONDS,
+            },
+            exc_info=True,
+        )
+    except Exception:  # noqa: BLE001
+        if not fast_deps.collected_tool_calls:
+            raise
+        logger.warning(
+            "fast_agent_run_failed_after_tool_call",
+            extra={
+                "session_id": session_id,
+                "tool_count": len(fast_deps.collected_tool_calls),
+            },
+            exc_info=True,
+        )
 
     fast_reply_text = ""
     needs_deep = False
@@ -103,11 +138,41 @@ async def run_turn(user_msg: str, session_id: str = "demo-session") -> dict[str,
             user_message=user_msg,
             fast_reply_text=fast_reply_text,
         )
-        result = await slow_agent.run(user_msg, deps=slow_deps)
-        slow_guidance_for_next_turn = (result.output or "").strip()
+        try:
+            result = await asyncio.wait_for(
+                slow_agent.run(
+                    user_msg,
+                    deps=slow_deps,
+                    usage_limits=TEXT_SLOW_USAGE_LIMITS,
+                ),
+                timeout=TEXT_SLOW_TIMEOUT_SECONDS,
+            )
+        except TimeoutError:
+            logger.warning(
+                "slow_agent_run_timeout",
+                extra={
+                    "session_id": session_id,
+                    "timeout_seconds": TEXT_SLOW_TIMEOUT_SECONDS,
+                },
+                exc_info=True,
+            )
+            result = None
+        except UsageLimitExceeded:
+            logger.warning(
+                "slow_agent_run_limited",
+                extra={
+                    "session_id": session_id,
+                    "request_limit": TEXT_SLOW_USAGE_LIMITS.request_limit,
+                    "tool_calls_limit": TEXT_SLOW_USAGE_LIMITS.tool_calls_limit,
+                },
+                exc_info=True,
+            )
+            result = None
+        slow_guidance_for_next_turn = ((result.output if result is not None else "") or "").strip()
         slow_history = list(slow_deps.tool_call_history)
         print(f"  tool 轨迹: {slow_history}")
-        _write_guidance(slow_guidance_for_next_turn)
+        if result is not None:
+            _write_guidance(slow_guidance_for_next_turn)
         if slow_guidance_for_next_turn:
             preview = slow_guidance_for_next_turn.replace("\n", " ")[:100]
             print(f"  → 已写入 SLOW_GUIDANCE.md（下一轮 Fast 参考）: {preview}…")
