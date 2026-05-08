@@ -91,6 +91,27 @@ def create_slow_model():
     return _create_openai_model(get_slow_model_name())
 
 
+def create_voice_streaming_client():
+    from openai import AsyncOpenAI
+
+    return AsyncOpenAI(
+        base_url=os.environ.get("DOUBAO_BASE_URL")
+        or os.environ.get("OPENAI_BASE_URL", "https://openrouter.ai/api/v1"),
+        api_key=os.environ.get("DOUBAO_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("OPENROUTER_API_KEY"),
+    )
+
+
+def get_voice_streaming_model_name() -> str:
+    return (
+        os.environ.get("DOUBAO_MODEL")
+        or os.environ.get("OPENAI_FAST_MODEL")
+        or os.environ.get("OPENAI_MODEL")
+        or "doubao-seed-2-0-lite-260215"
+    )
+
+
 def create_agent_model():
     """创建默认 PydanticAI model 实例；保留给非语音链路使用。"""
     return create_slow_model()

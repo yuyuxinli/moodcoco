@@ -64,7 +64,10 @@ export default function VoiceButton({
   sessionId = "web-demo",
   disabled = false,
 }: Props) {
-  const { state, error, toggle, disconnect, clearError } =
+  const {
+    state, error, toggle, disconnect, clearError,
+    userPartial, lastUserFinal, cocoPartial, cocoSentences,
+  } =
     useLiveKitVoice({ sessionId });
 
   const isActive = state !== "idle" && state !== "error";
@@ -102,6 +105,17 @@ export default function VoiceButton({
           <PhoneOff className="h-4 w-4" />
           结束通话
         </button>
+      )}
+
+      {(userPartial || lastUserFinal || cocoPartial || cocoSentences.length > 0) && (
+        <div className="rounded-md border border-zinc-200 bg-white px-2 py-1.5 text-xs text-zinc-600">
+          {userPartial && <p>你：{userPartial}</p>}
+          {!userPartial && lastUserFinal && <p>你：{lastUserFinal}</p>}
+          {cocoSentences.slice(-2).map((item) => (
+            <p key={item.id}>Coco：{item.text}</p>
+          ))}
+          {cocoPartial && <p>Coco：{cocoPartial}</p>}
+        </div>
       )}
 
       {error && (

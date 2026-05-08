@@ -22,18 +22,34 @@ Logger: ``voice.entrypoint``.
 """
 from __future__ import annotations
 
+import inspect
 import logging
 import os
+from dataclasses import dataclass
 from typing import Any
 
+from livekit import rtc
 from livekit.agents import AgentSession, JobContext, RoomInputOptions, stt as _agent_stt
 from livekit.plugins import silero as _silero
 from openai import AsyncOpenAI
 
+from backend.llm_provider import (
+    create_voice_streaming_client,
+    get_voice_streaming_model_name,
+)
 from backend.voice.bridge_agent import VoiceBridgeAgent
+from backend.voice.livekit_data import publish_voice_event
 from backend.voice.plugins._context import voice_session_ctx, voice_turn_ctx
+from backend.voice.plugins.minimax_streaming_tts import (
+    MiniMaxStreamingTTSClient,
+    MiniMaxStreamingTTSConfig,
+)
 from backend.voice.plugins.minimax_tts import MinimaxTTSPlugin
+from backend.voice.plugins.xfyun_streaming_stt import XfyunStreamingSTTPlugin
 from backend.voice.plugins.xfyun_stt import XfyunSTTPlugin
+from backend.voice.streaming_bridge_agent import StreamingVoiceBridgeAgent
+from backend.voice.streaming_events import VoiceStreamEvent
+from backend.voice.streaming_responder import VoiceStreamingResponder
 
 logger = logging.getLogger("voice.entrypoint")
 
@@ -47,6 +63,37 @@ _DEFAULT_INSTRUCTIONS = (
     "用中文回应，短句优先，先承接情绪再视情况展开。"
     "不诊断、不评判、不替用户做决定。"
 )
+
+
+@dataclass(slots=True)
+class _PCMFrame:
+    data: bytes
+    sample_rate: int
+    num_channels: int
+    samples_per_channel: int
+
+
+class _PCMFrameChunker:
+    def __init__(self, *, sample_rate: int = 32_000, num_channels: int = 1) -> None:
+        self._sample_rate = sample_rate
+        self._num_channels = num_channels
+        self._pending = b""
+
+    def push(self, pcm: bytes) -> list[_PCMFrame]:
+        data = self._pending + pcm
+        whole_len = len(data) - (len(data) % 2)
+        self._pending = data[whole_len:]
+        if whole_len == 0:
+            return []
+        chunk = data[:whole_len]
+        return [
+            _PCMFrame(
+                data=chunk,
+                sample_rate=self._sample_rate,
+                num_channels=self._num_channels,
+                samples_per_channel=len(chunk) // 2 // self._num_channels,
+            )
+        ]
 
 
 def _build_fast_llm() -> Any:
@@ -127,14 +174,83 @@ async def voice_entrypoint(ctx: JobContext) -> None:
             extra={"session_id": room_name, "room_name": room_name},
         )
 
-        # XfyunSTTPlugin is file-based; LiveKit 1.5 requires streaming STT
-        # to detect turn boundaries. Wrap with VAD + StreamAdapter.
-        vad = _silero.VAD.load(min_silence_duration=1.2)
-        stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
+        streaming_enabled = os.environ.get("VOICE_STREAMING_MODE", "").lower() == "true"
+
+        async def voice_stream_event_publisher(event: VoiceStreamEvent) -> None:
+            await publish_voice_event(ctx.room, event)
+
+        if streaming_enabled:
+            stt_plugin = XfyunStreamingSTTPlugin(
+                event_publisher=voice_stream_event_publisher,
+            )
+        else:
+            # XfyunSTTPlugin is file-based; LiveKit 1.5 requires streaming STT
+            # to detect turn boundaries. Wrap with VAD + StreamAdapter.
+            vad = _silero.VAD.load(min_silence_duration=1.2)
+            stt_plugin = _agent_stt.StreamAdapter(stt=XfyunSTTPlugin(), vad=vad)
         tts_plugin = MinimaxTTSPlugin()
         slow_llm = _build_slow_llm()
 
-        agent = VoiceBridgeAgent(instructions=_DEFAULT_INSTRUCTIONS)
+        streaming_tts_client = None
+        audio_sink = None
+        if os.environ.get("VOICE_STREAMING_TTS_MODE", "").lower() == "minimax_ws":
+            audio_source = rtc.AudioSource(sample_rate=32_000, num_channels=1)
+            track = rtc.LocalAudioTrack.create_audio_track("coco-minimax", audio_source)
+            publish_track = getattr(ctx.room.local_participant, "publish_track")
+            publish_result = publish_track(track)
+            if inspect.isawaitable(publish_result):
+                await publish_result
+            pcm_chunker = _PCMFrameChunker(sample_rate=32_000, num_channels=1)
+
+            async def _livekit_audio_sink(raw_pcm: bytes) -> None:
+                for pcm_frame in pcm_chunker.push(raw_pcm):
+                    frame = rtc.AudioFrame(
+                        data=pcm_frame.data,
+                        sample_rate=pcm_frame.sample_rate,
+                        num_channels=pcm_frame.num_channels,
+                        samples_per_channel=pcm_frame.samples_per_channel,
+                    )
+                    capture_result = audio_source.capture_frame(frame)
+                    if inspect.isawaitable(capture_result):
+                        await capture_result
+
+            streaming_tts_client = MiniMaxStreamingTTSClient(
+                config=MiniMaxStreamingTTSConfig.from_env()
+            )
+            audio_sink = _livekit_audio_sink
+            logger.info(
+                "voice_streaming_tts_audio_sink_ready",
+                extra={
+                    "session_id": room_name,
+                    "room_name": room_name,
+                    "voice_tts_sink": "pcm_audio_source",
+                },
+            )
+
+        if streaming_enabled:
+            responder = VoiceStreamingResponder(
+                client=create_voice_streaming_client(),
+                model=get_voice_streaming_model_name(),
+            )
+            agent = StreamingVoiceBridgeAgent(
+                instructions=_DEFAULT_INSTRUCTIONS,
+                responder=responder,
+                streaming_tts_client=streaming_tts_client,
+                audio_sink=audio_sink,
+                event_publisher=voice_stream_event_publisher,
+                tts_mode=(
+                    "minimax_ws"
+                    if streaming_tts_client is not None
+                    else "session_say"
+                ),
+                voice_tts_sink=(
+                    "pcm_audio_source"
+                    if streaming_tts_client is not None
+                    else "session_say"
+                ),
+            )
+        else:
+            agent = VoiceBridgeAgent(instructions=_DEFAULT_INSTRUCTIONS)
 
         session = AgentSession(
             stt=stt_plugin,
@@ -149,6 +265,17 @@ async def voice_entrypoint(ctx: JobContext) -> None:
                 "room_name": room_name,
                 "fast_model": os.environ.get("DOUBAO_MODEL", _DEFAULT_FAST_MODEL),
                 "slow_model": os.environ.get("OPENAI_MODEL", _DEFAULT_SLOW_MODEL),
+                "streaming_mode_enabled": streaming_enabled,
+                "tts_mode": (
+                    "minimax_ws"
+                    if streaming_tts_client is not None
+                    else "session_say"
+                ),
+                "voice_tts_sink": (
+                    "pcm_audio_source"
+                    if streaming_tts_client is not None
+                    else "session_say"
+                ),
             },
         )
 

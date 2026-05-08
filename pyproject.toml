@@ -21,6 +21,7 @@ voice = [
     "livekit-plugins-openai>=1.0",
     "livekit-plugins-silero>=1.0",
     "websocket-client>=1.0",
+    "websockets>=12",
     "httpx>=0.27",
 ]
 test = [

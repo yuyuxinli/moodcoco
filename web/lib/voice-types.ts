@@ -47,3 +47,22 @@ export interface VoiceTokenResponse {
   /** Canonical room name (echo of input or generated value). */
   room_name: string;
 }
+
+export type VoiceStreamEventType =
+  | "user_partial"
+  | "user_final"
+  | "coco_delta"
+  | "coco_sentence"
+  | "tts_started"
+  | "tts_done"
+  | "turn_interrupted"
+  | "stream_error";
+
+export interface VoiceStreamEvent {
+  type: VoiceStreamEventType;
+  session_id: string;
+  turn_id: string;
+  text: string;
+  is_final: boolean;
+  meta: Record<string, unknown>;
+}

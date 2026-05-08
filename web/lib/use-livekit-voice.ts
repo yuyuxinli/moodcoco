@@ -13,7 +13,9 @@ import {
   AgentTimeoutError, ConnectError, MicPermissionError,
   VoiceRoomHandle, connectToVoiceRoom, disconnectVoiceRoom,
 } from "./livekit";
-import type { VoiceError, VoiceErrorCode, VoiceState } from "./voice-types";
+import type {
+  VoiceError, VoiceErrorCode, VoiceState, VoiceStreamEvent,
+} from "./voice-types";
 
 const AGENT_AUDIO_TIMEOUT_MS = 60000;
 const MOCK_STATES: ReadonlySet<string> = new Set(["idle", "recording", "processing", "speaking", "error"]);
@@ -40,6 +42,10 @@ export interface UseLiveKitVoiceReturn {
   disconnect: () => Promise<void>;
   isAgentSpeaking: boolean;
   clearError: () => void;
+  userPartial: string;
+  lastUserFinal: string;
+  cocoPartial: string;
+  cocoSentences: Array<{ id: string; text: string }>;
 }
 
 function buildError(code: VoiceErrorCode): VoiceError {
@@ -66,6 +72,10 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
   const [mockInit] = useState<MockInit>(computeMockInit);
   const [state, setState] = useState<VoiceState>(mockInit.state);
   const [error, setError] = useState<VoiceError | null>(mockInit.error);
+  const [userPartial, setUserPartial] = useState("");
+  const [lastUserFinal, setLastUserFinal] = useState("");
+  const [cocoPartial, setCocoPartial] = useState("");
+  const [cocoSentences, setCocoSentences] = useState<Array<{ id: string; text: string }>>([]);
 
   const handleRef = useRef<VoiceRoomHandle | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
@@ -91,6 +101,33 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
     if (!el) return;
     try { el.pause(); el.srcObject = null; } catch { /* best-effort */ }
   }, []);
+
+  const resetStreamingTranscript = useCallback(() => {
+    setUserPartial("");
+    setLastUserFinal("");
+    setCocoPartial("");
+    setCocoSentences([]);
+  }, []);
+
+  const handleVoiceStreamEvent = useCallback((event: VoiceStreamEvent) => {
+    if (event.session_id !== sessionId) return;
+    if (event.type === "user_partial") setUserPartial(event.text);
+    if (event.type === "user_final") {
+      setLastUserFinal(event.text);
+      setUserPartial("");
+    }
+    if (event.type === "coco_delta") setCocoPartial(event.text);
+    if (event.type === "coco_sentence") {
+      setCocoSentences((items) => [
+        ...items.slice(-4),
+        { id: crypto.randomUUID(), text: event.text },
+      ]);
+      setCocoPartial("");
+    }
+    if (event.type === "turn_interrupted") {
+      setCocoPartial("");
+    }
+  }, [sessionId]);
 
   const ensureAgentAudioElement = useCallback(() => {
     if (!audioElRef.current) {
@@ -141,6 +178,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
       return;
     }
     setError(null);
+    resetStreamingTranscript();
     ensureAgentAudioElement();
 
     // 1. Token first — fail fast on backend errors before grabbing the mic.
@@ -194,6 +232,19 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
         attachAgentAudio(track);
       }
     });
+    handle.room.on(RoomEvent.DataReceived, (payload, _participant, _kind, topic) => {
+      if (topic !== "voice-stream") return;
+      let event: VoiceStreamEvent;
+      try {
+        event = JSON.parse(new TextDecoder().decode(payload)) as VoiceStreamEvent;
+      } catch (err) {
+        console.warn("[voice] invalid voice stream event", {
+          error: err instanceof Error ? err.message : String(err), sessionId,
+        });
+        return;
+      }
+      handleVoiceStreamEvent(event);
+    });
     handle.room.on(RoomEvent.Disconnected, (reason: DisconnectReason | undefined) => {
       const reasonStr = reason !== undefined ? String(reason) : "unknown";
       if (handleRef.current === handle) handleRef.current = null;
@@ -224,7 +275,10 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
         }
       },
     );
-  }, [attachAgentAudio, detachAgentAudio, ensureAgentAudioElement, flagError, sessionId, transitionTo]);
+  }, [
+    attachAgentAudio, detachAgentAudio, ensureAgentAudioElement, flagError,
+    handleVoiceStreamEvent, resetStreamingTranscript, sessionId, transitionTo,
+  ]);
 
   const stop = useCallback(async () => {
     if (isMockRef.current) return;
@@ -251,5 +305,16 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
     void disconnectVoiceRoom(h);
   }, [detachAgentAudio]);
 
-  return { state, error, toggle, disconnect: stop, isAgentSpeaking: state === "speaking", clearError };
+  return {
+    state,
+    error,
+    toggle,
+    disconnect: stop,
+    isAgentSpeaking: state === "speaking",
+    clearError,
+    userPartial,
+    lastUserFinal,
+    cocoPartial,
+    cocoSentences,
+  };
 }

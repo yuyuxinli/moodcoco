@@ -1616,6 +1616,7 @@ voice = [
     { name = "livekit-plugins-openai" },
     { name = "livekit-plugins-silero" },
     { name = "websocket-client" },
+    { name = "websockets" },
 ]
 
 [package.metadata]
@@ -1640,6 +1641,7 @@ voice = [
     { name = "livekit-plugins-openai", specifier = ">=1.0" },
     { name = "livekit-plugins-silero", specifier = ">=1.0" },
     { name = "websocket-client", specifier = ">=1.0" },
+    { name = "websockets", specifier = ">=12" },
 ]
 
 [[package]]

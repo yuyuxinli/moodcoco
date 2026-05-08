@@ -20,3 +20,13 @@ voice_session_ctx: ContextVar[str | None] = ContextVar(
     "voice_session_ctx", default=None
 )
 voice_turn_ctx: ContextVar[str | None] = ContextVar("voice_turn_ctx", default=None)
+
+_latest_voice_turn_ids: dict[str, str] = {}
+
+
+def set_latest_voice_turn_id(session_id: str, turn_id: str) -> None:
+    _latest_voice_turn_ids[session_id] = turn_id
+
+
+def get_latest_voice_turn_id(session_id: str) -> str | None:
+    return _latest_voice_turn_ids.get(session_id)
