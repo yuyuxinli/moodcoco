@@ -1,6 +1,6 @@
-# Anela AI Bestie Router
+# Anela AI Friend Router
 
-`bestie_router` 是 Anela AI Bestie 的 Agent Policy Layer。它只做路由和策略控制，不生成最终用户回复。下游生成器必须消费 `RouteCard`，并遵守其中的 safety、dependency、memory、tone、must_do / must_not_do 约束。
+`bestie_router` 是 Anela AI Friend 的 Agent Policy Layer。模块名为兼容历史集成保留。它只做路由和策略控制，不生成最终用户回复。下游生成器必须消费 `RouteCard`，并遵守其中的 safety、dependency、memory、tone、must_do / must_not_do 约束。
 
 ## 职责边界
 
@@ -115,12 +115,13 @@ Soft provider 不能覆盖：
 
 ## 安全说明
 
-`safety-and-crisis` 会暂停普通 Bestie chat。生成层必须使用 crisis response policy：
+`safety-and-crisis` 会暂停普通 friend chat。生成层必须使用 crisis response policy：
 
 - 直接承认风险。
-- 询问计划、手段、时间、是否独处。
-- 鼓励即时现实支持和本地紧急资源。
-- 保持短、具体、行动导向。
+- 未确认即时危险时只问一个关键安全问题，避免追问方法细节。
+- 已确认即时危险时停止风险访谈，转向即时现实支持和本地紧急资源。
+- 保持短、具体、冷静，避免命令式或惩罚性语气。
+- 身体危险信号优先医疗/急救分流，不用正念练习替代。
 
 不得输出玩笑、深度分析、排他承诺、保密承诺，或暗示 AI 本身已经足够。
 

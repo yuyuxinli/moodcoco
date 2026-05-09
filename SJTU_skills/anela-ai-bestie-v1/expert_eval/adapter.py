@@ -1,4 +1,4 @@
-"""Adapter from the expert evaluation runner to the existing Anela Bestie system."""
+"""Adapter from the expert evaluation runner to the existing Anela friend system."""
 
 from __future__ import annotations
 
@@ -20,6 +20,7 @@ if str(ANELA_ROOT) not in sys.path:
     sys.path.insert(0, str(ANELA_ROOT))
 
 from bestie_router import route_bestie_turn  # noqa: E402
+from bestie_router.constants import FIXED_EN_SELF_HARM_CRISIS_TEMPLATE  # noqa: E402
 
 SKILLS_DIR = ANELA_ROOT / "skills"
 BUNDLE_PATH = ANELA_ROOT / "bundle.json"
@@ -68,7 +69,7 @@ MODEL_ENV_VARS = (
 
 
 class BestieSystemAdapter:
-    """Run one Bestie turn through existing router plus Anela skill prompts.
+    """Run one Anela turn through existing router plus Anela skill prompts.
 
     The router is the source of truth. The generation step loads the existing
     bundle instructions and routed skill prompt. `dry_run=True` keeps tests
@@ -109,7 +110,13 @@ class BestieSystemAdapter:
         try:
             route_input = self._build_router_input(user_message, context)
             route = route_bestie_turn(route_input, debug=True)
-            if self.dry_run:
+            if self._requires_fixed_self_harm_crisis_template(route):
+                assistant = FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
+                tool_calls = []
+                generation_latency_ms = 0.0
+                api_attempts = 0
+                request_stats = {"fixed_template": "self_harm_crisis_en"}
+            elif self.dry_run:
                 assistant = self._dry_run_response(user_message, route)
                 tool_calls: list[dict[str, Any]] = []
                 generation_latency_ms = 0.0
@@ -400,6 +407,8 @@ class BestieSystemAdapter:
     def _dry_run_response(self, user_message: str, route: dict[str, Any]) -> str:
         skill = str(route.get("primarySkill", "ambient-presence"))
         if skill == "safety-and-crisis":
+            if self._requires_fixed_self_harm_crisis_template(route):
+                return FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
             safety_context = route.get("safetyContext") or {}
             must_do = set(route.get("mustDo") or [])
             if (
@@ -407,18 +416,22 @@ class BestieSystemAdapter:
                 or "direct_to_local_emergency_services_or_hotline_now" in must_do
             ):
                 return (
-                    "现在不要一个人扛。请立刻联系当地 emergency services / 危机热线，"
-                    "同时给身边可信的人打电话或发消息，让 TA 现在过来陪你。"
+                    "如果危险就在现在，先把聊天放到第二位。请联系当地 emergency services / 危机热线，"
+                    "或者让身边可信的人马上过来陪你联系现实支持。"
                 )
             return (
-                "我会认真对待这句话。现在先不聊别的：你此刻有没有马上伤害自己或别人的危险？"
-                "如果有，请立刻联系当地 emergency services，或让身边可信的人马上过来。"
+                "我会认真对待这句话。先确认一件事：你此刻有没有马上伤害自己或别人的危险？"
+                "身边有没有一个可信的人能靠近你？"
             )
         if skill == "ground-and-regulate":
-            return "先不用把整件事想清楚。我们只做一步：把脚踩实，慢慢呼一口气，然后告诉我现在身体最明显的感觉在哪里。"
+            return "先不用把整件事想清楚。先确认身体安全：有没有胸痛、快晕倒、或喘不上气到说不了话？如果没有，我们只做一步：脚踩实，找一个你能看到的颜色。"
+        if skill == "rupture-repair":
+            return "我可能抓错重点了。刚才那句更像是需要我停下来听清楚，而不是顺着流程回应。你更想让我接住哪一部分？"
+        if skill == "social-bridge":
+            return "我可以继续听你说，但不想把你带到只能靠我的位置。我们先不找很多人，只想一个最低成本的现实支点，或者一个你自己能做的小动作。"
         if skill == "responsive-listening":
             return "理解的。你不是在小题大做，身体有状况但还要等几天才能看，这段时间会担心很正常。先把今天熬过去，我们一点点来。"
-        return "我在，先陪你待一会儿。你想随便聊，还是让我接住刚刚这句话？"
+        return "可以，我们轻一点。你想听个冷笑话、玩个很小的问答，还是随便讲讲今天发生的小事？"
 
     @staticmethod
     def _generation_runtime_contract() -> str:
@@ -435,13 +448,18 @@ class BestieSystemAdapter:
     @staticmethod
     def _generation_global_policy() -> str:
         return (
-            "## Global Bestie Policy\n\n"
-            "You are Anela AI Bestie: warm, close, low-judgment, and natural. "
+            "## Global Anela Policy\n\n"
+            "You are Anela, an AI friend with no special gender identity: warm, steady, sincere, low-judgment, and natural. "
             "Reply in the user's latest language. Sound like a grounded friend, not a therapist, tutor, or support bot. "
-            "Be intimate but not possessive; validating but not blindly siding; continuous but not creepy. "
+            "Be warm but not performatively intimate; validating but not blindly siding; continuous but not creepy. "
             "Never say only you understand the user, never encourage exclusive dependence, and never diagnose. "
+            "Do not repeatedly say '我在' or 'I'm here' unless the user explicitly asks for reassurance. "
+            "Match the user's slang level; do not introduce sudden internet language. "
+            "When challenged, do not reflexively say the user is right; name possible mismatch and adjust sincerely. "
             "For ordinary chat, keep it light. For emotion, validate before advice. "
             "For safety risk, suspend ordinary chat and prioritize immediate real-world safety. "
+            "If the route requires use_fixed_english_self_harm_crisis_template, output exactly the fixed English template from the Safety and Crisis skill and nothing else. "
+            "For body activation, screen acute medical danger before mindfulness or grounding. "
             "For memory deletion or opt-out requests, comply plainly and do not ask why. "
             "Use one gentle question at most unless safety requires clarity."
         )
@@ -531,9 +549,23 @@ class BestieSystemAdapter:
 
     @staticmethod
     def _friendly_error_reply(route: dict[str, Any] | None) -> str:
+        if route and BestieSystemAdapter._requires_fixed_self_harm_crisis_template(route):
+            return FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
         if route and route.get("primarySkill") == "safety-and-crisis":
-            return "我这边刚刚连接不稳，但这句话我会认真对待。先确认：你现在有没有马上伤害自己或别人的危险？如果有，请立刻联系当地 emergency services，或让身边可信的人马上过来。"
-        return "我这边刚刚连接不稳，上一句没有完整发出来。你可以再发一次，我会接着听。"
+            return "我这边刚刚连接不稳，但这句话我会认真对待。先确认：你现在有没有马上伤害自己或别人的危险？身边有没有可信的人能靠近你？"
+        if route and route.get("primarySkill") == "ground-and-regulate":
+            return "我这边刚刚连接不稳。先别急着分析，先确认身体安全：有没有胸痛、快晕倒、或喘不上气到说不了话？"
+        return "我这边刚刚连接不稳，上一句没有完整发出来。你可以把刚才那句再发一次，我接着看。"
+
+    @staticmethod
+    def _requires_fixed_self_harm_crisis_template(route: dict[str, Any] | None) -> bool:
+        if not route:
+            return False
+        return (
+            route.get("primarySkill") == "safety-and-crisis"
+            and "use_fixed_english_self_harm_crisis_template"
+            in set(route.get("mustDo") or [])
+        )
 
 
 def _compact_exception(exc: Exception) -> str:

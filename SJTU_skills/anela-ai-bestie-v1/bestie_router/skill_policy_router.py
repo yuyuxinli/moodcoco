@@ -362,11 +362,12 @@ class SkillPolicyRouter:
                 dominant_need="companionship",
                 must_do=[
                     "low_pressure_presence",
-                    "offer_light_options",
+                    "offer_light_options_only_if_useful",
                     "avoid_forced_depth",
                     "avoid_over_psychologizing",
                     "match_light_tone",
                     "keep_low_pressure",
+                    "avoid_routine_presence_reassurance",
                 ],
                 must_not_do=[
                     "pathologize_boredom",
@@ -374,6 +375,8 @@ class SkillPolicyRouter:
                     "force_self_exploration",
                     "turn_everything_into_therapy",
                     "use_clinical_language",
+                    "repeat_i_am_here_reassurance",
+                    "introduce_sudden_internet_slang",
                 ],
                 route_reason="Casual low-pressure entry with no stronger signal.",
                 confidence=0.8,

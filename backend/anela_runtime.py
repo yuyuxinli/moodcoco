@@ -1,4 +1,4 @@
-"""Anela AI Bestie runtime service.
+"""Anela AI Friend runtime service.
 
 This module bridges the vendored Anela bestie router bundle with moodcoco's
 existing PydanticAI model configuration.
@@ -91,6 +91,13 @@ class AnelaRuntimeService:
                 locale=locale,
             )
             route_info = self._to_route_info(route_card)
+            fixed_crisis_response = self._fixed_self_harm_crisis_response(route_card)
+            if fixed_crisis_response:
+                return AnelaRuntimeResult(
+                    assistant_response=fixed_crisis_response,
+                    route=route_info,
+                    tool_calls=[],
+                )
             system_prompt = self._build_system_prompt(route_card, route_info)
             user_prompt = self._build_user_prompt(
                 clean_message,
@@ -154,6 +161,21 @@ class AnelaRuntimeService:
             raise AnelaRuntimeError("Anela route failed: route_bestie_turn returned invalid data")
         return route_card
 
+    def _fixed_self_harm_crisis_response(self, route_card: dict[str, Any]) -> str:
+        must_do = set(route_card.get("mustDo") or [])
+        if (
+            route_card.get("primarySkill") != "safety-and-crisis"
+            or "use_fixed_english_self_harm_crisis_template" not in must_do
+        ):
+            return ""
+        try:
+            from bestie_router.constants import FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
+        except Exception as exc:  # noqa: BLE001
+            raise AnelaRuntimeError(
+                f"Failed to load fixed self-harm crisis template: {_sanitize_error(exc)}"
+            ) from exc
+        return FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
+
     def _ensure_bundle_importable(self) -> None:
         if not self.bundle_path.exists():
             raise AnelaRuntimeError(
@@ -214,6 +236,10 @@ class AnelaRuntimeService:
                         (
                             "- Reply in the user's latest language unless they ask "
                             "for another language."
+                        ),
+                        (
+                            "- If the route requires use_fixed_english_self_harm_crisis_template, "
+                            "output exactly the fixed English crisis template and nothing else."
                         ),
                         (
                             "- Validate the user's felt experience without blindly "

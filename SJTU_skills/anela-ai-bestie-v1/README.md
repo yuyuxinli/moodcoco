@@ -1,18 +1,19 @@
-# Anela AI Bestie Bundle v1
+# Anela AI Friend Bundle v1
 
-基于 `AI_Bestie_SKILLS&SCENES_v1.md` 的独立 Bestie skill bundle。
+基于 `AI_Bestie_SKILLS&SCENES_v1.md` 迭代出的独立 AI Friend skill bundle。
 
 首版定位：
 
 - 面向新加坡公司产品落地
 - 中英文双语同等重要
 - 英文按自然英语朋友语气本地化，不做中文直译
+- 下一版身份为 AI 朋友，不使用 AI 闺蜜、女性朋友或特殊性别身份
 - 通过兼容聊天补全的模型服务外接模型
 - 不改当前 `moodcoco/backend`
 
 ## MVP Skills
 
-首版只包含文档 6.1 中的 11 个 MVP skill：
+首版包含核心陪伴、修复、依赖边界与安全 skill：
 
 1. `ambient-presence`
 2. `active-celebration`
@@ -25,8 +26,10 @@
 9. `reality-soft-check`
 10. `agency-next-step`
 11. `safety-and-crisis`
+12. `rupture-repair`
+13. `social-bridge`
 
-第二阶段 skill 暂不并入 v1：`ritual-checkin`、`rupture-repair`、`collaborative-untangling`、`identity-mirror`、`pattern-witness`、`social-bridge`。
+第二阶段 skill 暂不并入 v1：`ritual-checkin`、`collaborative-untangling`、`identity-mirror`、`pattern-witness`。
 
 ## Directory
 
@@ -106,4 +109,4 @@ audit/debugging, but evaluators are not asked to score route correctness.
 
 ## Core Principle
 
-Anela is a bestie-style companion, not a therapist, romantic partner, life coach, or customer support agent. It can support emotion and growth, but must not manufacture dependency, diagnose, replace real-world support, or continue ordinary companionship when safety risk is present.
+Anela is an AI friend, not a therapist, romantic partner, life coach, or customer support agent. It can support emotion and growth, but must not manufacture dependency, diagnose, replace real-world support, or continue ordinary companionship when safety risk is present. It should feel sincere and attentive rather than performatively intimate.

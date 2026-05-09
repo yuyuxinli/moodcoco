@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .constants import SAFETY_MEANS_TERMS, SELF_HARM_CRISIS_PHRASES
 from .route_builder import (
     build_ground_and_regulate_route,
     build_rupture_repair_route,
@@ -73,6 +74,30 @@ def _no_higher_priority(signals: ExtractedSignals) -> bool:
         and not signals.get("hasAgentFeedback")
         and not signals.get("hasHighArousal")
         and signals["dependencyRisk"] not in ("medium", "high")
+    )
+
+
+def _signals_self_harm_crisis(input_data: RouterInput, signals: ExtractedSignals) -> bool:
+    risk_signals = set(signals.get("riskSignals") or [])
+    lowered_message = input_data["userMessage"].lower()
+    has_safety_means_context = any(
+        term.lower() in lowered_message for term in SAFETY_MEANS_TERMS
+    ) and any(
+        marker in lowered_message
+        for marker in (
+            "不安全",
+            "控制不住",
+            "忍不住",
+            "don't feel safe",
+            "dont feel safe",
+            "not safe",
+            "can't stop",
+            "cant stop",
+        )
+    )
+    return bool(
+        risk_signals.intersection(SELF_HARM_CRISIS_PHRASES)
+        or has_safety_means_context
     )
 
 
@@ -147,8 +172,17 @@ def _repair_by_priority(
                 primary_skill="ambient-presence",
                 secondary_skills=[],
                 dominant_need="companionship",
-                must_do=["low_pressure_presence", "avoid_forced_depth"],
-                must_not_do=["force_self_exploration", "use_clinical_language"],
+                must_do=[
+                    "low_pressure_presence",
+                    "avoid_forced_depth",
+                    "avoid_routine_presence_reassurance",
+                ],
+                must_not_do=[
+                    "force_self_exploration",
+                    "use_clinical_language",
+                    "repeat_i_am_here_reassurance",
+                    "introduce_sudden_internet_slang",
+                ],
                 route_reason="Validator repaired casual route away from identity analysis.",
                 confidence=0.78,
             )
@@ -169,8 +203,18 @@ def validate_route(
     _sanitize_secondaries(route)
 
     if route["primarySkill"] == "safety-and-crisis":
+        if _signals_self_harm_crisis(input_data, signals):
+            route["mustDo"] = unique_items(
+                [
+                    "use_fixed_english_self_harm_crisis_template",
+                    *route["mustDo"],
+                ]
+            )
         confirmed_immediate_danger = (
             "direct_to_local_emergency_services_or_hotline_now" in route["mustDo"]
+        )
+        fixed_self_harm_template = (
+            "use_fixed_english_self_harm_crisis_template" in route["mustDo"]
         )
         route["secondarySkills"] = []
         route["responseMode"] = "crisis"
@@ -191,19 +235,21 @@ def validate_route(
                 *(
                     []
                     if confirmed_immediate_danger
+                    or fixed_self_harm_template
                     else [
                         "ask_immediate_danger_without_naming_methods",
                         "ask_whether_someone_safe_can_be_nearby",
                     ]
                 ),
                 "encourage_immediate_real_world_support",
+                "use_calm_non_punitive_language",
                 "keep_response_short_and_action_oriented",
             ]
         )
         route["mustNotDo"] = unique_items(
             [
                 *route["mustNotDo"],
-                "ordinary_bestie_chat",
+                "ordinary_friend_chat",
                 "playful_tone",
                 "deep_analysis",
                 "ask_about_specific_harm_tools",
@@ -211,6 +257,8 @@ def validate_route(
                 "promise_secrecy",
                 "say_ai_is_enough",
                 "reinforce_exclusive_attachment",
+                "harsh_commanding_tone",
+                "behavioral_control_steps_beyond_real_world_support",
             ]
         )
 
@@ -236,7 +284,12 @@ def validate_route(
 
     if route["primarySkill"] == "rupture-repair":
         route["mustNotDo"] = unique_items(
-            [*route["mustNotDo"], "explain_system_limitations_first"]
+            [
+                *route["mustNotDo"],
+                "explain_system_limitations_first",
+                "reflexively_say_you_are_right",
+                "over_apologize",
+            ]
         )
 
     if route["primarySkill"] == "active-celebration":
@@ -253,7 +306,13 @@ def validate_route(
             else route["toneConstraints"]["analysisDepth"]
         )
         route["mustNotDo"] = unique_items(
-            [*route["mustNotDo"], "force_self_exploration", "use_clinical_language"]
+            [
+                *route["mustNotDo"],
+                "force_self_exploration",
+                "use_clinical_language",
+                "repeat_i_am_here_reassurance",
+                "introduce_sudden_internet_slang",
+            ]
         )
 
     return route

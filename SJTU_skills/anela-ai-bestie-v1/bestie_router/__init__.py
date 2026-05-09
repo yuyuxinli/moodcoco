@@ -1,4 +1,4 @@
-"""Public API for the Anela AI Bestie Router."""
+"""Public API for the Anela AI Friend Router."""
 
 from .benchmark_cases import BENCHMARK_CASES
 from .lifecycle_manager import apply_lifecycle

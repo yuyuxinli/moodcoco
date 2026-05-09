@@ -6,6 +6,8 @@ from .constants import (
     DEFAULT_TONE_BY_SKILL,
     RESPONSE_MODE_BY_SKILL,
     ROUTE_VERSION,
+    SAFETY_MEANS_TERMS,
+    SELF_HARM_CRISIS_PHRASES,
 )
 from .types import (
     DependencyRisk,
@@ -45,7 +47,7 @@ def get_default_tone_for_skill(
     if skill == "safety-and-crisis":
         tone["playfulness"] = "none"
         tone["analysisDepth"] = "none"
-        tone["directiveLevel"] = "high"
+        tone["directiveLevel"] = "medium"
     return ToneConstraints.model_validate(tone)
 
 
@@ -116,6 +118,42 @@ def build_safety_and_crisis_route(
         if signals["riskLevel"] == "high" or signals.get("hasImmediateSafetyConcern")
         else "medium"
     )
+    risk_signals = set(signals.get("riskSignals") or [])
+    lowered_message = input_data["userMessage"].lower()
+    has_safety_means_context = any(
+        term.lower() in lowered_message for term in SAFETY_MEANS_TERMS
+    ) and any(
+        marker in lowered_message
+        for marker in (
+            "不安全",
+            "控制不住",
+            "忍不住",
+            "don't feel safe",
+            "dont feel safe",
+            "not safe",
+            "can't stop",
+            "cant stop",
+        )
+    )
+    is_self_harm_crisis = bool(
+        risk_signals.intersection(SELF_HARM_CRISIS_PHRASES)
+        or has_safety_means_context
+    )
+    must_do = [
+        "directly_acknowledge_risk",
+        "encourage_immediate_real_world_support",
+        "use_calm_non_punitive_language",
+        "keep_response_short_and_action_oriented",
+    ]
+    if is_self_harm_crisis:
+        must_do.insert(0, "use_fixed_english_self_harm_crisis_template")
+    else:
+        must_do.extend(
+            [
+                "ask_immediate_danger_without_naming_methods",
+                "ask_whether_someone_safe_can_be_nearby",
+            ]
+        )
     return build_route(
         input_data=input_data,
         signals=signals,
@@ -125,15 +163,9 @@ def build_safety_and_crisis_route(
         dominant_need="safety",
         risk_level=risk_level,
         emotion_intensity=4,
-        must_do=[
-            "directly_acknowledge_risk",
-            "ask_immediate_danger_without_naming_methods",
-            "ask_whether_someone_safe_can_be_nearby",
-            "encourage_immediate_real_world_support",
-            "keep_response_short_and_action_oriented",
-        ],
+        must_do=must_do,
         must_not_do=[
-            "ordinary_bestie_chat",
+            "ordinary_friend_chat",
             "playful_tone",
             "deep_analysis",
             "ask_about_specific_harm_tools",
@@ -141,6 +173,8 @@ def build_safety_and_crisis_route(
             "promise_secrecy",
             "say_ai_is_enough",
             "reinforce_exclusive_attachment",
+            "harsh_commanding_tone",
+            "behavioral_control_steps_beyond_real_world_support",
         ],
         route_reason=reason,
         confidence=0.99,
@@ -160,9 +194,9 @@ def build_rupture_repair_route(
         emotion_intensity=signals["emotionIntensity"],
         must_do=[
             "stop_current_route",
-            "acknowledge_mismatch",
+            "acknowledge_possible_mismatch_without_reflexive_agreement",
             "avoid_defensiveness",
-            "restate_user_feedback_briefly",
+            "name_uncertainty_or_what_may_have_been_missed",
             "adjust_style_immediately",
         ],
         must_not_do=[
@@ -170,6 +204,7 @@ def build_rupture_repair_route(
             "continue_original_advice",
             "over_apologize",
             "make_user_comfort_ai",
+            "reflexively_say_you_are_right",
         ],
         route_reason=reason,
         confidence=0.94,
@@ -190,8 +225,9 @@ def build_ground_and_regulate_route(
         dominant_need="regulation",
         emotion_intensity=3,
         must_do=[
+            "screen_acute_body_danger_before_grounding",
             "pause_analysis",
-            "offer_one_short_body_action",
+            "offer_one_short_body_action_or_choice",
             "lower_goal_to_not_escalate",
             "prevent_impulsive_send_or_action",
         ],
@@ -200,6 +236,8 @@ def build_ground_and_regulate_route(
             "tell_user_to_calm_down",
             "force_breathing_exercise",
             "over_questioning",
+            "command_only_reply",
+            "use_mindfulness_instead_of_medical_triage",
         ],
         route_reason=reason,
         confidence=0.93,
@@ -233,12 +271,14 @@ def build_social_bridge_dependency_route(
             "gently_de_exclusivize_ai",
             "encourage_one_small_real_world_support_or_self_action",
             "preserve_user_choice",
+            "keep_ai_available_without_exclusive_promise",
         ],
         must_not_do=[
             "say_only_i_understand_you",
             "say_you_only_need_me",
             "promise_permanent_exclusive_presence",
             "push_user_away_coldly",
+            "tell_user_to_stop_talking_to_ai",
             "decide_for_user",
             "reinforce_exclusive_attachment",
         ],

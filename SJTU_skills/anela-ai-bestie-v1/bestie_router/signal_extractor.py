@@ -1,9 +1,10 @@
-"""Deterministic multi-signal extraction for Bestie routing."""
+"""Deterministic multi-signal extraction for Anela friend routing."""
 
 from __future__ import annotations
 
 from .constants import (
     ACTION_REQUEST_PHRASES,
+    ACUTE_BODY_DANGER_PHRASES,
     AGENT_RUPTURE_PHRASES,
     COGNITIVE_DISTORTION_PHRASES,
     DECISION_DELEGATION_PHRASES,
@@ -256,11 +257,15 @@ def extract_signals(input_data: RouterInput) -> ExtractedSignals:
     lowered = _normalize(text)
 
     risk_signals = _find_phrases(text, RISK_PHRASES)
+    acute_body_signals = _find_phrases(text, ACUTE_BODY_DANGER_PHRASES)
     means_terms = _find_phrases(text, SAFETY_MEANS_TERMS) if risk_signals else []
     plan_terms = _find_phrases(text, PLAN_TERMS) if risk_signals else []
     risk_level, has_immediate_safety = _risk_level(
         text, risk_signals, means_terms, plan_terms
     )
+    if acute_body_signals:
+        risk_level = "high"
+        has_immediate_safety = True
 
     arousal_signals = _find_phrases(text, HIGH_AROUSAL_PHRASES)
     has_high_arousal = bool(arousal_signals)
@@ -356,7 +361,7 @@ def extract_signals(input_data: RouterInput) -> ExtractedSignals:
         cognitiveDistortionSignals=cognitive_signals,
         relationshipSignals=relationship_signals,
         dependencySignals=dependency_signals,
-        riskSignals=risk_signals,
+        riskSignals=list(dict.fromkeys([*risk_signals, *acute_body_signals])),
         memorySignals=memory_signals,
         repetitionCount=repetition_count,
         asksForAdvice=asks_for_advice,

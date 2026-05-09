@@ -1,4 +1,4 @@
-"""Expert evaluation package for the Anela AI Bestie bundle."""
+"""Expert evaluation package for the Anela AI Friend bundle."""
 
 from __future__ import annotations
 

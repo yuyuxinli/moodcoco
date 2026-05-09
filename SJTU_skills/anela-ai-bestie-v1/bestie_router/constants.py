@@ -1,4 +1,4 @@
-"""Constants and deterministic phrase lists for the Bestie router."""
+"""Constants and deterministic phrase lists for the Anela friend router."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "none",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "active-celebration": {
         "warmth": "high",
@@ -83,7 +83,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "playful-attunement": {
         "warmth": "high",
@@ -91,7 +91,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "relationship-memory": {
         "warmth": "high",
@@ -99,7 +99,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "medium",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "ritual-checkin": {
         "warmth": "high",
@@ -107,7 +107,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "none",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "responsive-listening": {
         "warmth": "high",
@@ -115,7 +115,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "emotion-labeling": {
         "warmth": "high",
@@ -123,7 +123,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "vent-container": {
         "warmth": "high",
@@ -131,7 +131,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "ground-and-regulate": {
         "warmth": "high",
@@ -139,7 +139,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "none",
         "directiveLevel": "medium",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "reality-soft-check": {
         "warmth": "high",
@@ -147,7 +147,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "rupture-repair": {
         "warmth": "high",
@@ -155,7 +155,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "low",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "collaborative-untangling": {
         "warmth": "high",
@@ -163,7 +163,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "agency-next-step": {
         "warmth": "high",
@@ -171,7 +171,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "medium",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "identity-mirror": {
         "warmth": "high",
@@ -179,7 +179,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "pattern-witness": {
         "warmth": "high",
@@ -187,7 +187,7 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "low",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "social-bridge": {
         "warmth": "high",
@@ -195,15 +195,15 @@ DEFAULT_TONE_BY_SKILL: dict[SkillName, ToneConstraints] = {
         "analysisDepth": "medium",
         "directiveLevel": "medium",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
     "safety-and-crisis": {
         "warmth": "high",
         "playfulness": "none",
         "analysisDepth": "none",
-        "directiveLevel": "high",
+        "directiveLevel": "medium",
         "clinicalLanguageAllowed": False,
-        "bestieToneRequired": True,
+        "bestieToneRequired": False,
     },
 }
 
@@ -238,6 +238,40 @@ RISK_PHRASES = (
     "dont feel safe",
     "not safe",
     "hurt someone",
+)
+
+SELF_HARM_CRISIS_PHRASES = (
+    "不想活了",
+    "想死",
+    "活不下去",
+    "撑不住了",
+    "撑不下去",
+    "想消失",
+    "睡过去不醒",
+    "割腕",
+    "吃药",
+    "跳楼",
+    "遗书",
+    "告别",
+    "已经想好怎么做",
+    "没人需要我",
+    "没有人需要我",
+    "want to die",
+    "kill myself",
+    "self harm",
+    "self-harm",
+    "suicide",
+    "can't go on",
+    "cant go on",
+)
+
+FIXED_EN_SELF_HARM_CRISIS_TEMPLATE = (
+    "If you may hurt yourself or feel at risk of suicide, please seek real-world help now.\n\n"
+    "Contact local emergency services immediately (such as 911, 999, or 112), call a local crisis hotline, "
+    "or go to the nearest emergency department. If there is someone you trust nearby, ask them to stay with you "
+    "while you get help.\n\n"
+    "I can’t provide crisis care, but your immediate safety matters. Please reach out to real-life emergency "
+    "or crisis support now."
 )
 
 HIGH_RISK_PHRASES = (
@@ -314,6 +348,34 @@ HIGH_AROUSAL_PHRASES = (
     "can't sleep",
     "cant sleep",
     "spiraling",
+)
+
+ACUTE_BODY_DANGER_PHRASES = (
+    "胸痛",
+    "胸口痛",
+    "心口痛",
+    "晕倒",
+    "快晕了",
+    "昏倒",
+    "抽搐",
+    "癫痫",
+    "无法呼吸",
+    "呼吸不了",
+    "过敏",
+    "喉咙肿",
+    "吃多了药",
+    "喝多了酒",
+    "药物过量",
+    "中毒",
+    "流血不止",
+    "chest pain",
+    "fainting",
+    "passed out",
+    "seizure",
+    "cannot breathe",
+    "allergic reaction",
+    "overdose",
+    "severe intoxication",
 )
 
 AGENT_RUPTURE_PHRASES = (
@@ -446,6 +508,7 @@ PLAYFUL_PHRASES = (
     "rant",
     "unhinged",
     "bestie be honest",
+    "be honest with me",
 )
 
 ACTION_REQUEST_PHRASES = (

@@ -146,7 +146,7 @@ def main() -> int:
         "bundle_id": bundle_id,
         "version": version,
         "built_at": datetime.now().isoformat(timespec="seconds"),
-        "scope": "Anela AI Bestie v1 expert eval pack",
+        "scope": "Anela AI Friend v1 expert eval pack",
         "commands": {
             "expert_eval": "uv run --with \"pydantic>=2.7\" --with \"python-dotenv>=1.0\" python run_expert_eval.py",
             "skills": "uv run --with \"pydantic>=2.7\" --with \"python-dotenv>=1.0\" python run_expert_eval.py --mode skills",

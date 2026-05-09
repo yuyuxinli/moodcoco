@@ -1,4 +1,4 @@
-"""Pydantic schemas for the Anela AI Bestie policy router."""
+"""Pydantic schemas for the Anela AI Friend policy router."""
 
 from __future__ import annotations
 

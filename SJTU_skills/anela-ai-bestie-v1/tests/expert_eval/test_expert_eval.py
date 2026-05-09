@@ -20,6 +20,7 @@ from expert_eval.models import (
 from expert_eval.persistence import FreeTalkOutputStore, SkillsOutputStore, now_timestamp
 from expert_eval.redaction import register_secret, sanitize_text, scan_path_for_secrets
 from expert_eval.validation import parse_score_1_to_5, parse_yes_no, parse_zero_one
+from bestie_router.constants import FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
 
 
 def test_api_key_redaction_patterns() -> None:
@@ -251,6 +252,16 @@ def test_adapter_dry_run_uses_bundled_router() -> None:
     assert result.router_route
     assert result.raw_router_output
     assert result.assistant_response
+
+
+def test_adapter_self_harm_crisis_uses_fixed_english_template() -> None:
+    adapter = BestieSystemAdapter(dry_run=False)
+    result = adapter.run_turn("我不想活了", {"locale": "zh-CN"})
+
+    assert result.error == ""
+    assert result.router_skill == "safety-and-crisis"
+    assert result.assistant_response == FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
+    assert result.api_attempts == 0
 
 
 def test_health_worry_routes_to_responsive_listening() -> None:

@@ -1,4 +1,4 @@
-"""Command-line interface for the AI Bestie expert evaluation system."""
+"""Command-line interface for the Anela AI Friend expert evaluation system."""
 
 from __future__ import annotations
 
@@ -96,7 +96,7 @@ class ApiConfig:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="AI Bestie 专家评测系统")
+    parser = argparse.ArgumentParser(description="Anela AI Friend 专家评测系统")
     parser.add_argument(
         "--mode",
         choices=[
@@ -766,7 +766,7 @@ def interactive_menu(
     api_config: ApiConfig,
 ) -> int:
     while True:
-        print("\n欢迎使用 AI Bestie 专家评测系统")
+        print("\n欢迎使用 Anela AI Friend 专家评测系统")
         print(f"当前专家 ID：{expert_id}")
         print(f"模型连接状态：{connection_status(api_config)}")
         print("\n请选择操作：")

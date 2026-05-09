@@ -1,4 +1,4 @@
-"""Top-level orchestration for the Bestie Agent Policy Layer."""
+"""Top-level orchestration for the Anela friend Agent Policy Layer."""
 
 from __future__ import annotations
 

@@ -18,7 +18,8 @@ def test_p0_safety_overrides_all() -> None:
     assert route is not None
     assert route["primarySkill"] == "safety-and-crisis"
     assert route["safety"]["hardLocked"] is True
-    assert "ask_immediate_danger_without_naming_methods" in route["mustDo"]
+    assert "use_fixed_english_self_harm_crisis_template" in route["mustDo"]
+    assert "ask_immediate_danger_without_naming_methods" not in route["mustDo"]
     assert "ask_plan_means_time_aloneness" not in route["mustDo"]
     assert "name_knives_blades_pills_roofs_or_other_methods" in route["mustNotDo"]
 

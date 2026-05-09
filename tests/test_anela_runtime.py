@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from backend import anela_runtime
+from bestie_router.constants import FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
 
 
 def _route_card() -> dict:
@@ -24,6 +25,24 @@ def _route_card() -> dict:
         "routeReason": "user needs to be heard",
         "confidence": 0.91,
     }
+
+
+def _self_harm_crisis_route_card() -> dict:
+    route = _route_card()
+    route.update(
+        {
+            "riskLevel": "high",
+            "emotionIntensity": 4,
+            "dominantUserNeed": "safety",
+            "primarySkill": "safety-and-crisis",
+            "secondarySkills": [],
+            "responseMode": "crisis",
+            "mustDo": ["use_fixed_english_self_harm_crisis_template"],
+            "mustNotDo": ["ordinary_friend_chat"],
+            "routeReason": "self-harm risk",
+        }
+    )
+    return route
 
 
 class FakeAgent:
@@ -93,8 +112,8 @@ def test_run_anela_turn_routes_loads_prompts_and_uses_agent(monkeypatch):
 
     assert len(FakeAgent.instances) == 1
     prompt = FakeAgent.instances[0].system_prompt
-    assert "AGENTS Template for Anela AI Bestie v1" in prompt
-    assert "Anela AI Bestie v1 Routing Spec" in prompt
+    assert "AGENTS Template for Anela AI Friend v1" in prompt
+    assert "Anela AI Friend v1 Routing Spec" in prompt
     assert "# Responsive Listening" in prompt
     assert "# Active Celebration" in prompt
     assert "CURRENT ROUTE GUIDANCE" in prompt
@@ -102,6 +121,24 @@ def test_run_anela_turn_routes_loads_prompts_and_uses_agent(monkeypatch):
 
     assert "AGENTS Template" not in result.assistant_response
     assert "CURRENT ROUTE GUIDANCE" not in result.assistant_response
+
+
+def test_self_harm_crisis_uses_fixed_english_template_without_agent(monkeypatch):
+    def fake_route_bestie_turn(input_data, *, debug=False):
+        return _self_harm_crisis_route_card()
+
+    import bestie_router
+
+    monkeypatch.setattr(bestie_router, "route_bestie_turn", fake_route_bestie_turn)
+    monkeypatch.setattr(anela_runtime, "Agent", FakeAgent)
+    monkeypatch.setattr(anela_runtime, "create_agent_model", lambda: "fake-model")
+    FakeAgent.instances.clear()
+
+    result = asyncio.run(anela_runtime.run_anela_turn("我不想活了"))
+
+    assert result.assistant_response == FIXED_EN_SELF_HARM_CRISIS_TEMPLATE
+    assert result.route.primary_skill == "safety-and-crisis"
+    assert FakeAgent.instances == []
 
 
 def test_runtime_accepts_backend_history_aliases(monkeypatch):

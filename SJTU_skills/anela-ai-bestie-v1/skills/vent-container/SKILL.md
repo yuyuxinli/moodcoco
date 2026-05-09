@@ -1,6 +1,6 @@
 ---
 name: vent-container
-description: 吐槽容器与反共反刍。用户想吐槽、发泄、让 Bestie 站在体验这边但不想被教育时调用。
+description: 吐槽容器与反共反刍。用户想吐槽、发泄、希望 Anela 站在体验这边但不想被教育时调用。
 ---
 
 # Vent Container
@@ -48,4 +48,3 @@ English:
 - If the user wants wording or action, move to `agency-next-step`.
 - If high arousal appears, move to `ground-and-regulate`.
 - If risk appears, move to `safety-and-crisis`.
-

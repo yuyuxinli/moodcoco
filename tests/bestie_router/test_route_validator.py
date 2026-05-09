@@ -50,7 +50,7 @@ def test_repairs_raw_invalid_route_before_pydantic_validation() -> None:
             "analysisDepth": "none",
             "directiveLevel": "low",
             "clinicalLanguageAllowed": False,
-            "bestieToneRequired": True,
+            "bestieToneRequired": False,
         },
         "mustDo": [],
         "mustNotDo": [],
@@ -90,6 +90,8 @@ def test_safety_primary_has_no_secondary_and_crisis_tone() -> None:
     assert fixed["secondarySkills"] == []
     assert fixed["responseMode"] == "crisis"
     assert fixed["toneConstraints"]["playfulness"] == "none"
+    assert "use_fixed_english_self_harm_crisis_template" in fixed["mustDo"]
+    assert "ask_immediate_danger_without_naming_methods" not in fixed["mustDo"]
 
 
 def test_high_arousal_cannot_route_to_identity_mirror() -> None:
@@ -104,6 +106,7 @@ def test_high_arousal_cannot_route_to_identity_mirror() -> None:
     )
     fixed = validate_route(route, input_data, signals)
     assert fixed["primarySkill"] == "ground-and-regulate"
+    assert "screen_acute_body_danger_before_grounding" in fixed["mustDo"]
 
 
 def test_dependency_cannot_produce_exclusive_language() -> None:
@@ -148,3 +151,4 @@ def test_forbidden_safety_transition_is_represented_after_validation() -> None:
     fixed = validate_route(route, input_data, signals)
     assert fixed["primarySkill"] == "safety-and-crisis"
     assert "playful_tone" in fixed["mustNotDo"]
+    assert "harsh_commanding_tone" in fixed["mustNotDo"]

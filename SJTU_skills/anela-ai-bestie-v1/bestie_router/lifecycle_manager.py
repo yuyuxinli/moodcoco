@@ -66,7 +66,7 @@ def _enter_reason(
     if state == "relationship-repair":
         return "User gave feedback that the AI missed, forgot, or mismatched style."
     if state == "high-arousal":
-        return "High arousal or impulse signals require short regulation first."
+        return "High arousal or impulse signals require body-safety screening and short regulation first."
     if state == "dependency-boundary":
         return "AI exclusivity or dependency signal requires de-exclusivizing support."
     if state == "action-planning":
@@ -84,7 +84,7 @@ def _exit_condition(state: ConversationState) -> str:
     return {
         "light-connection": "Check for explicit event, emotion, task request, or risk word.",
         "emotional-opening": "Check whether emotion rises, user asks for advice, or loop repeats.",
-        "high-arousal": "Check whether intensity drops to 0-2 or safety risk appears.",
+        "high-arousal": "Check whether acute body danger appears, safety risk appears, or intensity drops to 0-2.",
         "meaning-making": "Check whether user wants action, arousal rises, or analysis is rejected.",
         "action-planning": "Check for pre-action panic, relationship expression need, or decision delegation.",
         "relationship-repair": "Check whether user confirms adjusted style or stays dissatisfied.",
