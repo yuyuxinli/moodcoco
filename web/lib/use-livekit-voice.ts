@@ -11,7 +11,7 @@ import { RemoteAudioTrack, RoomEvent, type DisconnectReason } from "livekit-clie
 import { fetchVoiceToken } from "./api";
 import {
   AgentTimeoutError, ConnectError, MicPermissionError,
-  VoiceRoomHandle, connectToVoiceRoom, disconnectVoiceRoom,
+  VoiceRoomHandle, connectToVoiceRoom, disconnectVoiceRoom, isAgentParticipant,
 } from "./livekit";
 import type {
   VoiceError, VoiceErrorCode, VoiceState, VoiceStreamEvent,
@@ -180,6 +180,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
     setError(null);
     resetStreamingTranscript();
     ensureAgentAudioElement();
+    transitionTo("processing", "token_fetching");
 
     // 1. Token first — fail fast on backend errors before grabbing the mic.
     let tokenResp;
@@ -191,6 +192,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
       console.error("[voice] token fetch failed", {
         error: err instanceof Error ? err.message : String(err), sessionId,
       });
+      transitionTo("idle", "token_fetch_failed");
       flagError("TOKEN_FETCH_FAILED");
       return;
     }
@@ -213,6 +215,7 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
         kind: err instanceof ConnectError ? "ConnectError" : "Unknown",
         ws_url: tokenResp.ws_url, sessionId,
       });
+      transitionTo("idle", "room_connect_failed");
       flagError("ROOM_CONNECT_FAILED");
       return;
     }
@@ -226,9 +229,17 @@ export function useLiveKitVoice(opts: UseLiveKitVoiceOptions = {}): UseLiveKitVo
         playing, canPlaybackAudio: handle.room.canPlaybackAudio, sessionId,
       });
     });
-    handle.room.on(RoomEvent.TrackSubscribed, (track) => {
+    handle.room.on(RoomEvent.TrackSubscribed, (track, _publication, participant) => {
       if (track instanceof RemoteAudioTrack) {
-        console.info("[voice] remote audio track subscribed", { sessionId });
+        if (!isAgentParticipant(participant)) {
+          console.info("[voice] ignored non-agent remote audio track", {
+            identity: participant.identity, sessionId,
+          });
+          return;
+        }
+        console.info("[voice] remote agent audio track subscribed", {
+          identity: participant.identity, sessionId,
+        });
         attachAgentAudio(track);
       }
     });

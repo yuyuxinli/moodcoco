@@ -5,6 +5,7 @@
 import {
   LocalAudioTrack,
   RemoteAudioTrack,
+  RemoteParticipant,
   RemoteTrack,
   Room,
   RoomEvent,
@@ -40,6 +41,12 @@ export interface VoiceRoomHandle {
 export interface ConnectOptions {
   /** Max ms to wait for the agent's first audio track. Default 8000 (F2 §5.2). */
   agentAudioTimeoutMs?: number;
+}
+
+export function isAgentParticipant(
+  participant: RemoteParticipant | undefined,
+): boolean {
+  return participant?.identity.startsWith("agent-") === true;
 }
 
 /**
@@ -115,8 +122,13 @@ function waitForAgentAudioTrack(
       reject(new AgentTimeoutError(timeoutMs));
     }, timeoutMs);
 
-    const onSubscribed = (track: RemoteTrack) => {
+    const onSubscribed = (
+      track: RemoteTrack,
+      _publication: unknown,
+      participant: RemoteParticipant,
+    ) => {
       if (track.kind !== Track.Kind.Audio) return;
+      if (!isAgentParticipant(participant)) return;
       cleanup();
       resolve(track as RemoteAudioTrack);
     };

@@ -9,8 +9,8 @@ Coverage map (F1 §8 F9):
    name and ``video.roomJoin``; ``ws_url`` echoes ``LIVEKIT_URL``.
 2. ``test_voice_token_missing_secret_returns_500`` — ``LIVEKIT_API_SECRET``
    unset → HTTP 500 with detail mentioning the missing secret.
-3. ``test_voice_token_default_room_name`` — POST without ``room_name`` → the
-   canonical default ``"moodcoco-voice"`` is returned.
+3. ``test_voice_token_default_room_name`` — POST without ``room_name`` → a
+   fresh ``"moodcoco-voice-..."`` room is returned.
 4. ``test_voice_token_request_validation`` — POST with the wrong field type
    (``room_name`` as int) → FastAPI returns HTTP 422.
 5. ``test_existing_routes_still_work`` — ``GET /api/health`` still returns
@@ -40,7 +40,12 @@ _FAKE_LK_SECRET = "test-lk-api-secret-32-bytes-padding"  # noqa: S105 - test-onl
 _FAKE_LK_URL = "wss://test.livekit.cloud"
 
 
-def _make_client(monkeypatch: pytest.MonkeyPatch, *, with_secret: bool = True):
+def _make_client(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    with_secret: bool = True,
+    auto_dispatch: bool = False,
+):
     """Build a ``TestClient`` after wiring LiveKit env vars.
 
     The lazy ``from backend.api import app`` defers pydantic_ai-backed agent
@@ -58,6 +63,7 @@ def _make_client(monkeypatch: pytest.MonkeyPatch, *, with_secret: bool = True):
     else:
         monkeypatch.delenv("LIVEKIT_API_SECRET", raising=False)
     monkeypatch.setenv("LIVEKIT_URL", _FAKE_LK_URL)
+    monkeypatch.setenv("VOICE_AUTO_DISPATCH_AGENT", "true" if auto_dispatch else "false")
 
     from backend.api import app
 
@@ -129,13 +135,13 @@ def test_voice_token_missing_secret_returns_500(
 
 
 def test_voice_token_default_room_name(monkeypatch: pytest.MonkeyPatch) -> None:
-    """F1 §8 F9 case (default): omitted ``room_name`` → ``moodcoco-voice``."""
+    """F1 §8 F9 case (default): omitted ``room_name`` creates a fresh room."""
     client = _make_client(monkeypatch)
     resp = client.post("/api/voice/token", json={"session_id": "web-demo"})
     assert resp.status_code == 200, resp.text
 
     body = resp.json()
-    assert body["room_name"] == "moodcoco-voice"
+    assert body["room_name"].startswith("moodcoco-voice-web-demo-")
     # The signed JWT must encode the same room — clients trust the JWT, not the body.
     claims = jwt.decode(
         body["token"],
@@ -143,7 +149,7 @@ def test_voice_token_default_room_name(monkeypatch: pytest.MonkeyPatch) -> None:
         algorithms=["HS256"],
         options={"verify_aud": False},
     )
-    assert (claims.get("video") or {}).get("room") == "moodcoco-voice", claims
+    assert (claims.get("video") or {}).get("room") == body["room_name"], claims
     # Generated participant_identity should be deterministic-shaped.
     assert body["participant_identity"].startswith("web-user-web-demo-"), body
 
@@ -165,6 +171,48 @@ def test_voice_token_request_validation(monkeypatch: pytest.MonkeyPatch) -> None
     # Validation error body has FastAPI's standard ``detail`` array shape.
     payload = resp.json()
     assert "detail" in payload, payload
+
+
+def test_voice_token_dispatches_agent_to_same_room(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Browser token creation should also start the voice agent in that room."""
+    dispatched: list[tuple[str, str]] = []
+
+    async def fake_dispatch(*, room_name: str, agent_name: str) -> None:
+        dispatched.append((room_name, agent_name))
+
+    client = _make_client(monkeypatch, auto_dispatch=True)
+    monkeypatch.setattr("backend.api._dispatch_voice_agent", fake_dispatch)
+
+    resp = client.post(
+        "/api/voice/token",
+        json={"session_id": "web-demo", "room_name": "moodcoco-voice-room-002"},
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert dispatched == [("moodcoco-voice-room-002", "moodcoco-coco")]
+
+
+def test_voice_token_does_not_dispatch_browser_listener(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Subscribe-only browser listeners must not create competing agent jobs."""
+    dispatched: list[tuple[str, str]] = []
+
+    async def fake_dispatch(*, room_name: str, agent_name: str) -> None:
+        dispatched.append((room_name, agent_name))
+
+    client = _make_client(monkeypatch, auto_dispatch=True)
+    monkeypatch.setattr("backend.api._dispatch_voice_agent", fake_dispatch)
+
+    resp = client.post(
+        "/api/voice/token",
+        json={"session_id": "browser-listener", "room_name": "moodcoco-voice-room-003"},
+    )
+
+    assert resp.status_code == 200, resp.text
+    assert dispatched == []
 
 
 # ── Test 5: existing routes regression guard ────────────────────────────────

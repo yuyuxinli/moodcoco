@@ -19,6 +19,7 @@ from backend.slow import reset_memory_file_for_demo
 _voice_api_logger = logging.getLogger("voice.api")
 _DEFAULT_ROOM_NAME = "moodcoco-voice"
 _DEFAULT_LK_URL = "wss://your-livekit-server.livekit.cloud"
+_DEFAULT_VOICE_AGENT_NAME = "moodcoco-coco"
 
 app = FastAPI(title="moodcoco API", version="0.1.0")
 
@@ -224,6 +225,39 @@ class VoiceTokenResp(BaseModel):
     participant_identity: str = Field(..., description="Participant identity baked into the JWT")
 
 
+def _voice_auto_dispatch_enabled() -> bool:
+    return os.environ.get("VOICE_AUTO_DISPATCH_AGENT", "true").lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+
+
+def _livekit_http_url(ws_url: str) -> str:
+    return ws_url.replace("ws://", "http://").replace("wss://", "https://")
+
+
+async def _dispatch_voice_agent(*, room_name: str, agent_name: str) -> None:
+    from livekit import api
+
+    lkapi = api.LiveKitAPI(
+        url=_livekit_http_url(os.environ.get("LIVEKIT_URL", _DEFAULT_LK_URL)),
+        api_key=os.environ["LIVEKIT_API_KEY"],
+        api_secret=os.environ["LIVEKIT_API_SECRET"],
+    )
+    try:
+        await lkapi.agent_dispatch.create_dispatch(
+            api.CreateAgentDispatchRequest(
+                agent_name=agent_name,
+                room=room_name,
+                metadata="",
+            )
+        )
+    finally:
+        await lkapi.aclose()
+
+
 @app.post("/api/voice/token", response_model=VoiceTokenResp)
 async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
     """Issue a LiveKit room access token for the browser voice client.
@@ -265,7 +299,11 @@ async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
 
     # Resolve canonical room_name + participant_identity with stable defaults.
     session_id = req.session_id or "web-demo"
-    room_name = req.room_name or _DEFAULT_ROOM_NAME
+    safe_session_id = "".join(
+        ch if ch.isalnum() or ch in ("-", "_") else "-"
+        for ch in session_id
+    )[:48]
+    room_name = req.room_name or f"{_DEFAULT_ROOM_NAME}-{safe_session_id}-{uuid.uuid4().hex[:8]}"
     participant_identity = (
         req.participant_identity
         or f"web-user-{session_id}-{uuid.uuid4().hex[:8]}"
@@ -313,6 +351,33 @@ async def voice_token(req: VoiceTokenReq) -> VoiceTokenResp:
             "participant_identity": participant_identity,
         },
     )
+
+    if _voice_auto_dispatch_enabled() and not is_browser_listener:
+        agent_name = os.environ.get("VOICE_AGENT_NAME", _DEFAULT_VOICE_AGENT_NAME)
+        try:
+            await _dispatch_voice_agent(room_name=room_name, agent_name=agent_name)
+        except Exception as exc:  # noqa: BLE001
+            _voice_api_logger.error(
+                "voice_agent_dispatch_failed",
+                extra={
+                    "session_id": session_id,
+                    "room_name": room_name,
+                    "agent_name": agent_name,
+                    "error": str(exc),
+                },
+            )
+            raise HTTPException(
+                status_code=503,
+                detail=f"voice agent dispatch failed: {exc}",
+            ) from exc
+        _voice_api_logger.info(
+            "voice_agent_dispatched",
+            extra={
+                "session_id": session_id,
+                "room_name": room_name,
+                "agent_name": agent_name,
+            },
+        )
 
     return VoiceTokenResp(
         token=token,
