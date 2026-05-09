@@ -10,6 +10,7 @@ pool via asyncio.to_thread() so the event loop is never stalled (OQ-11).
 from __future__ import annotations
 
 import asyncio
+import audioop
 import json
 import logging
 import os
@@ -194,9 +195,19 @@ class XfyunSTTPlugin(STT):
         turn_id = voice_turn_ctx.get() or uuid.uuid4().hex[:8]
         voice_turn_ctx.set(turn_id)
 
-        # Measure audio duration for logging.
         combined = combine_frames(buffer) if isinstance(buffer, list) else buffer
-        pcm_bytes = bytes(combined.data)
+        source_sample_rate = getattr(combined, "sample_rate", self._sample_rate)
+        source_channels = getattr(combined, "num_channels", 1)
+        source_pcm_bytes = bytes(combined.data)
+        source_audio_duration_s = (
+            len(source_pcm_bytes) / 2 / max(source_sample_rate, 1) / max(source_channels, 1)
+        )
+        pcm_bytes = _normalize_pcm_for_xfyun(
+            source_pcm_bytes,
+            source_sample_rate=source_sample_rate,
+            source_channels=source_channels,
+            target_sample_rate=self._sample_rate,
+        )
         audio_duration_s = len(pcm_bytes) / 2 / self._sample_rate  # 16-bit mono
 
         logger.info(
@@ -206,6 +217,9 @@ class XfyunSTTPlugin(STT):
                 "turn_id": turn_id,
                 "phase": "stt",
                 "audio_duration_s": round(audio_duration_s, 3),
+                "source_audio_duration_s": round(source_audio_duration_s, 3),
+                "source_sample_rate": source_sample_rate,
+                "xfyun_sample_rate": self._sample_rate,
             },
         )
 
@@ -431,6 +445,36 @@ class XfyunSTTPlugin(STT):
 # ---------------------------------------------------------------------------
 # Error-classification helpers
 # ---------------------------------------------------------------------------
+
+
+def _normalize_pcm_for_xfyun(
+    pcm_bytes: bytes,
+    *,
+    source_sample_rate: int,
+    source_channels: int,
+    target_sample_rate: int,
+) -> bytes:
+    """Return 16-bit mono PCM at the sample rate expected by Xfyun."""
+    if source_channels <= 0:
+        source_channels = 1
+    if source_sample_rate <= 0:
+        source_sample_rate = target_sample_rate
+
+    normalized = pcm_bytes
+    if source_sample_rate != target_sample_rate:
+        normalized, _state = audioop.ratecv(
+            normalized,
+            2,
+            source_channels,
+            source_sample_rate,
+            target_sample_rate,
+            None,
+        )
+    if source_channels == 1:
+        return normalized
+    if source_channels == 2:
+        return audioop.tomono(normalized, 2, 0.5, 0.5)
+    raise ValueError(f"unsupported Xfyun STT channel count: {source_channels}")
 
 
 _VENDOR_ERROR_RE = re.compile(r"code=(?P<code>-?\d+), message=(?P<message>.*)")

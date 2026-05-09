@@ -6,6 +6,7 @@ import os
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import urlencode
 
 import websockets
 from livekit.agents.tts import TTS, TTSCapabilities
@@ -14,7 +15,8 @@ from livekit.agents.tts import TTS, TTSCapabilities
 @dataclass(slots=True)
 class MiniMaxStreamingTTSConfig:
     api_key: str
-    group_id: str
+    group_id: str | None = None
+    ws_url: str = "wss://api.minimaxi.com/ws/v1/t2a_v2"
     model: str = "speech-2.8-turbo"
     voice_id: str = "Chinese (Mandarin)_Cute_Spirit"
     sample_rate: int = 32000
@@ -26,7 +28,11 @@ class MiniMaxStreamingTTSConfig:
     def from_env(cls) -> "MiniMaxStreamingTTSConfig":
         return cls(
             api_key=os.environ["MINIMAX_API_KEY"],
-            group_id=os.environ["MINIMAX_GROUP_ID"],
+            group_id=os.environ.get("MINIMAX_GROUP_ID") or None,
+            ws_url=os.environ.get(
+                "MINIMAX_TTS_WS_URL",
+                "wss://api.minimaxi.com/ws/v1/t2a_v2",
+            ),
             model=os.environ.get("MINIMAX_TTS_MODEL", "speech-2.8-turbo"),
             voice_id=os.environ.get(
                 "MINIMAX_TTS_VOICE_ID",
@@ -47,7 +53,7 @@ class MiniMaxStreamingTTSClient:
         self._ws: Any | None = None
 
     async def start(self) -> None:
-        url = f"wss://api.minimax.io/ws/v1/t2a_v2?GroupId={self._config.group_id}"
+        url = self._build_url()
         headers = {"Authorization": f"Bearer {self._config.api_key}"}
         if self._websocket_factory is None:
             self._ws = await websockets.connect(url, additional_headers=headers)
@@ -108,6 +114,12 @@ class MiniMaxStreamingTTSClient:
         if self._ws is None:
             raise RuntimeError("MiniMax streaming TTS websocket is not started")
         return self._ws
+
+    def _build_url(self) -> str:
+        if not self._config.group_id:
+            return self._config.ws_url
+        separator = "&" if "?" in self._config.ws_url else "?"
+        return f"{self._config.ws_url}{separator}{urlencode({'GroupId': self._config.group_id})}"
 
 
 class MiniMaxStreamingTTSPlugin(TTS):

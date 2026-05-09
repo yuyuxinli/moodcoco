@@ -5,7 +5,10 @@ from typing import Any
 
 import pytest
 
-from backend.voice.streaming_responder import VoiceStreamingResponder
+from backend.voice.streaming_responder import (
+    VoiceStreamingResponder,
+    build_voice_system_prompt,
+)
 
 
 @dataclass
@@ -68,3 +71,11 @@ async def test_stream_reply_yields_sentence_chunks() -> None:
     assert chunks == ["我知道这很难。", "先慢一点"]
     assert client.chat.completions.kwargs["stream"] is True
     assert client.chat.completions.kwargs["model"] == "test-model"
+
+
+def test_voice_system_prompt_stays_compact_for_low_latency() -> None:
+    prompt = build_voice_system_prompt()
+
+    assert len(prompt) < 500
+    assert "不要输出 JSON" in prompt
+    assert "不要调用工具" in prompt

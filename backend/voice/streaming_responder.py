@@ -8,31 +8,16 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from typing import Any
 
-from backend.llm_provider import load_prompt
 from backend.voice.streaming_text import SentenceChunker
 
 
-def _load_prompt_or_empty(relative_path: str) -> str:
-    try:
-        return load_prompt(relative_path)
-    except FileNotFoundError:
-        return ""
-
-
 def build_voice_system_prompt() -> str:
-    return "\n\n".join(
-        part
-        for part in [
-            _load_prompt_or_empty("backend/prompts/SOUL.md"),
-            _load_prompt_or_empty("backend/prompts/IDENTITY.md"),
-            _load_prompt_or_empty("backend/prompts/AGENTS.md"),
-            "## 实时语音模式\n"
-            "只输出可直接说给用户听的中文短句。"
-            "不要输出 JSON。不要调用工具。"
-            "优先一句承接情绪，再问一个具体问题。"
-            "每句尽量 10 到 30 个中文字符。",
-        ]
-        if part.strip()
+    return (
+        "你是 moodcoco 的语音陪伴者可可。"
+        "用温柔、具体、不过度解释的中文短句回应。"
+        "先接住用户的情绪和处境，再问一个容易回答的具体问题。"
+        "不要输出 JSON，不要调用工具，不要讲方法论，不要长篇分析。"
+        "每句适合直接说出口，尽量 10 到 30 个中文字符。"
     )
 
 

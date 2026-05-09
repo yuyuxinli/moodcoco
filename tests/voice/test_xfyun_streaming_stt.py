@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
+import logging
 from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
@@ -55,6 +57,33 @@ def test_parse_xfyun_iat_final_message() -> None:
     event = parse_xfyun_iat_message(message)
 
     assert event.text == "很难过"
+    assert event.is_final is True
+
+
+def test_parse_xfyun_iat_header_payload_final_message() -> None:
+    text_payload = {
+        "pgs": "apd",
+        "ws": [
+            {"cw": [{"w": "我"}]},
+            {"cw": [{"w": "说完了"}]},
+        ],
+    }
+    message = {
+        "header": {"code": 0, "status": 2},
+        "payload": {
+            "result": {
+                "text": base64.b64encode(
+                    json.dumps(text_payload, ensure_ascii=False).encode("utf-8")
+                ).decode("utf-8")
+            }
+        },
+    }
+
+    event = parse_xfyun_iat_message(message)
+
+    assert event.text == "我说完了"
+    assert event.segments == ["我", "说完了"]
+    assert event.pgs == "apd"
     assert event.is_final is True
 
 
@@ -136,6 +165,8 @@ class _FakeStreamingClient:
             if item is None:
                 return
             yield item
+            if item.is_final:
+                return
 
     async def close(self) -> None:
         self.closed = True
@@ -144,6 +175,15 @@ class _FakeStreamingClient:
 def _frame() -> rtc.AudioFrame:
     return rtc.AudioFrame(
         data=bytes(1600),
+        sample_rate=16000,
+        num_channels=1,
+        samples_per_channel=800,
+    )
+
+
+def _voice_frame() -> rtc.AudioFrame:
+    return rtc.AudioFrame(
+        data=(b"\xff\x7f" * 800),
         sample_rate=16000,
         num_channels=1,
         samples_per_channel=800,
@@ -172,7 +212,7 @@ async def test_streaming_stt_sends_first_frame_and_flush_status() -> None:
     plugin = XfyunStreamingSTTPlugin(client_factory=lambda: client)
     stream = plugin.stream()
 
-    stream.push_frame(_frame())
+    stream.push_frame(_voice_frame())
     stream.flush()
     await _wait_until(lambda: len(client.sent_statuses) >= 2)
     client.events_queue.put_nowait(None)
@@ -184,11 +224,93 @@ async def test_streaming_stt_sends_first_frame_and_flush_status() -> None:
 
 
 @pytest.mark.asyncio
+async def test_streaming_stt_logs_first_speech_frame(caplog: pytest.LogCaptureFixture) -> None:
+    client = _FakeStreamingClient()
+    plugin = XfyunStreamingSTTPlugin(client_factory=lambda: client)
+    stream = plugin.stream()
+    caplog.set_level(logging.INFO, logger="voice.plugins.xfyun_streaming_stt")
+
+    stream.push_frame(_frame())
+    stream.push_frame(_voice_frame())
+    stream.flush()
+    await _wait_until(lambda: client.started)
+    client.events_queue.put_nowait(None)
+    await stream.aclose()
+
+    assert any(
+        record.message == "voice_streaming_stt_speech_started"
+        for record in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_streaming_stt_auto_flushes_after_trailing_silence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    client = _FakeStreamingClient()
+    plugin = XfyunStreamingSTTPlugin(client_factory=lambda: client)
+    stream = plugin.stream()
+    caplog.set_level(logging.INFO, logger="voice.plugins.xfyun_streaming_stt")
+
+    stream.push_frame(_voice_frame())
+    for _ in range(20):
+        stream.push_frame(_frame())
+
+    await _wait_until(lambda: 2 in client.sent_statuses)
+    client.events_queue.put_nowait(
+        XfyunTranscriptEvent(text="说完了", segments=["说完了"], is_final=True)
+    )
+    client.events_queue.put_nowait(None)
+    final = await stream.__anext__()
+    await stream.aclose()
+
+    assert client.sent_statuses[-1] == 2
+    assert final.type == SpeechEventType.FINAL_TRANSCRIPT
+    assert final.alternatives[0].text == "说完了"
+    assert any(
+        record.message == "voice_streaming_stt_endpointed"
+        for record in caplog.records
+    )
+
+
+@pytest.mark.asyncio
+async def test_streaming_stt_keeps_stream_open_for_multiple_utterances() -> None:
+    client = _FakeStreamingClient()
+    plugin = XfyunStreamingSTTPlugin(client_factory=lambda: client)
+    stream = plugin.stream()
+
+    stream.push_frame(_voice_frame())
+    for _ in range(20):
+        stream.push_frame(_frame())
+    await _wait_until(lambda: 2 in client.sent_statuses)
+    client.events_queue.put_nowait(
+        XfyunTranscriptEvent(text="第一句", segments=["第一句"], is_final=True)
+    )
+    first = await stream.__anext__()
+
+    stream.push_frame(_voice_frame())
+    for _ in range(20):
+        stream.push_frame(_frame())
+    await _wait_until(lambda: client.sent_statuses.count(2) >= 2)
+    client.events_queue.put_nowait(
+        XfyunTranscriptEvent(text="第二句", segments=["第二句"], is_final=True)
+    )
+    second = await stream.__anext__()
+    await stream.aclose()
+
+    assert first.type == SpeechEventType.FINAL_TRANSCRIPT
+    assert first.alternatives[0].text == "第一句"
+    assert second.type == SpeechEventType.FINAL_TRANSCRIPT
+    assert second.alternatives[0].text == "第二句"
+
+
+@pytest.mark.asyncio
 async def test_streaming_stt_emits_interim_and_final_events() -> None:
     client = _FakeStreamingClient()
     plugin = XfyunStreamingSTTPlugin(client_factory=lambda: client)
     stream = plugin.stream()
 
+    stream.push_frame(_voice_frame())
     client.events_queue.put_nowait(
         XfyunTranscriptEvent(text="我今天", segments=["我", "今天"], is_final=False)
     )

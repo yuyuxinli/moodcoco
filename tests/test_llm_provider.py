@@ -51,3 +51,27 @@ def test_fast_model_allows_explicit_override(monkeypatch):
     fast_model = llm_provider.create_fast_model()
 
     assert fast_model.model_name == "openrouter-fast-no-thinking"
+
+
+def test_voice_streaming_model_prefers_explicit_fast_override(monkeypatch):
+    import backend.llm_provider as llm_provider
+
+    monkeypatch.delenv("DOUBAO_MODEL", raising=False)
+    monkeypatch.setenv("OPENAI_FAST_MODEL", "voice-fast-model")
+    monkeypatch.setenv("DOUBAO_API_KEY", "doubao-key")
+    monkeypatch.setenv("OPENAI_MODEL", "slow-model")
+
+    assert llm_provider.get_voice_streaming_model_name() == "voice-fast-model"
+
+
+def test_voice_streaming_model_keeps_openai_fallback_without_doubao(monkeypatch):
+    import backend.llm_provider as llm_provider
+
+    monkeypatch.delenv("DOUBAO_MODEL", raising=False)
+    monkeypatch.delenv("OPENAI_FAST_MODEL", raising=False)
+    monkeypatch.delenv("DOUBAO_API_KEY", raising=False)
+    monkeypatch.delenv("DOUBAO_BASE_URL", raising=False)
+    monkeypatch.setenv("OPENAI_BASE_URL", "https://openrouter.ai/api/v1")
+    monkeypatch.setenv("OPENAI_MODEL", "openrouter-slow")
+
+    assert llm_provider.get_voice_streaming_model_name() == "openrouter-slow"

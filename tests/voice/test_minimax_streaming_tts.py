@@ -51,7 +51,7 @@ async def test_minimax_streaming_client_sends_text_and_yields_audio() -> None:
     )
     seen: dict[str, object] = {}
     client = MiniMaxStreamingTTSClient(
-        config=MiniMaxStreamingTTSConfig(api_key="key", group_id="group"),
+        config=MiniMaxStreamingTTSConfig(api_key="key"),
         websocket_factory=lambda url, headers: (seen.update(url=url, headers=headers) or ws),
     )
 
@@ -64,6 +64,23 @@ async def test_minimax_streaming_client_sends_text_and_yields_audio() -> None:
     assert ws.sent[0]["audio_setting"]["format"] == "pcm"
     assert ws.sent[1] == {"event": "task_continue", "text": "你好。"}
     assert ws.sent[-1] == {"event": "task_finish"}
-    assert seen["url"] == "wss://api.minimax.io/ws/v1/t2a_v2?GroupId=group"
+    assert seen["url"] == "wss://api.minimaxi.com/ws/v1/t2a_v2"
     assert seen["headers"] == {"Authorization": "Bearer key"}
     assert ws.closed is True
+
+
+@pytest.mark.asyncio
+async def test_minimax_streaming_client_appends_optional_group_id() -> None:
+    ws = _FakeWebSocket()
+    ws.push({"event": "connected_success", "base_resp": {"status_code": 0}})
+    ws.push({"event": "task_started", "base_resp": {"status_code": 0}})
+    seen: dict[str, object] = {}
+    client = MiniMaxStreamingTTSClient(
+        config=MiniMaxStreamingTTSConfig(api_key="key", group_id="group"),
+        websocket_factory=lambda url, headers: (seen.update(url=url, headers=headers) or ws),
+    )
+
+    await client.start()
+    await client.finish()
+
+    assert seen["url"] == "wss://api.minimaxi.com/ws/v1/t2a_v2?GroupId=group"

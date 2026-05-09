@@ -52,6 +52,7 @@ def _first_timestamp_by_turn(
     *,
     message: str,
     event_type: str | None = None,
+    require_nonempty_text: bool = False,
 ) -> dict[str, datetime]:
     timestamps: dict[str, datetime] = {}
     for event in events:
@@ -59,12 +60,25 @@ def _first_timestamp_by_turn(
             continue
         if event_type is not None and event.get("event_type") != event_type:
             continue
+        if require_nonempty_text:
+            text = str(event.get("text") or "")
+            text_len = event.get("text_len")
+            if not text.strip() and not (isinstance(text_len, int) and text_len > 0):
+                continue
         turn_id = str(event.get("turn_id") or "")
         ts = _parse_ts(event.get("timestamp"))
         if not turn_id or ts is None:
             continue
         timestamps.setdefault(turn_id, ts)
     return timestamps
+
+
+def _prefer_start_by_turn(
+    primary: dict[str, datetime], fallback: dict[str, datetime]
+) -> dict[str, datetime]:
+    starts = dict(fallback)
+    starts.update(primary)
+    return starts
 
 
 def _latencies_between(
@@ -153,10 +167,17 @@ def summarize_agent(events: list[dict[str, Any]]) -> dict[str, Any]:
     stt_started = _first_timestamp_by_turn(
         events, message="voice_streaming_stt_started"
     )
+    speech_started = _first_timestamp_by_turn(
+        events, message="voice_streaming_stt_speech_started"
+    )
+    stt_endpointed = _first_timestamp_by_turn(
+        events, message="voice_streaming_stt_endpointed"
+    )
     user_partial = _first_timestamp_by_turn(
         events,
         message="voice_stream_event_published",
         event_type="user_partial",
+        require_nonempty_text=True,
     )
     user_final = _first_timestamp_by_turn(
         events,
@@ -178,6 +199,8 @@ def summarize_agent(events: list[dict[str, Any]]) -> dict[str, Any]:
     )
     if not first_audio:
         first_audio = tts_started
+    stt_effective_start = _prefer_start_by_turn(speech_started, user_partial)
+    stt_effective_start = _prefer_start_by_turn(stt_effective_start, stt_started)
 
     published_event_types = Counter(
         str(event.get("event_type") or "")
@@ -225,11 +248,26 @@ def summarize_agent(events: list[dict[str, Any]]) -> dict[str, Any]:
             "fast_agent_run_completed": _latency_summary(latencies["fast_agent_run_completed"]),
             "slow_agent_run_completed": _latency_summary(latencies["slow_agent_run_completed"]),
             "minimax_tts_synthesize_done": _latency_summary(latencies["minimax_tts_synthesize_done"]),
-            "time_to_user_partial_ms": _latency_summary(
+            "stt_stream_start_to_user_partial_ms": _latency_summary(
                 _latencies_between(stt_started, user_partial)
             ),
-            "time_to_user_final_ms": _latency_summary(
+            "stt_stream_start_to_user_final_ms": _latency_summary(
                 _latencies_between(stt_started, user_final)
+            ),
+            "stt_first_partial_to_user_final_ms": _latency_summary(
+                _latencies_between(user_partial, user_final)
+            ),
+            "stt_speech_to_endpoint_ms": _latency_summary(
+                _latencies_between(speech_started, stt_endpointed)
+            ),
+            "stt_endpoint_to_user_final_ms": _latency_summary(
+                _latencies_between(stt_endpointed, user_final)
+            ),
+            "time_to_user_partial_ms": _latency_summary(
+                _latencies_between(stt_effective_start, user_partial)
+            ),
+            "time_to_user_final_ms": _latency_summary(
+                _latencies_between(stt_effective_start, user_final)
             ),
             "time_to_first_coco_sentence_ms": _latency_summary(
                 _latencies_between(user_final, coco_sentence)

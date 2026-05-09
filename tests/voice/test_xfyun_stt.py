@@ -123,6 +123,40 @@ async def test_recognize_writes_temp_file(
 
 
 @pytest.mark.asyncio
+async def test_recognize_resamples_livekit_48k_audio_to_xfyun_16k(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """LiveKit room audio may arrive as 48 kHz; Xfyun file input must be 16 kHz."""
+    captured_sizes: list[int] = []
+
+    def fake_recognize(path: str) -> str:
+        captured_sizes.append(os.path.getsize(path))
+        return "采样率测试"
+
+    sample_rate = 48_000
+    duration_s = 1.0
+    samples = int(sample_rate * duration_s)
+    frame = rtc.AudioFrame(
+        data=bytes(samples * 2),
+        sample_rate=sample_rate,
+        num_channels=1,
+        samples_per_channel=samples,
+    )
+
+    with patch("backend.voice.plugins.xfyun_stt.XfyunASR") as MockASR:
+        mock_instance = MockASR.return_value
+        mock_instance.recognize.side_effect = fake_recognize
+
+        plugin = XfyunSTTPlugin(sample_rate=16_000)
+        event: SpeechEvent = await plugin._recognize_impl(
+            [frame], conn_options=DEFAULT_API_CONNECT_OPTIONS
+        )
+
+    assert event.alternatives[0].text == "采样率测试"
+    assert captured_sizes == [16_000 * 2]
+
+
+@pytest.mark.asyncio
 async def test_recognize_temp_file_cleanup_on_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

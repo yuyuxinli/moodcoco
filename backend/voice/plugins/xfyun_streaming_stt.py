@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import audioop
 import base64
 import contextlib
 import hashlib
@@ -59,11 +60,12 @@ class XfyunTranscriptEvent:
 
 
 def parse_xfyun_iat_message(message: dict[str, Any]) -> XfyunTranscriptEvent:
-    code = int(message.get("code", 0))
+    header = message.get("header") or {}
+    code = int(message.get("code", header.get("code", 0)))
     if code != 0:
         raise RuntimeError(f"Xfyun streaming ASR error: {message}")
     data = message.get("data") or {}
-    result = data.get("result") or {}
+    result = data.get("result") or _decode_header_payload_result(message)
     segments: list[str] = []
     for item in result.get("ws") or []:
         candidates = item.get("cw") or []
@@ -73,11 +75,24 @@ def parse_xfyun_iat_message(message: dict[str, Any]) -> XfyunTranscriptEvent:
                 segments.append(text)
     return XfyunTranscriptEvent(
         text="".join(segments),
-        is_final=int(data.get("status", 0)) == 2,
+        is_final=int(data.get("status", header.get("status", 0))) == 2,
         segments=segments,
         pgs=result.get("pgs"),
         rg=result.get("rg"),
     )
+
+
+def _decode_header_payload_result(message: dict[str, Any]) -> dict[str, Any]:
+    encoded = ((message.get("payload") or {}).get("result") or {}).get("text")
+    if not encoded:
+        return {}
+    try:
+        decoded = base64.b64decode(encoded).decode("utf-8")
+        payload = json.loads(decoded)
+    except Exception:
+        logger.warning("xfyun_streaming_result_decode_failed", exc_info=True)
+        return {}
+    return payload if isinstance(payload, dict) else {}
 
 
 class TranscriptAggregator:
@@ -308,50 +323,99 @@ class XfyunRecognizeStream(RecognizeStream):
         self._language = language
         self._aggregator = TranscriptAggregator()
         self._turn_id = uuid.uuid4().hex[:8]
+        self._silence_threshold_rms = 200
+        self._endpoint_silence_duration_s = 0.8
 
     async def _run(self) -> None:
         session_id = voice_session_ctx.get() or "unknown"
-        voice_turn_ctx.set(self._turn_id)
-        set_latest_voice_turn_id(session_id, self._turn_id)
-        logger.info(
-            "voice_streaming_stt_started",
-            extra={"session_id": session_id, "turn_id": self._turn_id},
-        )
-        await self._client.start()
-        input_task = asyncio.create_task(self._send_audio_from_input())
-        receive_task = asyncio.create_task(self._emit_transcripts())
-        try:
-            done, _pending = await asyncio.wait(
-                {input_task, receive_task},
-                return_when=asyncio.FIRST_COMPLETED,
+        while True:
+            self._turn_id = uuid.uuid4().hex[:8]
+            self._aggregator = TranscriptAggregator()
+            voice_turn_ctx.set(self._turn_id)
+            set_latest_voice_turn_id(session_id, self._turn_id)
+            logger.info(
+                "voice_streaming_stt_started",
+                extra={"session_id": session_id, "turn_id": self._turn_id},
             )
-            for task in done:
-                task.result()
-            if input_task in done and receive_task not in done:
-                await receive_task
-            elif receive_task in done and input_task not in done:
-                input_task.cancel()
-                with contextlib.suppress(asyncio.CancelledError):
-                    await input_task
-        finally:
-            for task in (input_task, receive_task):
-                if not task.done():
-                    task.cancel()
+            client_started = asyncio.Event()
+            input_task = asyncio.create_task(
+                self._send_audio_from_input(client_started)
+            )
+            receive_task = asyncio.create_task(self._emit_transcripts(client_started))
+            try:
+                done, _pending = await asyncio.wait(
+                    {input_task, receive_task},
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for task in done:
+                    task.result()
+                if input_task in done and input_task.result() == "closed":
+                    break
+                if input_task in done and input_task.result() == "empty":
+                    receive_task.cancel()
                     with contextlib.suppress(asyncio.CancelledError):
-                        await task
-            await self._client.close()
+                        await receive_task
+                    continue
+                if input_task in done and receive_task not in done:
+                    await receive_task
+                elif receive_task in done and input_task not in done:
+                    input_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError):
+                        await input_task
+            finally:
+                for task in (input_task, receive_task):
+                    if not task.done():
+                        task.cancel()
+                        with contextlib.suppress(asyncio.CancelledError):
+                            await task
+                await self._client.close()
 
-    async def _send_audio_from_input(self) -> None:
+    async def _send_audio_from_input(self, client_started: asyncio.Event) -> str:
         status = 0
+        seen_voice = False
+        trailing_silence_s = 0.0
+        sent_any = False
+        session_id = voice_session_ctx.get() or "unknown"
         async for item in self._input_ch:
             if isinstance(item, RecognizeStream._FlushSentinel):
-                await self._client.send_pcm(b"", status=2)
+                if sent_any:
+                    await self._client.send_pcm(b"", status=2)
+                    logger.info(
+                        "voice_streaming_stt_endpointed",
+                        extra={"session_id": session_id, "turn_id": self._turn_id},
+                    )
                 status = 0
+                return "segment" if sent_any else "empty"
+            is_speech = _is_speech_frame(item, threshold_rms=self._silence_threshold_rms)
+            if not seen_voice and not is_speech:
                 continue
+            if not seen_voice and is_speech:
+                logger.info(
+                    "voice_streaming_stt_speech_started",
+                    extra={"session_id": session_id, "turn_id": self._turn_id},
+                )
+            if not sent_any:
+                await self._client.start()
+                client_started.set()
             await self._client.send_pcm(bytes(item.data), status=status)
+            sent_any = True
+            if is_speech:
+                seen_voice = True
+                trailing_silence_s = 0.0
+            elif seen_voice:
+                trailing_silence_s += item.samples_per_channel / item.sample_rate
+                if trailing_silence_s >= self._endpoint_silence_duration_s:
+                    await self._client.send_pcm(b"", status=2)
+                    logger.info(
+                        "voice_streaming_stt_endpointed",
+                        extra={"session_id": session_id, "turn_id": self._turn_id},
+                    )
+                    return "segment"
             status = 1
+        return "segment" if sent_any else "closed"
 
-    async def _emit_transcripts(self) -> None:
+    async def _emit_transcripts(self, client_started: asyncio.Event) -> None:
+        await client_started.wait()
         async for transcript in self._client.events():
             text = self._aggregator.update(
                 transcript.segments,
@@ -386,3 +450,10 @@ class XfyunRecognizeStream(RecognizeStream):
                         is_final=transcript.is_final,
                     )
                 )
+
+
+def _is_speech_frame(frame: Any, *, threshold_rms: int) -> bool:
+    try:
+        return audioop.rms(bytes(frame.data), 2) > threshold_rms
+    except audioop.error:
+        return False

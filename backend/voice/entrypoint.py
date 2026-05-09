@@ -175,11 +175,14 @@ async def voice_entrypoint(ctx: JobContext) -> None:
         )
 
         streaming_enabled = os.environ.get("VOICE_STREAMING_MODE", "").lower() == "true"
+        streaming_stt_enabled = (
+            os.environ.get("VOICE_STREAMING_STT_MODE", "").lower() == "true"
+        )
 
         async def voice_stream_event_publisher(event: VoiceStreamEvent) -> None:
             await publish_voice_event(ctx.room, event)
 
-        if streaming_enabled:
+        if streaming_enabled and streaming_stt_enabled:
             stt_plugin = XfyunStreamingSTTPlugin(
                 event_publisher=voice_stream_event_publisher,
             )
@@ -227,10 +230,12 @@ async def voice_entrypoint(ctx: JobContext) -> None:
                 },
             )
 
+        voice_streaming_model = get_voice_streaming_model_name()
+
         if streaming_enabled:
             responder = VoiceStreamingResponder(
                 client=create_voice_streaming_client(),
-                model=get_voice_streaming_model_name(),
+                model=voice_streaming_model,
             )
             agent = StreamingVoiceBridgeAgent(
                 instructions=_DEFAULT_INSTRUCTIONS,
@@ -266,6 +271,8 @@ async def voice_entrypoint(ctx: JobContext) -> None:
                 "fast_model": os.environ.get("DOUBAO_MODEL", _DEFAULT_FAST_MODEL),
                 "slow_model": os.environ.get("OPENAI_MODEL", _DEFAULT_SLOW_MODEL),
                 "streaming_mode_enabled": streaming_enabled,
+                "streaming_stt_enabled": streaming_stt_enabled,
+                "voice_streaming_model": voice_streaming_model,
                 "tts_mode": (
                     "minimax_ws"
                     if streaming_tts_client is not None

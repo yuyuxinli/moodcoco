@@ -41,25 +41,43 @@ def test_voice_eval_summarizes_streaming_metrics() -> None:
             "turn_id": "turn-a",
         },
         {
-            "timestamp": "2026-05-08T10:00:01.200000+00:00",
-            "message": "voice_stream_event_published",
-            "event_type": "user_partial",
+            "timestamp": "2026-05-08T10:00:01.500000+00:00",
+            "message": "voice_streaming_stt_speech_started",
             "turn_id": "turn-a",
         },
         {
-            "timestamp": "2026-05-08T10:00:02+00:00",
+            "timestamp": "2026-05-08T10:00:01.700000+00:00",
+            "message": "voice_stream_event_published",
+            "event_type": "user_partial",
+            "turn_id": "turn-a",
+            "text": "",
+        },
+        {
+            "timestamp": "2026-05-08T10:00:01.900000+00:00",
+            "message": "voice_stream_event_published",
+            "event_type": "user_partial",
+            "turn_id": "turn-a",
+            "text": "我",
+        },
+        {
+            "timestamp": "2026-05-08T10:00:02.100000+00:00",
+            "message": "voice_streaming_stt_endpointed",
+            "turn_id": "turn-a",
+        },
+        {
+            "timestamp": "2026-05-08T10:00:02.300000+00:00",
             "message": "voice_stream_event_published",
             "event_type": "user_final",
             "turn_id": "turn-a",
         },
         {
-            "timestamp": "2026-05-08T10:00:03+00:00",
+            "timestamp": "2026-05-08T10:00:03.300000+00:00",
             "message": "voice_stream_event_published",
             "event_type": "coco_sentence",
             "turn_id": "turn-a",
         },
         {
-            "timestamp": "2026-05-08T10:00:03.100000+00:00",
+            "timestamp": "2026-05-08T10:00:03.400000+00:00",
             "message": "voice_streaming_tts_first_audio",
             "turn_id": "turn-a",
             "tts_mode": "minimax_ws",
@@ -79,7 +97,11 @@ def test_voice_eval_summarizes_streaming_metrics() -> None:
     assert summary["streaming"]["tts_mode"] == "minimax_ws"
     assert summary["streaming"]["voice_tts_sink"] == "pcm_audio_source"
     assert summary["streaming"]["barge_in_success"] is True
-    assert summary["latency_ms"]["time_to_user_partial_ms"]["p50"] == 200
-    assert summary["latency_ms"]["time_to_user_final_ms"]["p50"] == 1000
+    assert summary["latency_ms"]["time_to_user_partial_ms"]["p50"] == 400
+    assert summary["latency_ms"]["time_to_user_final_ms"]["p50"] == 800
+    assert summary["latency_ms"]["stt_stream_start_to_user_final_ms"]["p50"] == 1300
+    assert summary["latency_ms"]["stt_first_partial_to_user_final_ms"]["p50"] == 400
+    assert summary["latency_ms"]["stt_speech_to_endpoint_ms"]["p50"] == 600
+    assert summary["latency_ms"]["stt_endpoint_to_user_final_ms"]["p50"] == 200
     assert summary["latency_ms"]["time_to_first_coco_sentence_ms"]["p50"] == 1000
     assert summary["latency_ms"]["time_to_first_audio_ms"]["p50"] == 1100
