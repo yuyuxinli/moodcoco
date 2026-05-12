@@ -56,8 +56,8 @@ def test_fast_model_allows_explicit_override(monkeypatch):
 def test_voice_streaming_model_prefers_explicit_fast_override(monkeypatch):
     import backend.llm_provider as llm_provider
 
-    monkeypatch.delenv("DOUBAO_MODEL", raising=False)
     monkeypatch.setenv("OPENAI_FAST_MODEL", "voice-fast-model")
+    monkeypatch.setenv("DOUBAO_MODEL", "doubao-fast")
     monkeypatch.setenv("DOUBAO_API_KEY", "doubao-key")
     monkeypatch.setenv("OPENAI_MODEL", "slow-model")
 

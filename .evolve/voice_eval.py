@@ -189,6 +189,15 @@ def summarize_agent(events: list[dict[str, Any]]) -> dict[str, Any]:
         message="voice_stream_event_published",
         event_type="coco_sentence",
     )
+    llm_request_started = _first_timestamp_by_turn(
+        events, message="voice_llm_request_started"
+    )
+    llm_first_token = _first_timestamp_by_turn(
+        events, message="voice_llm_first_token"
+    )
+    llm_first_sentence = _first_timestamp_by_turn(
+        events, message="voice_llm_first_sentence"
+    )
     tts_started = _first_timestamp_by_turn(
         events,
         message="voice_stream_event_published",
@@ -268,6 +277,18 @@ def summarize_agent(events: list[dict[str, Any]]) -> dict[str, Any]:
             ),
             "time_to_user_final_ms": _latency_summary(
                 _latencies_between(stt_effective_start, user_final)
+            ),
+            "user_final_to_llm_request_ms": _latency_summary(
+                _latencies_between(user_final, llm_request_started)
+            ),
+            "llm_request_to_first_token_ms": _latency_summary(
+                _latencies_between(llm_request_started, llm_first_token)
+            ),
+            "llm_first_token_to_first_sentence_ms": _latency_summary(
+                _latencies_between(llm_first_token, llm_first_sentence)
+            ),
+            "llm_first_sentence_to_first_audio_ms": _latency_summary(
+                _latencies_between(llm_first_sentence, first_audio)
             ),
             "time_to_first_coco_sentence_ms": _latency_summary(
                 _latencies_between(user_final, coco_sentence)

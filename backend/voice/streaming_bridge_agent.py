@@ -113,6 +113,8 @@ class StreamingVoiceBridgeAgent(Agent):
             dynamic_inject=list(self._slow_state["carryover_inject"]),
             skill_bundle=list(self._slow_state["carryover_skills"]),
             retrieval_block=str(self._slow_state["carryover_retrieval"]),
+            session_id=session_id,
+            turn_id=turn_id,
         ):
             logger.info(
                 "voice_streaming_sentence",
