@@ -20,6 +20,38 @@ logger = logging.getLogger("voice.bridge_agent")
 VOICE_SLOW_USAGE_LIMITS = UsageLimits(request_limit=4, tool_calls_limit=4)
 
 
+def _extract_speaker_text(collected_tool_calls: list[dict[str, Any]]) -> str:
+    """Extract spoken text from the last ai_message tool call."""
+    for call in reversed(collected_tool_calls):
+        if call.get("name") == "ai_message":
+            messages = (call.get("args") or {}).get("messages", [])
+            return "\n".join(str(m).strip() for m in messages if str(m).strip())
+    return ""
+
+
+def _build_prewarmed_contexts(next_likely: list[str]) -> dict[str, str]:
+    """Load skill content for predicted next-turn contexts."""
+    if not next_likely:
+        return {}
+    from backend.slow import SKILLS_DIR
+
+    result: dict[str, str] = {}
+    for name in next_likely:
+        skill_path = SKILLS_DIR / name / "SKILL.md"
+        if skill_path.exists():
+            result[name] = skill_path.read_text(encoding="utf-8")
+    return result
+
+
+def _extract_skill_names(reasoning_trail: list[str]) -> list[str]:
+    """Extract skill names from reasoning_trail entries like 'skill:untangle'."""
+    names = []
+    for entry in reasoning_trail:
+        if entry.startswith("skill:"):
+            names.append(entry[6:])
+    return names
+
+
 class VoiceBridgeAgent(Agent):
     """LiveKit Agent that bridges each user turn to pydantic-ai Fast and Slow."""
 
@@ -37,7 +69,10 @@ class VoiceBridgeAgent(Agent):
             "carryover_inject": [],
             "carryover_skills": [],
             "carryover_retrieval": "",
+            "next_likely_contexts": [],
+            "carryover_skill_names": [],
         }
+        self._last_speaker_text: str = ""
 
     async def stt_node(
         self,
@@ -142,6 +177,10 @@ class VoiceBridgeAgent(Agent):
             skill_bundle=list(self._slow_state["carryover_skills"]),
             retrieval_block=str(self._slow_state["carryover_retrieval"]),
             dynamic_inject=list(self._slow_state["carryover_inject"]),
+            prewarmed_contexts=_build_prewarmed_contexts(
+                self._slow_state["next_likely_contexts"]
+            ),
+            skill_names=list(self._slow_state["carryover_skill_names"]),
         )
         if (
             fast_deps.dynamic_inject
@@ -163,6 +202,7 @@ class VoiceBridgeAgent(Agent):
             session_id=session_id,
             user_message=user_text,
             fast_reply_text="",
+            speaker_output=self._last_speaker_text,
             reasoning_trail=self._slow_state["reasoning_trail"],
             search_cache=self._slow_state["search_cache"],
             pending_actions=self._slow_state["pending_actions"],
@@ -184,8 +224,6 @@ class VoiceBridgeAgent(Agent):
         )
 
         def _persist_slow_state(result: Any | None) -> None:
-            if result is not None:
-                self._slow_history = result.all_messages()
             slow_called_tool = bool(slow_deps.tool_call_history)
             if slow_deps.mutation_count_this_iter == 0 and not slow_called_tool:
                 from backend.slow import _append_lru
@@ -206,12 +244,7 @@ class VoiceBridgeAgent(Agent):
                         "fallback": "bridge_no_mutation",
                     },
                 )
-            self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
-            self._slow_state["search_cache"] = slow_deps.search_cache
-            self._slow_state["pending_actions"] = slow_deps.pending_actions
-            self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
-            self._slow_state["carryover_skills"] = slow_deps.carryover_skills[-2:]
-            self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval
+            self._persist_slow_state_sync(slow_deps, result)
 
         def _on_slow_done(task: asyncio.Task[Any]) -> None:
             latency_ms = round((time.monotonic() - started_at) * 1000)
@@ -332,7 +365,27 @@ class VoiceBridgeAgent(Agent):
                 },
             )
 
+        self._last_speaker_text = _extract_speaker_text(
+            fast_deps.collected_tool_calls
+        )
         raise StopResponse()
+
+    def _persist_slow_state_sync(
+        self, slow_deps: Any, result: Any | None
+    ) -> None:
+        """Persist slow agent state for cross-turn carryover."""
+        if result is not None:
+            self._slow_history = result.all_messages()
+        self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
+        self._slow_state["search_cache"] = slow_deps.search_cache
+        self._slow_state["pending_actions"] = slow_deps.pending_actions
+        self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
+        self._slow_state["carryover_skills"] = slow_deps.carryover_skills[-2:]
+        self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval
+        self._slow_state["next_likely_contexts"] = slow_deps.next_likely_contexts
+        self._slow_state["carryover_skill_names"] = _extract_skill_names(
+            slow_deps.reasoning_trail
+        )
 
     def _resolve_room_name(self) -> str:
         candidates = [
@@ -384,6 +437,9 @@ FastSlowAgent = VoiceBridgeAgent
 __all__ = [
     "FastSlowAgent",
     "VoiceBridgeAgent",
+    "_build_prewarmed_contexts",
+    "_extract_skill_names",
+    "_extract_speaker_text",
     "voice_session_ctx",
     "voice_turn_ctx",
 ]

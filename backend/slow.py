@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -60,6 +61,8 @@ class SlowThinkDeps(BaseModel):
     carryover_inject: list[str] = Field(default_factory=list)
     carryover_skills: list[str] = Field(default_factory=list)
     carryover_retrieval: str = ""
+    next_likely_contexts: list[str] = Field(default_factory=list)
+    speaker_output: str = ""
     mutation_count_this_iter: int = 0
 
 
@@ -344,6 +347,62 @@ async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: 
         text_len=len(skill_text),
     )
     return f"skill attached (cross-turn, effective next turn): {skill_name}"
+
+
+@slow_agent.tool
+async def slow_set_next_likely_contexts(
+    ctx: RunContext[SlowThinkDeps], contexts: list[str]
+) -> str:
+    """Predict next likely contexts for pre-warming (cross-turn)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_set_next_likely_contexts")
+    ctx.deps.next_likely_contexts = contexts[:3]
+    ctx.deps.reasoning_trail.append(f"predict:{','.join(contexts[:3])}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_set_next_likely_contexts",
+        started_at=started_at,
+    )
+    return f"next_likely_contexts set: {contexts[:3]}"
+
+
+SAFETY_REVIEW_PATTERNS = [
+    ("诊断", ["你可能患有", "你可能有", "你有抑郁症", "你有焦虑症", "诊断为", "你患了"]),
+    ("替用户做决定", ["你应该分手", "你必须离开", "你应该辞职", "你不应该原谅"]),
+    ("动机判断", ["他就是想控制你", "她根本不爱你", "他们的目的是"]),
+]
+
+
+@slow_agent.tool
+async def slow_safety_review(ctx: RunContext[SlowThinkDeps]) -> str:
+    """Review Speaker's last output for safety issues (async, non-blocking)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_safety_review")
+    output = ctx.deps.speaker_output
+    if not output.strip():
+        _log_slow_tool_call(ctx, tool="slow_safety_review", started_at=started_at)
+        return "no speaker output to review"
+
+    issues = []
+    for category, patterns in SAFETY_REVIEW_PATTERNS:
+        for pattern in patterns:
+            if re.search(re.escape(pattern), output, re.DOTALL):
+                issues.append(f"{category}: '{pattern}'")
+    if not issues:
+        _log_slow_tool_call(ctx, tool="slow_safety_review", started_at=started_at)
+        return "speaker output OK, no safety issues"
+
+    correction = f"上轮 Speaker 输出有安全问题({'; '.join(issues)})。下轮避免诊断、替用户做决定、对不在场的人做动机判断。"
+    _append_lru(ctx.deps.carryover_inject, correction, limit=3)
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_safety_review",
+        started_at=started_at,
+        text_len=len(correction),
+    )
+    return f"correction injected: {correction}"
 
 
 def _append_to_memory_section(section: str, content: str, session_id: str) -> None:

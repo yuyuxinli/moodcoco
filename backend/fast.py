@@ -41,6 +41,8 @@ class FastThinkDeps(BaseModel):
     skill_bundle: list[str] = Field(default_factory=list)
     retrieval_block: str = ""
     dynamic_inject: list[str] = Field(default_factory=list)
+    prewarmed_contexts: dict[str, str] = Field(default_factory=dict)
+    skill_names: list[str] = Field(default_factory=list)
 
     def voice_system_extras(self) -> str:
         """Compile cross-turn voice context injected by Thinker into Speaker instructions."""
@@ -64,6 +66,9 @@ class FastThinkDeps(BaseModel):
             parts.append(f"## Slow 检索补充\n\n{self.retrieval_block.strip()}")
         if self.dynamic_inject:
             parts.append("## Slow 动态注入\n\n" + "\n\n".join(self.dynamic_inject))
+        for ctx_key, ctx_content in self.prewarmed_contexts.items():
+            if ctx_key in self.skill_names:
+                parts.append(f"## 预热 Context ({ctx_key})\n\n{ctx_content}")
         return "\n\n".join(parts)
 
 
