@@ -317,8 +317,14 @@ class VoiceBridgeAgent(Agent):
         except Exception:
             latency_ms = round((time.monotonic() - started_at) * 1000)
             already_spoke = any(
-                call.get("name") == "ai_message"
-                and (call.get("args") or {}).get("messages")
+                (
+                    call.get("name") == "ai_message"
+                    and (call.get("args") or {}).get("messages")
+                )
+                or (
+                    call.get("name") == "ai_safety_brake"
+                    and (call.get("args") or {}).get("response")
+                )
                 for call in fast_deps.collected_tool_calls
             )
             if already_spoke:

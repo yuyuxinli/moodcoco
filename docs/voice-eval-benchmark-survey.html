@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>语音 Agent 评估与 Benchmark 合集 · 4 篇论文</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --eval: #2563eb;
+      --eval-bg: #eff6ff;
+      --bench: #059669;
+      --bench-bg: #ecfdf5;
+      --asr: #0891b2;
+      --asr-bg: #ecfeff;
+      --e2e: #7c3aed;
+      --e2e-bg: #f5f3ff;
+      --warn: #d97706;
+      --warn-bg: #fffbeb;
+      --danger: #dc2626;
+      --win: #16a34a;
+      --win-bg: #f0fdf4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 { font-size: 1.1em; margin: 36px 0 14px; padding: 8px 14px; border-radius: 6px; display: inline-block; }
+    .tag { display: inline-block; font-size: 14px; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+    .overview { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin: 20px 0 36px; }
+    .overview-title { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 20px; text-align: center; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+    .note { margin: 12px 0; padding: 12px 16px; border-radius: 6px; font-size: 15px; line-height: 1.6; }
+    .note-key { background: var(--eval-bg); border-left: 3px solid var(--eval); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: #fef2f2; border-left: 3px solid var(--danger); }
+    .note-win { background: var(--win-bg); border-left: 3px solid var(--win); }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+    .gl-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 15px; }
+    .gl-term { flex-shrink: 0; width: 220px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    .pipeline { display: flex; align-items: stretch; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+    .pipe-node { flex: 1; min-width: 100px; padding: 12px; border-radius: 8px; text-align: center; }
+    .pipe-node .pipe-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .pipe-node .pipe-desc { font-size: 12px; line-height: 1.4; opacity: 0.8; }
+    .pipe-arrow { display: flex; align-items: center; font-size: 22px; color: var(--muted); padding: 0 3px; flex-shrink: 0; }
+
+    /* Paper card */
+    .paper-card {
+      border: 2px solid;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 12px;
+    }
+    .paper-card .paper-id {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-bottom: 8px;
+    }
+    .paper-card .paper-title { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+    .paper-card .paper-source { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .paper-card .paper-question { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .paper-card .paper-answer { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+    /* Bar chart */
+    .bar-chart { margin: 16px 0; }
+    .bar-row { display: flex; align-items: center; margin-bottom: 6px; }
+    .bar-label { width: 160px; flex-shrink: 0; font-size: 13px; font-weight: 600; text-align: right; padding-right: 12px; }
+    .bar-track { flex: 1; height: 28px; background: #f1f5f9; border-radius: 4px; position: relative; }
+    .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; font-weight: 600; color: white; }
+    @media (max-width: 800px) { .bar-label { width: 100px; font-size: 12px; } }
+
+    /* Hallucination example */
+    .halluc-card { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+    .halluc-in { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; }
+    .halluc-arrow { flex-shrink: 0; font-size: 20px; color: var(--muted); padding-top: 8px; }
+    .halluc-out { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; }
+    @media (max-width: 800px) { .halluc-card { flex-direction: column; } .halluc-arrow { transform: rotate(90deg); text-align: center; } }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; font-weight: 700; }
+    td:first-child { font-weight: 600; width: 130px; }
+  </style>
+</head>
+<body>
+
+<h1>语音 Agent 评估与 Benchmark 合集 <small>— 4 篇论文精读</small></h1>
+<p class="subtitle">
+  如何衡量语音 Agent 的好坏？客观指标 ≠ 用户满意 · SpeechLM 尚不及级联 · ASR 短句幻觉 · Bot-to-Bot 端到端评估
+</p>
+
+<!-- ===== 术语速查 ===== -->
+<h2 style="background:#f1f5f9; color:var(--ink);">术语速查</h2>
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">WER（词错误率）</div>
+    <div class="gl-def">Word Error Rate，ASR 输出与真实文本的编辑距离。传统 ASR 核心指标，但论文 C 指出仅此不够。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LLM-as-Judge</div>
+    <div class="gl-def">用大语言模型评分对话质量。论文 A 用此方法评估 conversational quality 和 skill assessment。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Bot-to-Bot 评估</div>
+    <div class="gl-def">两个 AI 互相打电话。一个做"测试用户"，一个是被测系统。EVA 框架的核心方法，实现端到端自动化测试。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Agentic Task</div>
+    <div class="gl-def">需要工具调用、多步推理的任务（如订餐、查日历、转账）。VoiceAgentBench 的评估重点。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">SpeechLM（端到端语音模型）</div>
+    <div class="gl-def">直接从语音到语音的模型（如 Qwen2.5-Omni）。不走 STT→LLM→TTS 级联，延迟低但工具调用弱。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">ASR Hallucination</div>
+    <div class="gl-def">ASR 在短音频/截断音频上"幻觉"出不存在的内容。论文 C 发现这是语音 Agent 的隐性风险。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Cascade vs End-to-End</div>
+    <div class="gl-def">级联（STT→LLM→TTS）vs 端到端（SpeechLM）。2025-2026 的共识：级联在 agentic 场景仍更强。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTFA（首音频时间）</div>
+    <div class="gl-def">Time To First Audio，从用户说完到系统发出第一个音频帧的时间。端到端延迟衡量。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">User Satisfaction</div>
+    <div class="gl-def">用户主观满意度。论文 A 关键发现：与 WER、BLEU 等客观指标弱相关。</div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 全景概览 ===== -->
+<h2 style="background:var(--eval-bg); color:var(--eval);">全景概览：4 篇论文各解决什么问题</h2>
+
+<div style="display:grid;gap:12px;margin:16px 0;">
+  <div class="paper-card" style="border-color:var(--eval);background:var(--eval-bg);">
+    <span class="paper-id" style="background:var(--eval);color:white;">Paper A</span>
+    <div class="paper-title">Evaluating STT × LLM × TTS Combinations for AI Interview Systems</div>
+    <div class="paper-source">arXiv 2025 · 30 万+ AI 面试数据</div>
+    <div class="paper-question">❓ 生产环境里，哪种 STT+LLM+TTS 组合最好？</div>
+    <div class="paper-answer">答：看你怎么定义"好"。客观质量指标与用户满意度弱相关——用户满不满意和文本正确与否是两回事。</div>
+  </div>
+  <div class="paper-card" style="border-color:var(--bench);background:var(--bench-bg);">
+    <span class="paper-id" style="background:var(--bench);color:white;">Paper B</span>
+    <div class="paper-title">VoiceAgentBench: Benchmarking Spoken Agentic Tasks</div>
+    <div class="paper-source">arXiv 2025 · 工具调用 / 多轮 / 安全 / 多语言</div>
+    <div class="paper-question">❓ 语音 Agent 能完成复杂任务吗？</div>
+    <div class="paper-answer">答：Cascade pipeline 能，SpeechLM 还不行。端到端模型在 agentic tasks 上仍显著落后于级联方案。</div>
+  </div>
+  <div class="paper-card" style="border-color:var(--asr);background:var(--asr-bg);">
+    <span class="paper-id" style="background:var(--asr);color:white;">Paper C</span>
+    <div class="paper-title">Back to Basics: Revisiting ASR in the Age of Voice Agents</div>
+    <div class="paper-source">arXiv 2026 · WildASR benchmark</div>
+    <div class="paper-question">❓ ASR 真的够好了吗？</div>
+    <div class="paper-answer">答：WER 不够用。短音频截断、环境噪声、口音、数字/专名场景下 ASR 幻觉严重——下游 LLM 再强也会被拖垮。</div>
+  </div>
+  <div class="paper-card" style="border-color:var(--e2e);background:var(--e2e-bg);">
+    <span class="paper-id" style="background:var(--e2e);color:white;">Paper D</span>
+    <div class="paper-title">EVA: End-to-end Voice Agent Evaluation Framework</div>
+    <div class="paper-source">ServiceNow 2026 · 开源 bot-to-bot 评估</div>
+    <div class="paper-question">❓ 怎么自动化测试语音 Agent？</div>
+    <div class="paper-answer">答：让两个 bot 互相打电话。Evaluator Bot 拨入被测系统，录制音频/转写/工具调用日志，自动评分。</div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Paper A ========== -->
+<h2 style="background:var(--eval-bg); color:var(--eval);">Paper A：STT×LLM×TTS 组合评估</h2>
+<p style="color:var(--muted);margin-bottom:12px;">
+  30 万+ 场 AI 面试 · 5 种生产配置 · LLM-as-judge 评估 conversational quality + technical accuracy + skill assessment
+</p>
+
+<div class="note note-key" style="font-size:16px;">
+  <strong>核心发现：客观质量指标（WER、BLEU、准确率）与用户满意度相关性较弱。</strong><br/>
+  用户满不满意受语音自然度、响应速度、情绪感知等主观因素影响，单看文本正确性无法预测满意度。
+</div>
+
+<div class="overview">
+  <div class="overview-title">指标 vs 满意度 —— 相关性示意</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-size:13px;">
+    <div style="padding:12px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;">
+      <div style="font-weight:700;">WER</div>
+      <div style="color:var(--danger);font-weight:700;font-size:18px;">弱</div>
+      <div style="color:var(--muted);">词错误率低 ≠ 用户满意</div>
+    </div>
+    <div style="padding:12px;border-radius:8px;background:#fee2e2;border:1px solid #fca5a5;">
+      <div style="font-weight:700;">BLEU</div>
+      <div style="color:var(--danger);font-weight:700;font-size:18px;">弱</div>
+      <div style="color:var(--muted);">回复相似度 ≠ 对话质量</div>
+    </div>
+    <div style="padding:12px;border-radius:8px;background:#fef9c3;border:1px solid #fde68a;">
+      <div style="font-weight:700;">Latency</div>
+      <div style="color:var(--warn);font-weight:700;font-size:18px;">中等</div>
+      <div style="color:var(--muted);">速度影响满意，但非唯一因素</div>
+    </div>
+    <div style="padding:12px;border-radius:8px;background:var(--win-bg);border:1px solid #86efac;">
+      <div style="font-weight:700;">Voice UX</div>
+      <div style="color:var(--win);font-weight:700;font-size:18px;">强</div>
+      <div style="color:var(--muted);">自然度+情感 = 满意度主要因素</div>
+    </div>
+  </div>
+</div>
+
+<div class="note note-compare">
+  <strong>对 moodcoco 的启示：</strong>不要只优化 WER 和回复文本质量。需要追踪用户主观满意度作为主要指标，
+  尤其是在情绪陪伴场景——同一个回复在用户不同情绪状态下的评价可能完全不同。
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Paper B ========== -->
+<h2 style="background:var(--bench-bg); color:var(--bench);">Paper B：VoiceAgentBench</h2>
+<p style="color:var(--muted);margin-bottom:12px;">
+  面向 spoken agentic tasks 的 benchmark · 工具调用 / 多工具 workflow / 多轮对话 / 安全 / 多语言
+</p>
+
+<div class="note" style="background:var(--bench-bg);border-left:3px solid var(--bench);font-size:16px;">
+  <strong>核心发现：SpeechLM 在 agentic tasks 上仍显著落后于 ASR-LLM pipeline。</strong><br/>
+  端到端语音模型（如 Qwen2.5-Omni）在工具调用、多步推理、安全约束等维度表现不足——
+  级联架构（STT→LLM→TTS）仍然是严肃 agentic 应用的实际选择。
+</div>
+
+<div class="overview">
+  <div class="overview-title">Cascade Pipeline vs SpeechLM —— Agentic 能力对比</div>
+  <div class="bar-chart">
+    <div style="font-size:13px;color:var(--muted);margin-bottom:8px;text-align:right;padding-right:12px;">
+      <span style="display:inline-block;width:12px;height:12px;background:var(--bench);border-radius:2px;"></span> Cascade &nbsp;
+      <span style="display:inline-block;width:12px;height:12px;background:var(--e2e);border-radius:2px;"></span> SpeechLM
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">工具调用准确率</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:82%;background:var(--bench);">Cascade 82%</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:41%;background:var(--e2e);">SpeechLM 41%</div>
+      </div>
+    </div>
+    <div class="bar-row" style="margin-top:8px;">
+      <div class="bar-label">多步 Workflow</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:71%;background:var(--bench);">Cascade 71%</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:28%;background:var(--e2e);">SpeechLM 28%</div>
+      </div>
+    </div>
+    <div class="bar-row" style="margin-top:8px;">
+      <div class="bar-label">安全合规</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:89%;background:var(--bench);">Cascade 89%</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:55%;background:var(--e2e);">SpeechLM 55%</div>
+      </div>
+    </div>
+    <div class="bar-row" style="margin-top:8px;">
+      <div class="bar-label">多语言</div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:75%;background:var(--bench);">Cascade 75%</div>
+      </div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label"></div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width:48%;background:var(--e2e);">SpeechLM 48%</div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px;">* 数值为论文报告的代表性结果示意，非精确值</p>
+</div>
+
+<div class="note note-compare">
+  <strong>对 moodcoco 的启示：</strong>moodcoco 的级联架构（STT→Fast/Slow→TTS）是正确方向。
+  情绪陪伴涉及 Skill 路由、工具调用（检索、评估）、安全边界——这些 agentic 能力正是端到端模型的短板。
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Paper C ========== -->
+<h2 style="background:var(--asr-bg); color:var(--asr);">Paper C：Revisiting ASR for Voice Agents</h2>
+<p style="color:var(--muted);margin-bottom:12px;">
+  WildASR benchmark · 短音频幻觉 · 环境/口音/数字识别 failure modes · WER 不够用
+</p>
+
+<div class="note" style="background:var(--asr-bg);border-left:3px solid var(--asr);font-size:16px;">
+  <strong>核心发现：Voice Agent 依赖 ASR 触发下游动作，但 ASR 在短音频/截断场景下存在严重幻觉。</strong><br/>
+  单纯 WER 无法衡量这种 failure mode——短音频可能 WER 看起来还行，但 ASR 幻觉出完全不存在的内容。
+</div>
+
+<div class="overview">
+  <div class="overview-title">ASR 短音频幻觉示例</div>
+  <div class="halluc-card">
+    <div class="halluc-in" style="background:var(--asr-bg);border:1px solid var(--asr);">
+      <strong style="color:var(--asr);">🎤 用户实际说的</strong><br/>
+      "嗯…"（叹气，0.8 秒）
+    </div>
+    <div class="halluc-arrow">→</div>
+    <div class="halluc-out" style="background:#fef2f2;border:1px solid var(--danger);">
+      <strong style="color:var(--danger);">📝 ASR 输出</strong><br/>
+      "嗯，我觉得这个方案不太好" <span style="font-size:12px;color:var(--danger);">← 幻觉</span>
+    </div>
+  </div>
+  <div class="halluc-card">
+    <div class="halluc-in" style="background:var(--asr-bg);border:1px solid var(--asr);">
+      <strong style="color:var(--asr);">🎤 用户实际说的</strong><br/>
+      "好"（单字确认，0.3 秒）
+    </div>
+    <div class="halluc-arrow">→</div>
+    <div class="halluc-out" style="background:#fef2f2;border:1px solid var(--danger);">
+      <strong style="color:var(--danger);">📝 ASR 输出</strong><br/>
+      "好的，我明天就去" <span style="font-size:12px;color:var(--danger);">← 幻觉</span>
+    </div>
+  </div>
+  <div class="halluc-card">
+    <div class="halluc-in" style="background:var(--asr-bg);border:1px solid var(--asr);">
+      <strong style="color:var(--asr);">🎤 背景噪声</strong><br/>
+      （空调声 + 键盘声，无人说话）
+    </div>
+    <div class="halluc-arrow">→</div>
+    <div class="halluc-out" style="background:#fef2f2;border:1px solid var(--danger);">
+      <strong style="color:var(--danger);">📝 ASR 输出</strong><br/>
+      "请问你能帮我…" <span style="font-size:12px;color:var(--danger);">← 幻觉</span>
+    </div>
+  </div>
+</div>
+
+<div class="note note-danger">
+  <strong>对 moodcoco 的风险：</strong>情绪陪伴对话常有短句（"嗯"、"哦"）、叹气、沉默、单字回应——
+  这些正是 ASR 幻觉的高发区。如果 ASR 幻觉出用户没说的内容，Slow Agent 会基于错误输入做出错误判断。
+  需要：① ASR confidence 评分 ② 短音频专项测试 ③ 低置信度时的 fallback 策略。
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Paper D ========== -->
+<h2 style="background:var(--e2e-bg); color:var(--e2e);">Paper D：EVA — Bot-to-Bot 评估框架</h2>
+<p style="color:var(--muted);margin-bottom:12px;">
+  ServiceNow 开源 · 端到端音频评估 · 支持 cascade 和 speech-to-speech · 自动评分
+</p>
+
+<div class="note" style="background:var(--e2e-bg);border-left:3px solid var(--e2e);font-size:16px;">
+  <strong>核心方法：用 Evaluator Bot 给被测系统"打电话"，记录音频/转写/工具调用日志，自动评分。</strong><br/>
+  不是文本 replay，而是真实的端到端音频交互——覆盖 ASR 噪声、TTS 自然度、延迟等全链路因素。
+</div>
+
+<div class="overview">
+  <div class="overview-title">EVA 评估管线</div>
+  <div class="pipeline">
+    <div class="pipe-node" style="background:var(--e2e-bg);border:2px solid var(--e2e);">
+      <div class="pipe-title" style="color:var(--e2e);">Evaluator Bot</div>
+      <div class="pipe-desc">扮演用户<br/>按脚本说话</div>
+    </div>
+    <div class="pipe-arrow">🔊→</div>
+    <div class="pipe-node" style="background:#f1f5f9;border:2px solid var(--muted);">
+      <div class="pipe-title">音频传输</div>
+      <div class="pipe-desc">真实 audio<br/>全链路</div>
+    </div>
+    <div class="pipe-arrow">→🔊</div>
+    <div class="pipe-node" style="background:var(--eval-bg);border:2px solid var(--eval);">
+      <div class="pipe-title" style="color:var(--eval);">被测系统</div>
+      <div class="pipe-desc">moodcoco /<br/>任何 voice agent</div>
+    </div>
+    <div class="pipe-arrow">→📊</div>
+    <div class="pipe-node" style="background:var(--win-bg);border:2px solid var(--win);">
+      <div class="pipe-title" style="color:var(--win);">Validators</div>
+      <div class="pipe-desc">转写 + 工具日志<br/>→ 自动评分</div>
+    </div>
+  </div>
+</div>
+
+<div class="note note-win">
+  <strong>对 moodcoco 的启示：</strong>如果要验证"并行 LLM 是否提高质量"、"Slow Agent 注入是否改善回复"，
+  需要这种端到端评估——不是只看 LLM 文本输出，而是完整的 audio→ASR→LLM→TTS→audio 全链路。
+  第一步：用 EVA 的思路搭建一个"测试用户 bot"，按典型情绪场景脚本自动与 moodcoco 对话并评分。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 横向对比 ===== -->
+<h2 style="background:#fefce8; color:#92400e;">横向对比：4 篇论文解决的层次</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th style="color:var(--eval);">Paper A</th>
+      <th style="color:var(--bench);">Paper B</th>
+      <th style="color:var(--asr);">Paper C</th>
+      <th style="color:var(--e2e);">Paper D</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>评估对象</td>
+      <td>STT×LLM×TTS 组合</td>
+      <td>Agentic 任务能力</td>
+      <td>ASR 鲁棒性</td>
+      <td>全链路端到端</td>
+    </tr>
+    <tr>
+      <td>评估方法</td>
+      <td>LLM-as-Judge + 用户满意度</td>
+      <td>任务完成率 + 安全</td>
+      <td>WildASR benchmark + 幻觉检测</td>
+      <td>Bot-to-Bot 音频评估</td>
+    </tr>
+    <tr>
+      <td>关键发现</td>
+      <td>客观指标 ≠ 满意度</td>
+      <td>Cascade &gt; SpeechLM</td>
+      <td>短音频 ASR 幻觉</td>
+      <td>文本 replay 不够</td>
+    </tr>
+    <tr>
+      <td>数据规模</td>
+      <td>30 万+ 面试</td>
+      <td>多 benchmark 套件</td>
+      <td>WildASR 专项集</td>
+      <td>框架（无固定数据集）</td>
+    </tr>
+    <tr>
+      <td>对 moodcoco 相关度</td>
+      <td style="color:var(--warn);">⭐⭐⭐ 满意度追踪</td>
+      <td style="color:var(--bench);">⭐⭐ 架构验证</td>
+      <td style="color:var(--danger);">⭐⭐⭐ 风险识别</td>
+      <td style="color:var(--e2e);">⭐⭐⭐ 测试方法</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider" />
+
+<!-- ===== 对 moodcoco 的统一建议 ===== -->
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的评估建议：三层体系</h2>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0;">
+  <div class="card" style="border-top:4px solid var(--asr);">
+    <h3 style="color:var(--asr);">Layer 1：组件级</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:8px;">来自 Paper C</p>
+    <ul style="font-size:14px;">
+      <li>ASR 准确率（不止 WER）</li>
+      <li>短音频幻觉检测</li>
+      <li>ASR confidence 评分</li>
+      <li>TTS 自然度 MOS</li>
+    </ul>
+  </div>
+  <div class="card" style="border-top:4px solid var(--e2e);">
+    <h3 style="color:var(--e2e);">Layer 2：管线级</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:8px;">来自 Paper B + D</p>
+    <ul style="font-size:14px;">
+      <li>Bot-to-Bot 自动化回归测试</li>
+      <li>Skill 路由准确率</li>
+      <li>工具调用成功率</li>
+      <li>TTFA 端到端延迟</li>
+    </ul>
+  </div>
+  <div class="card" style="border-top:4px solid var(--eval);">
+    <h3 style="color:var(--eval);">Layer 3：用户级</h3>
+    <p style="font-size:14px;color:var(--muted);margin-bottom:8px;">来自 Paper A</p>
+    <ul style="font-size:14px;">
+      <li>用户满意度（主指标）</li>
+      <li>"看见情绪/原因/模式/方法"</li>
+      <li>安全边界合规</li>
+      <li>对话自然度主观评分</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-danger" style="margin-top:16px;">
+  <strong>情绪场景的特殊挑战：</strong>同一个回复在用户不同情绪状态下的评价完全不同。
+  "我理解你的感受"在用户刚倾诉完时是共情，在用户反复听到后是敷衍。
+  评估系统需要情绪状态作为上下文变量，不能脱离情绪谈质量。
+</div>
+
+<p style="margin-top:32px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于 4 篇语音 Agent 评估论文综合分析，2026-05-11 —
+</p>
+
+</body>
+</html>

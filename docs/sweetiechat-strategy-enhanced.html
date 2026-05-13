@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SweetieChat: Strategy-Enhanced Emotional Support 深度解读</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --indigo: #4f46e5;
+    --indigo-light: #eef2ff;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 40px;
+  }
+  .section-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .card p, .card li {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .card ul {
+    padding-left: 20px;
+  }
+  .card ul li {
+    margin-bottom: 4px;
+  }
+
+  /* TLDR Box */
+  .tldr {
+    background: linear-gradient(135deg, var(--indigo-light) 0%, var(--blue-light) 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow-md);
+  }
+  .tldr h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--indigo);
+  }
+  .tldr p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .tldr ul {
+    padding-left: 20px;
+    margin-top: 8px;
+  }
+  .tldr li {
+    font-size: 14px;
+    line-height: 1.8;
+    margin-bottom: 4px;
+  }
+  .tldr .verdict {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  /* Architecture Diagram */
+  .arch-diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+  }
+  .arch-diagram h3 {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: var(--text-secondary);
+  }
+
+  /* Flow diagram */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .flow-phase {
+    width: 100%;
+    max-width: 760px;
+    margin-bottom: 8px;
+  }
+  .flow-phase-label {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    padding: 14px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 140px;
+    line-height: 1.4;
+    position: relative;
+  }
+  .flow-box.seeker {
+    background: var(--amber-light);
+    border: 2px solid var(--amber);
+    color: #92400e;
+  }
+  .flow-box.counselor {
+    background: var(--purple-light);
+    border: 2px solid var(--purple);
+    color: #5b21b6;
+  }
+  .flow-box.supporter {
+    background: var(--green-light);
+    border: 2px solid var(--green);
+    color: #166534;
+  }
+  .flow-box.data {
+    background: var(--blue-light);
+    border: 2px solid var(--blue);
+    color: #1e40af;
+  }
+  .flow-box.model {
+    background: var(--pink-light);
+    border: 2px solid var(--pink);
+    color: #9d174d;
+  }
+  .flow-box.output {
+    background: var(--teal-light);
+    border: 2px solid var(--teal);
+    color: #115e59;
+  }
+  .flow-box small {
+    display: block;
+    font-weight: 400;
+    font-size: 11px;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+  .flow-arrow {
+    font-size: 20px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1;
+  }
+  .flow-arrow-down {
+    font-size: 20px;
+    color: var(--text-secondary);
+    text-align: center;
+    padding: 4px 0;
+  }
+  .flow-connector {
+    width: 2px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 auto;
+  }
+  .flow-connector-dashed {
+    width: 2px;
+    height: 20px;
+    margin: 0 auto;
+    border-left: 2px dashed var(--text-secondary);
+    opacity: 0.4;
+  }
+
+  /* Interaction Loop Diagram */
+  .interaction-loop {
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+  .loop-step {
+    flex: 1;
+    min-width: 160px;
+    max-width: 200px;
+    text-align: center;
+  }
+  .loop-step-box {
+    padding: 16px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .loop-step-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    padding: 0 4px;
+  }
+  .loop-arrow-right {
+    display: flex;
+    align-items: center;
+    font-size: 24px;
+    color: var(--text-secondary);
+    padding: 0 2px;
+    margin-top: -20px;
+  }
+
+  /* Strategy comparison table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  th {
+    background: var(--slate-light);
+    font-weight: 600;
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 2px solid var(--border);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--slate);
+  }
+  td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  tr:hover {
+    background: var(--slate-light);
+  }
+
+  /* Strategy bar */
+  .strategy-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .strategy-bar .label {
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 180px;
+    text-align: right;
+    color: var(--text);
+  }
+  .strategy-bar .bar-track {
+    flex: 1;
+    height: 20px;
+    background: var(--slate-light);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .strategy-bar .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    padding-left: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+  }
+  .strategy-bar .bar-fill.esconv {
+    background: var(--blue);
+    opacity: 0.35;
+  }
+  .strategy-bar .bar-fill.serve {
+    background: var(--purple);
+  }
+  .bar-legend {
+    display: flex;
+    gap: 20px;
+    justify-content: flex-end;
+    margin-bottom: 16px;
+    font-size: 12px;
+  }
+  .bar-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bar-legend .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .bar-legend .dot.esconv { background: var(--blue); opacity: 0.35; }
+  .bar-legend .dot.serve { background: var(--purple); }
+
+  /* Metric badge */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .metric-badge {
+    text-align: center;
+    padding: 16px 12px;
+    background: var(--slate-light);
+    border-radius: 12px;
+  }
+  .metric-badge .value {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+    display: block;
+  }
+  .metric-badge .label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Quality metrics */
+  .quality-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .quality-bar-row .qlabel {
+    font-size: 12px;
+    min-width: 110px;
+    text-align: right;
+    color: var(--text-secondary);
+  }
+  .quality-bar-row .qtrack {
+    flex: 1;
+    height: 16px;
+    background: var(--slate-light);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .quality-bar-row .qfill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--green);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 2px 4px 2px 0;
+  }
+  .tag-blue { background: var(--blue-light); color: #1e40af; }
+  .tag-green { background: var(--green-light); color: #166534; }
+  .tag-amber { background: var(--amber-light); color: #92400e; }
+  .tag-red { background: var(--red-light); color: #991b1b; }
+  .tag-purple { background: var(--purple-light); color: #5b21b6; }
+  .tag-teal { background: var(--teal-light); color: #115e59; }
+  .tag-pink { background: var(--pink-light); color: #9d174d; }
+  .tag-slate { background: var(--slate-light); color: var(--slate); }
+
+  /* Callout */
+  .callout {
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-top: 12px;
+  }
+  .callout-amber {
+    background: var(--amber-light);
+    border-left: 4px solid var(--amber);
+  }
+  .callout-blue {
+    background: var(--blue-light);
+    border-left: 4px solid var(--blue);
+  }
+  .callout-green {
+    background: var(--green-light);
+    border-left: 4px solid var(--green);
+  }
+  .callout-red {
+    background: var(--red-light);
+    border-left: 4px solid var(--red);
+  }
+  .callout-purple {
+    background: var(--purple-light);
+    border-left: 4px solid var(--purple);
+  }
+
+  /* Comparison grid */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 12px;
+  }
+  @media (max-width: 600px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .flow-row { flex-direction: column; }
+    .interaction-loop { flex-direction: column; align-items: center; }
+    .loop-arrow-right { transform: rotate(90deg); }
+  }
+
+  /* Three-stage model */
+  .three-stage {
+    display: flex;
+    gap: 0;
+    margin: 16px 0;
+  }
+  .stage-block {
+    flex: 1;
+    padding: 16px;
+    text-align: center;
+    position: relative;
+  }
+  .stage-block:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 20%;
+    height: 60%;
+    width: 1px;
+    background: var(--border);
+  }
+  .stage-block .stage-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+  .stage-block .stage-name {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .stage-block .stage-desc {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .stage-block .stage-strategies {
+    margin-top: 8px;
+  }
+
+  /* Results table highlight */
+  .best-result {
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .footer a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>SweetieChat</h1>
+    <div class="subtitle">Strategy-Enhanced Role-playing Framework for Diverse Scenarios Handling Emotional Support Agent</div>
+    <div class="meta">
+      <span>COLING 2025</span>
+      <span>中科院自动化所</span>
+      <span>Jing Ye, Lu Xiang et al.</span>
+      <span>arXiv: 2412.08389</span>
+      <span>未开源</span>
+    </div>
+  </div>
+
+  <!-- 30-second TLDR -->
+  <div class="tldr">
+    <h2>30 秒版本</h2>
+    <p>LLM 做情绪支持的核心问题：策略选择偏差（偏好"安慰鼓励"，忽视"提问探索"）+ 场景单一（只会处理训练集中的问题类型）。</p>
+    <ul>
+      <li><strong>方法：</strong>三角色 role-playing 框架 -- Seeker（求助者）+ Strategy Counselor（策略顾问，fine-tuned LLaMA）+ Supporter（支持者，GPT-4o）协同生成对话</li>
+      <li><strong>关键创新：</strong>把策略选择从 Supporter 中拆出来，交给一个专门 fine-tuned 的 Counselor 模型，避免 LLM 自带的策略偏差</li>
+      <li><strong>产出：</strong>ServeForEmo 数据集（3.7K 对话 / 62.8K 条消息），问题类型从 ESConv 的 13 类扩展到 45 类</li>
+      <li><strong>结果：</strong>在 ESConv 测试集上自动指标持平或略优于 ESConv 原始数据集训练的模型，人评中 empathy 和 overall quality 优于所有 baseline</li>
+    </ul>
+    <div class="verdict">
+      <strong>对 moodcoco 的核心价值：</strong>策略选择独立化的思路值得借鉴（可用于 fast/slow 架构中的 slow agent 策略规划），但数据集和代码均未开源，直接可用性有限。
+    </div>
+  </div>
+
+  <!-- Architecture Diagram -->
+  <div class="section">
+    <h2 class="section-title">核心架构</h2>
+
+    <div class="arch-diagram">
+      <h3>SweetieChat 两阶段流水线</h3>
+
+      <!-- Phase 1 -->
+      <div class="flow-phase">
+        <div class="flow-phase-label">Phase 1: Strategy-Enhanced Role-Playing Data Construction</div>
+        <div class="flow-row">
+          <div class="flow-box seeker">
+            Seeker
+            <small>GPT-4o 扮演</small>
+            <small>45 类问题 x 个性化 profile</small>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box counselor">
+            Strategy Counselor
+            <small>Fine-tuned LLaMA</small>
+            <small>分析对话历史 &rarr; 选策略</small>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box supporter">
+            Supporter
+            <small>GPT-4o 扮演</small>
+            <small>按策略生成回复</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-connector-dashed"></div>
+
+      <div style="text-align: center; font-size: 12px; color: var(--text-secondary); padding: 4px 0;">
+        多轮交互 &rarr; 生成对话 &rarr; 质量过滤 &rarr; 人工审核
+      </div>
+
+      <div class="flow-connector-dashed"></div>
+
+      <!-- Dataset -->
+      <div class="flow-phase">
+        <div class="flow-row">
+          <div class="flow-box data" style="min-width: 320px;">
+            ServeForEmo Dataset
+            <small>3,757 dialogues / 62,863 utterances / 45 problem types</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-connector"></div>
+      <div class="flow-arrow-down">&darr;</div>
+
+      <!-- Phase 2 -->
+      <div class="flow-phase">
+        <div class="flow-phase-label">Phase 2: Emotional Support Agent Training</div>
+        <div class="flow-row">
+          <div class="flow-box data">
+            ServeForEmo
+            <small>训练集</small>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box model">
+            LLaMA 3-8B-Instruct
+            <small>LoRA fine-tuning</small>
+            <small>rank=8, lr=3e-5, epoch=5</small>
+          </div>
+          <div class="flow-arrow">&rarr;</div>
+          <div class="flow-box output">
+            SweetieChat Agent
+            <small>开放域情绪支持</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interaction Loop Detail -->
+    <div class="card">
+      <h3>Role-Playing 交互循环（单轮对话生成过程）</h3>
+      <div class="interaction-loop">
+        <div class="loop-step">
+          <div class="loop-step-box" style="background: var(--amber-light); border: 1px solid var(--amber);">
+            Seeker 发言
+          </div>
+          <div class="loop-step-desc">基于 persona + scenario 表达情绪困扰</div>
+        </div>
+        <div class="loop-arrow-right">&rarr;</div>
+        <div class="loop-step">
+          <div class="loop-step-box" style="background: var(--purple-light); border: 1px solid var(--purple);">
+            Counselor 选策略
+          </div>
+          <div class="loop-step-desc">分析对话历史，输出最优 strategy label</div>
+        </div>
+        <div class="loop-arrow-right">&rarr;</div>
+        <div class="loop-step">
+          <div class="loop-step-box" style="background: var(--green-light); border: 1px solid var(--green);">
+            Supporter 回复
+          </div>
+          <div class="loop-step-desc">按照选定策略 + 对话上下文生成支持性回复</div>
+        </div>
+        <div class="loop-arrow-right">&rarr;</div>
+        <div class="loop-step">
+          <div class="loop-step-box" style="background: var(--slate-light); border: 1px solid var(--slate);">
+            下一轮
+          </div>
+          <div class="loop-step-desc">循环直至对话自然结束（avg 16.7 turns）</div>
+        </div>
+      </div>
+      <div class="callout callout-purple" style="margin-top: 16px;">
+        <strong>关键设计：</strong>Strategy Counselor 是独立 fine-tuned 的 LLaMA 模型，而不是 prompt 指令。这解决了 LLM 直接选策略时的偏差问题 -- 直接 prompt GPT-4o 选策略，会严重偏向 "Affirmation and Reassurance"（安慰）而忽视 "Question"（提问探索）。
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy-Enhanced Mechanism -->
+  <div class="section">
+    <h2 class="section-title">Strategy-Enhanced 机制详解</h2>
+
+    <div class="card">
+      <h3>为什么需要独立的 Strategy Counselor？</h3>
+      <p>论文发现的核心问题：直接让 LLM（如 GPT-4o）在生成回复的同时选择策略，会出现严重的策略偏差：</p>
+      <div class="compare-grid">
+        <div class="callout callout-red">
+          <strong>LLM 直接选策略的偏差</strong>
+          <ul style="padding-left: 16px; margin-top: 8px; font-size: 13px;">
+            <li>"Affirmation & Reassurance" 被过度使用</li>
+            <li>"Question" 策略严重不足</li>
+            <li>跳过 Exploration 阶段，直接进入 Action</li>
+            <li>回复模式化、公式化</li>
+          </ul>
+        </div>
+        <div class="callout callout-green">
+          <strong>独立 Counselor 的改善</strong>
+          <ul style="padding-left: 16px; margin-top: 8px; font-size: 13px;">
+            <li>策略分布更接近人类咨询师</li>
+            <li>遵循三阶段帮助模型</li>
+            <li>前期充分提问探索，中后期再给建议</li>
+            <li>策略多样性显著提升</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Strategy Counselor 训练方式</h3>
+      <p>把策略选择建模为 classification task，而不是 generation task：</p>
+      <ul style="margin-top: 8px;">
+        <li><strong>训练数据：</strong>ESConv 数据集的人工标注策略标签（1,300 对话）</li>
+        <li><strong>输入：</strong>截至当前轮次的完整对话历史 D<sub>ij</sub></li>
+        <li><strong>输出：</strong>最优策略标签 o<sub>i</sub> = argmax P(o | D<sub>ij</sub>)</li>
+        <li><strong>基座模型：</strong>LLaMA（论文未明确是哪个版本，推测为 LLaMA 2 或 3）</li>
+        <li><strong>关键：</strong>Counselor 只输出策略标签，不生成回复文本，职责分离</li>
+      </ul>
+    </div>
+
+    <!-- Three-stage model -->
+    <div class="card">
+      <h3>Hill 三阶段帮助模型 (Three-Stage Helping Model)</h3>
+      <p style="margin-bottom: 12px;">SweetieChat 的策略选择遵循心理咨询的三阶段理论框架：</p>
+      <div class="three-stage">
+        <div class="stage-block" style="background: var(--blue-light); border-radius: 12px 0 0 12px;">
+          <div class="stage-name" style="color: var(--blue);">Exploration</div>
+          <div class="stage-desc">理解问题，建立关系<br>占对话前 1/3</div>
+          <div class="stage-strategies">
+            <span class="tag tag-blue">Question</span>
+            <span class="tag tag-blue">Reflection</span>
+            <span class="tag tag-blue">Restatement</span>
+          </div>
+        </div>
+        <div class="stage-block" style="background: var(--amber-light);">
+          <div class="stage-name" style="color: var(--amber);">Comforting</div>
+          <div class="stage-desc">情感支持，共情回应<br>贯穿对话全程</div>
+          <div class="stage-strategies">
+            <span class="tag tag-amber">Affirmation</span>
+            <span class="tag tag-amber">Reflection</span>
+            <span class="tag tag-amber">Self-disclosure</span>
+          </div>
+        </div>
+        <div class="stage-block" style="background: var(--green-light); border-radius: 0 12px 12px 0;">
+          <div class="stage-name" style="color: var(--green);">Action</div>
+          <div class="stage-desc">提供建议，推动改变<br>占对话后 1/3</div>
+          <div class="stage-strategies">
+            <span class="tag tag-green">Suggestions</span>
+            <span class="tag tag-green">Information</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Labels -->
+  <div class="section">
+    <h2 class="section-title">策略标签体系 & 与 ESConv 对比</h2>
+
+    <div class="card">
+      <h3>8 种支持策略的分布对比</h3>
+      <p style="margin-bottom: 12px;">ServeForEmo vs ESConv 的策略分布。核心差异：ServeForEmo 更均衡，ESConv 的 "Others" 类过大。</p>
+
+      <div class="bar-legend">
+        <span><span class="dot serve"></span> ServeForEmo</span>
+        <span><span class="dot esconv"></span> ESConv</span>
+      </div>
+
+      <!-- Bars -->
+      <div class="strategy-bar">
+        <span class="label">Affirmation & Reassurance</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 51.3%;">15.4%</div>
+          <div class="bar-fill serve" style="width: 84.2%;">25.3%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Providing Suggestions</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 53.6%;">16.1%</div>
+          <div class="bar-fill serve" style="width: 66.7%;">20.0%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Question</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 69.0%;">20.7%</div>
+          <div class="bar-fill serve" style="width: 63.5%;">19.0%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Reflection of Feelings</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 26.0%;">7.8%</div>
+          <div class="bar-fill serve" style="width: 40.1%;">12.0%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Information</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 22.0%;">6.6%</div>
+          <div class="bar-fill serve" style="width: 29.3%;">8.8%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Self-disclosure</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 31.1%;">9.3%</div>
+          <div class="bar-fill serve" style="width: 16.4%;">4.9%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Restatement / Paraphrasing</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 19.8%;">5.9%</div>
+          <div class="bar-fill serve" style="width: 13.0%;">3.9%</div>
+        </div>
+      </div>
+      <div class="strategy-bar">
+        <span class="label">Others</span>
+        <div class="bar-track">
+          <div class="bar-fill esconv" style="width: 60.6%;">18.2%</div>
+          <div class="bar-fill serve" style="width: 20.2%;">6.1%</div>
+        </div>
+      </div>
+
+      <div class="callout callout-amber" style="margin-top: 16px;">
+        <strong>关键观察：</strong>ServeForEmo 大幅降低了 "Others" 类（18.2% &rarr; 6.1%），说明策略标注更精确。"Affirmation & Reassurance" 从 15.4% 升至 25.3% -- 看起来升高了，但论文指出这是因为 ESConv 把大量安慰回复错误归入了 "Others" 类。实际策略选择比直接 prompt LLM 更均衡。
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>问题类型扩展：13 &rarr; 45 类</h3>
+      <div class="compare-grid">
+        <div>
+          <h4 style="font-size: 14px; margin-bottom: 8px;">ESConv 原始 (13 类)</h4>
+          <span class="tag tag-slate">depression</span>
+          <span class="tag tag-slate">anxiety</span>
+          <span class="tag tag-slate">loneliness</span>
+          <span class="tag tag-slate">relationship</span>
+          <span class="tag tag-slate">academic</span>
+          <span class="tag tag-slate">job crisis</span>
+          <span class="tag tag-slate">abuse</span>
+          <span class="tag tag-slate">health issues</span>
+          <span class="tag tag-slate">ongoing stress</span>
+          <span class="tag tag-slate">grief</span>
+          <span class="tag tag-slate">shame</span>
+          <span class="tag tag-slate">financial</span>
+          <span class="tag tag-slate">substance abuse</span>
+        </div>
+        <div>
+          <h4 style="font-size: 14px; margin-bottom: 8px;">ServeForEmo 扩展 (45 类, 5 大组)</h4>
+          <span class="tag tag-purple">情感与关系</span>
+          <span class="tag tag-blue">工作与职业</span>
+          <span class="tag tag-green">健康与自我</span>
+          <span class="tag tag-amber">社会与生活</span>
+          <span class="tag tag-pink">学业与成长</span>
+          <div style="margin-top: 8px; font-size: 12px; color: var(--text-secondary);">
+            每组约 9 个子类型，覆盖更广泛的生活场景。每个问题类型配 GPT-4o 生成的 20+ 词具体场景描述。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dataset Details -->
+  <div class="section">
+    <h2 class="section-title">ServeForEmo 数据集</h2>
+
+    <div class="card">
+      <h3>数据集规模对比</h3>
+      <div class="metric-grid">
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">3,757</span>
+          <span class="label">对话数</span>
+        </div>
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">62,863</span>
+          <span class="label">消息条数</span>
+        </div>
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">16.73</span>
+          <span class="label">平均轮次</span>
+        </div>
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">17.97</span>
+          <span class="label">平均 token 数/条</span>
+        </div>
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">45</span>
+          <span class="label">问题类型</span>
+        </div>
+        <div class="metric-badge" style="background: var(--purple-light);">
+          <span class="value">100+</span>
+          <span class="label">Seeker Profiles</span>
+        </div>
+      </div>
+
+      <table style="margin-top: 20px;">
+        <thead>
+          <tr>
+            <th>数据集</th>
+            <th>对话数</th>
+            <th>消息数</th>
+            <th>构建方式</th>
+            <th>策略标注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>ESConv</strong></td>
+            <td>1,300</td>
+            <td>29,278</td>
+            <td>人工众包</td>
+            <td>人工标注</td>
+          </tr>
+          <tr>
+            <td><strong>ExTES</strong></td>
+            <td>--</td>
+            <td>--</td>
+            <td>LLM 模仿</td>
+            <td>LLM 自选</td>
+          </tr>
+          <tr>
+            <td><strong>AUGESC</strong></td>
+            <td>--</td>
+            <td>--</td>
+            <td>对话补全</td>
+            <td>LLM 自选</td>
+          </tr>
+          <tr style="background: var(--purple-light);">
+            <td><strong>ServeForEmo</strong></td>
+            <td>3,757</td>
+            <td>62,863</td>
+            <td>三角色 Role-play</td>
+            <td>独立 Counselor 选择</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>数据质量评估 (5 分制人评)</h3>
+      <div style="margin-top: 12px;">
+        <div class="quality-bar-row">
+          <span class="qlabel">Safety</span>
+          <div class="qtrack"><div class="qfill" style="width: 100%; background: var(--green);">5.00</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Consistency</span>
+          <div class="qtrack"><div class="qfill" style="width: 97.6%; background: var(--green);">4.88</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Informativeness</span>
+          <div class="qtrack"><div class="qfill" style="width: 93.2%; background: var(--teal);">4.66</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Coherence</span>
+          <div class="qtrack"><div class="qfill" style="width: 93%; background: var(--teal);">4.65</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Helpfulness</span>
+          <div class="qtrack"><div class="qfill" style="width: 92.4%; background: var(--teal);">4.62</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Rationality</span>
+          <div class="qtrack"><div class="qfill" style="width: 92.2%; background: var(--teal);">4.61</div></div>
+        </div>
+        <div class="quality-bar-row">
+          <span class="qlabel">Understanding</span>
+          <div class="qtrack"><div class="qfill" style="width: 89.6%; background: var(--amber);">4.48</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>数据构建流程</h3>
+      <ol style="padding-left: 20px; font-size: 14px;">
+        <li style="margin-bottom: 6px;"><strong>扩展问题类型：</strong>从 ESConv 的 13 类扩展到 45 类（5 大组），覆盖更广泛的生活场景</li>
+        <li style="margin-bottom: 6px;"><strong>构建种子场景：</strong>从 ESConv + 心理学网站收集 1,000 个种子场景描述</li>
+        <li style="margin-bottom: 6px;"><strong>创建 Seeker Profile：</strong>100 个手工设计的个性化角色（姓名、性别、职业、性格、爱好）</li>
+        <li style="margin-bottom: 6px;"><strong>GPT-4o 生成新场景/角色：</strong>通过 in-context learning 生成更多独特场景</li>
+        <li style="margin-bottom: 6px;"><strong>三角色交互生成对话：</strong>Seeker-Counselor-Supporter 循环</li>
+        <li style="margin-bottom: 6px;"><strong>后处理：</strong>去除不一致、过滤重复、控制长度（每条回复最多 3 句）</li>
+        <li style="margin-bottom: 6px;"><strong>人工审核与精炼：</strong>最终质量把关</li>
+        <li><strong>迭代扩展：</strong>新生成的高质量对话加入种子池，滚雪球式扩展</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Evaluation -->
+  <div class="section">
+    <h2 class="section-title">评估方法与结果</h2>
+
+    <div class="card">
+      <h3>自动评估指标（ESConv 测试集）</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>模型</th>
+            <th>BLEU-2</th>
+            <th>BLEU-4</th>
+            <th>ROUGE-L</th>
+            <th>Distinct-2</th>
+            <th>BERT-Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>LLaMA 3-8B (base)</td>
+            <td>4.13</td>
+            <td>1.55</td>
+            <td>10.65</td>
+            <td>97.25</td>
+            <td>84.49</td>
+          </tr>
+          <tr>
+            <td>AUGESC</td>
+            <td>6.10</td>
+            <td>2.81</td>
+            <td>13.48</td>
+            <td>98.85</td>
+            <td>85.56</td>
+          </tr>
+          <tr>
+            <td>ExTES</td>
+            <td>6.69</td>
+            <td>2.86</td>
+            <td>13.99</td>
+            <td>99.25</td>
+            <td>85.88</td>
+          </tr>
+          <tr>
+            <td>ESConv</td>
+            <td>6.73</td>
+            <td><span class="best-result">3.21</span></td>
+            <td><span class="best-result">14.83</span></td>
+            <td>98.72</td>
+            <td>85.74</td>
+          </tr>
+          <tr style="background: var(--purple-light);">
+            <td><strong>ServeForEmo</strong></td>
+            <td><span class="best-result">6.76</span></td>
+            <td>3.12</td>
+            <td>14.01</td>
+            <td><span class="best-result">99.48</span></td>
+            <td><span class="best-result">85.98</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout callout-blue" style="margin-top: 16px;">
+        <strong>解读：</strong>ServeForEmo 在 BLEU-2、Distinct-2、BERT-Score 上最优，BLEU-4 和 ROUGE-L 略低于 ESConv 原始数据。Distinct-2 最高说明回复多样性最好（不重复、不公式化）。BERT-Score 最高说明语义质量最优。整体差距不大，考虑到 ESConv 是在自己的测试集上评估（domain match），ServeForEmo 的泛化性很强。
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>人工评估（10 位评估者，5 分制，50 对话）</h3>
+      <p>维度包括：Empathy / Informativeness / Coherence / Suggestion / Understanding / Helpfulness / Overall Quality</p>
+      <div class="compare-grid" style="margin-top: 12px;">
+        <div class="callout callout-green">
+          <strong>ServeForEmo 优势维度</strong>
+          <ul style="padding-left: 16px; margin-top: 8px; font-size: 13px;">
+            <li><strong>Empathy：</strong>优于所有 baseline</li>
+            <li><strong>Overall Quality：</strong>优于所有 baseline</li>
+            <li><strong>Coherence：</strong>与最佳 baseline 持平</li>
+          </ul>
+        </div>
+        <div class="callout callout-amber">
+          <strong>薄弱维度</strong>
+          <ul style="padding-left: 16px; margin-top: 8px; font-size: 13px;">
+            <li><strong>Suggestion：</strong>所有模型普遍偏弱</li>
+            <li><strong>Helpfulness：</strong>仍有提升空间</li>
+            <li><strong>Informativeness：</strong>内容丰富度一般</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+        评估者间一致性 Fleiss' Kappa: 0.4 ~ 0.8（fair to moderate），说明情绪支持评估本身就有较大主观性。
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>训练配置</h3>
+      <table>
+        <thead>
+          <tr><th>参数</th><th>值</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Base Model</td><td>LLaMA 3-8B-Instruct</td></tr>
+          <tr><td>Fine-tuning</td><td>LoRA (rank=8, Wq/Wk/Wv/Wo)</td></tr>
+          <tr><td>Optimizer</td><td>AdamW, lr=3e-5</td></tr>
+          <tr><td>Batch Size</td><td>2 per device</td></tr>
+          <tr><td>Epochs</td><td>5</td></tr>
+          <tr><td>Warm-up</td><td>1% steps (linear)</td></tr>
+          <tr><td>Early Stopping</td><td>patience=7 eval steps</td></tr>
+          <tr><td>Hardware</td><td>8x Tesla V100</td></tr>
+          <tr><td>Report</td><td>3 runs average</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Open Source Status -->
+  <div class="section">
+    <h2 class="section-title">开源状态</h2>
+
+    <div class="card">
+      <div class="compare-grid">
+        <div>
+          <h3 style="margin-bottom: 12px;">
+            <span class="tag tag-red">未开源</span> 代码
+          </h3>
+          <ul style="font-size: 14px;">
+            <li>论文中未提供 GitHub 链接</li>
+            <li>GitHub 和 HuggingFace 上均未找到官方仓库</li>
+            <li>HuggingFace 有 "ChatSweetie" 组织，但与本论文无关</li>
+            <li>无法直接复现三角色 role-playing 框架</li>
+          </ul>
+        </div>
+        <div>
+          <h3 style="margin-bottom: 12px;">
+            <span class="tag tag-red">未开源</span> ServeForEmo 数据集
+          </h3>
+          <ul style="font-size: 14px;">
+            <li>数据集未在 HuggingFace Datasets 上发布</li>
+            <li>论文未提及计划开源</li>
+            <li>可联系作者索取：yejing2022@ia.ac.cn</li>
+            <li>但策略标签体系和构建流程已公开描述</li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout callout-amber" style="margin-top: 16px;">
+        <strong>替代方案：</strong>论文的方法论完全可以基于已开源的 ESConv 数据集 + 任意 LLM 复现。核心思路（独立策略选择器 + 角色扮演数据生成）不依赖于特定的闭源组件。
+      </div>
+    </div>
+  </div>
+
+  <!-- Value for moodcoco -->
+  <div class="section">
+    <h2 class="section-title">对 moodcoco 的价值</h2>
+
+    <div class="card">
+      <h3>可直接借鉴的设计</h3>
+      <div style="margin-top: 12px;">
+        <div style="padding: 12px 16px; background: var(--green-light); border-radius: 10px; margin-bottom: 10px;">
+          <strong style="color: var(--green);">1. 策略选择与回复生成分离</strong>
+          <p style="font-size: 13px; margin-top: 4px;">moodcoco 的 fast/slow 架构天然适配：slow agent 做策略规划（类似 Strategy Counselor），fast agent 按策略生成回复（类似 Supporter）。这比让单个模型同时选策略 + 生成回复效果更好。</p>
+        </div>
+        <div style="padding: 12px 16px; background: var(--green-light); border-radius: 10px; margin-bottom: 10px;">
+          <strong style="color: var(--green);">2. 三阶段策略转换</strong>
+          <p style="font-size: 13px; margin-top: 4px;">Exploration &rarr; Comforting &rarr; Action 的策略分布变化可以编码进 slow agent 的策略规划逻辑中，确保前期充分探索、后期才给建议。</p>
+        </div>
+        <div style="padding: 12px 16px; background: var(--green-light); border-radius: 10px; margin-bottom: 10px;">
+          <strong style="color: var(--green);">3. 策略分布监控</strong>
+          <p style="font-size: 13px; margin-top: 4px;">论文提供了具体的策略分布数据，可以用作 moodcoco 对话质量评估的 benchmark baseline -- 如果系统的策略分布过度偏向安慰而缺少提问，说明存在策略偏差。</p>
+        </div>
+        <div style="padding: 12px 16px; background: var(--green-light); border-radius: 10px;">
+          <strong style="color: var(--green);">4. 问题类型扩展方法</strong>
+          <p style="font-size: 13px; margin-top: 4px;">从 13 类扩展到 45 类的方法论（基于心理学文献 + GPT-4o 生成）可以用来扩展 moodcoco 的场景覆盖范围。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>与 moodcoco 架构的映射</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>SweetieChat 角色</th>
+            <th>moodcoco 对应</th>
+            <th>映射关系</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Strategy Counselor</td>
+            <td>Slow Agent (Thinker)</td>
+            <td>策略规划、对话阶段判断</td>
+          </tr>
+          <tr>
+            <td>Supporter</td>
+            <td>Fast Agent (Speaker)</td>
+            <td>按策略快速生成回复</td>
+          </tr>
+          <tr>
+            <td>Seeker Profile</td>
+            <td>用户记忆模块</td>
+            <td>个性化上下文（性格、问题类型）</td>
+          </tr>
+          <tr>
+            <td>策略标签</td>
+            <td>Skill 触发</td>
+            <td>策略选择 &rarr; 对应 Skill 执行</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Limitations -->
+  <div class="section">
+    <h2 class="section-title">局限性</h2>
+
+    <div class="card">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div class="callout callout-red">
+          <strong>未开源</strong>
+          <p style="font-size: 13px; margin-top: 4px;">代码和数据集均未公开，无法直接复现或使用。只能参考方法论自行实现。</p>
+        </div>
+        <div class="callout callout-red">
+          <strong>仅文本模态</strong>
+          <p style="font-size: 13px; margin-top: 4px;">数据集和评估都是纯文本，不涉及语音。moodcoco 的语音场景需要额外适配。</p>
+        </div>
+        <div class="callout callout-amber">
+          <strong>评估主观性大</strong>
+          <p style="font-size: 13px; margin-top: 4px;">人评 Fleiss' Kappa 仅 0.4-0.8，情绪支持质量的评估标准本身就缺乏共识。</p>
+        </div>
+        <div class="callout callout-amber">
+          <strong>SFT 天花板</strong>
+          <p style="font-size: 13px; margin-top: 4px;">论文自己承认单纯扩展 SFT 数据不够，需要 preference alignment。但未实施 RLHF/DPO。</p>
+        </div>
+        <div class="callout callout-amber">
+          <strong>策略体系保守</strong>
+          <p style="font-size: 13px; margin-top: 4px;">沿用 ESConv 的 8 种策略标签，未引入更细粒度的策略分类（如 MI 技术中的 OARS）。</p>
+        </div>
+        <div class="callout callout-amber">
+          <strong>GPT-4o 依赖</strong>
+          <p style="font-size: 13px; margin-top: 4px;">数据生成依赖 GPT-4o（Seeker + Supporter），数据质量上限受限于 GPT-4o 的情绪理解能力。</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>与相关工作的定位</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>工作</th>
+            <th>核心贡献</th>
+            <th>策略处理</th>
+            <th>开源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>ESConv (2021)</td>
+            <td>人工标注情绪支持数据集</td>
+            <td>人工标注，8 种策略</td>
+            <td style="color: var(--green);">是</td>
+          </tr>
+          <tr>
+            <td>ExTES</td>
+            <td>LLM 模仿生成数据</td>
+            <td>LLM 自选（有偏差）</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>AUGESC</td>
+            <td>对话补全增强</td>
+            <td>LLM 自选（有偏差）</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>MultiAgentESC</td>
+            <td>多 Agent 协作</td>
+            <td>Agent 间协商</td>
+            <td>--</td>
+          </tr>
+          <tr style="background: var(--purple-light);">
+            <td><strong>SweetieChat</strong></td>
+            <td>独立策略选择器 + Role-play 数据</td>
+            <td>Fine-tuned Counselor</td>
+            <td style="color: var(--red);">否</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bottom line -->
+  <div class="section">
+    <div class="tldr" style="background: linear-gradient(135deg, var(--green-light) 0%, var(--teal-light) 100%); border-color: #86efac;">
+      <h2 style="color: var(--green);">Bottom Line</h2>
+      <p>SweetieChat 的核心洞察 -- <strong>策略选择应该由专门模块负责，而不是让生成模型自行决定</strong> -- 对 moodcoco 有直接参考价值。这恰好对应 Speaker+Thinker 架构中 Thinker 的策略规划职责。</p>
+      <p style="margin-top: 8px;">但论文本身未开源任何资源，直接可用性为零。价值在于方法论验证：独立策略选择器 + 三阶段帮助模型的组合，在 8B 参数量级就能达到不错的效果。moodcoco 可以用更强的模型（minimax-m2.7）+ 更细粒度的策略体系实现更好的效果。</p>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>
+      论文：<a href="https://arxiv.org/abs/2412.08389" target="_blank">arXiv:2412.08389</a> |
+      会议：<a href="https://aclanthology.org/2025.coling-main.312/" target="_blank">COLING 2025</a> |
+      moodcoco benchmark 调研系列
+    </p>
+    <p style="margin-top: 8px;">Generated 2026-05-13</p>
+  </div>
+
+</div>
+</body>
+</html>

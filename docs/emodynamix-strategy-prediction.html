@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EmoDynamiX 论文解读</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    max-width: 680px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 650;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .card p, .card li {
+    font-size: 14.5px;
+    color: #44403c;
+  }
+  .card ul {
+    list-style: none;
+    padding: 0;
+  }
+  .card ul li {
+    padding: 4px 0 4px 20px;
+    position: relative;
+  }
+  .card ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-secondary);
+  }
+
+  /* TLDR */
+  .tldr {
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+    border: 1px solid #fde68a;
+  }
+  .tldr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .tldr-item {
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .tldr-item .num {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .tldr-item .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Architecture Diagram */
+  .arch-diagram {
+    margin: 20px 0;
+    padding: 24px;
+    background: #fafaf9;
+    border-radius: 12px;
+    overflow-x: auto;
+  }
+
+  /* Flow pipeline */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    position: relative;
+    min-height: 320px;
+    margin: 16px 0;
+  }
+  .pipe-stage {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 1;
+  }
+  .pipe-box {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 14px;
+    margin: 0 4px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pipe-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .pipe-title {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+  .pipe-desc {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .pipe-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+  .pipe-arrow svg {
+    width: 20px;
+    height: 20px;
+    fill: var(--text-secondary);
+  }
+
+  /* Graph nodes */
+  .graph-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0;
+    gap: 8px;
+  }
+  .graph-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  .graph-node {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  .graph-node.emotion {
+    background: var(--pink-light);
+    border: 2px solid var(--pink);
+    color: var(--pink);
+  }
+  .graph-node.strategy {
+    background: var(--blue-light);
+    border: 2px solid var(--blue);
+    color: var(--blue);
+  }
+  .graph-node.dummy {
+    background: var(--amber-light);
+    border: 2px solid var(--amber);
+    color: var(--amber);
+    width: 72px;
+    height: 72px;
+    font-size: 12px;
+  }
+  .graph-edge-area {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    width: 80px;
+  }
+  .graph-edge {
+    height: 2px;
+    width: 60px;
+    position: relative;
+  }
+  .graph-edge::after {
+    content: '';
+    position: absolute;
+    right: -4px;
+    top: -3px;
+    width: 0;
+    height: 0;
+    border-left: 6px solid;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+  }
+  .graph-edge.discourse {
+    background: var(--purple);
+  }
+  .graph-edge.discourse::after {
+    border-left-color: var(--purple);
+  }
+  .graph-edge.self-ref {
+    background: var(--teal);
+  }
+  .graph-edge.self-ref::after {
+    border-left-color: var(--teal);
+  }
+  .graph-edge.inter-ref {
+    background: var(--orange);
+  }
+  .graph-edge.inter-ref::after {
+    border-left-color: var(--orange);
+  }
+  .edge-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  /* Heterogeneous graph visual */
+  .hetero-graph {
+    position: relative;
+    width: 100%;
+    max-width: 700px;
+    height: 360px;
+    margin: 20px auto;
+  }
+  .hg-node {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+    box-shadow: var(--shadow-md);
+    z-index: 2;
+  }
+  .hg-label {
+    position: absolute;
+    font-size: 11px;
+    color: var(--text-secondary);
+    z-index: 3;
+    white-space: nowrap;
+  }
+  .hg-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Comparison table */
+  .compare-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+    margin-top: 12px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .compare-table th {
+    background: var(--slate-light);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f5f5f4;
+    color: #44403c;
+  }
+  .compare-table tr:last-child td {
+    border-bottom: none;
+  }
+  .compare-table tr.highlight td {
+    background: #f0fdf4;
+    font-weight: 600;
+    color: var(--green);
+  }
+  .compare-table .best {
+    color: var(--green);
+    font-weight: 700;
+  }
+  .compare-table .worst {
+    color: var(--red);
+  }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    font-size: 11.5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-weight: 500;
+    margin: 2px;
+  }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-green { background: var(--green-light); color: var(--green); }
+  .tag-amber { background: var(--amber-light); color: var(--amber); }
+  .tag-red { background: var(--red-light); color: var(--red); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-teal { background: var(--teal-light); color: var(--teal); }
+  .tag-pink { background: var(--pink-light); color: var(--pink); }
+  .tag-slate { background: var(--slate-light); color: var(--slate); }
+
+  /* Insight box */
+  .insight {
+    background: linear-gradient(135deg, #ede9fe 0%, #dbeafe 100%);
+    border: 1px solid #c4b5fd;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: #44403c;
+    line-height: 1.6;
+  }
+  .insight strong {
+    color: var(--purple);
+  }
+
+  /* Warning box */
+  .warning {
+    background: var(--amber-light);
+    border: 1px solid #fbbf24;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-top: 12px;
+    font-size: 13.5px;
+    color: #78350f;
+    line-height: 1.6;
+  }
+
+  /* Decouple diagram */
+  .decouple-vs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .decouple-box {
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+  }
+  .decouple-box.old {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+  }
+  .decouple-box.new {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+  }
+  .decouple-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+  }
+  .decouple-box.old .decouple-label { color: var(--red); }
+  .decouple-box.new .decouple-label { color: var(--green); }
+  .decouple-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .decouple-box.old .decouple-step {
+    background: rgba(255,255,255,0.7);
+    color: #991b1b;
+  }
+  .decouple-box.new .decouple-step {
+    background: rgba(255,255,255,0.7);
+    color: #166534;
+  }
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .decouple-box.old .step-num { background: #fecaca; color: var(--red); }
+  .decouple-box.new .step-num { background: #bbf7d0; color: var(--green); }
+
+  /* Emotion bar */
+  .emotion-bar {
+    display: flex;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 28px;
+    margin: 8px 0;
+    box-shadow: var(--shadow);
+  }
+  .emotion-seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: white;
+    transition: width 0.3s;
+  }
+
+  /* Ablation bars */
+  .ablation-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 8px 0;
+  }
+  .ablation-label {
+    font-size: 12.5px;
+    width: 180px;
+    flex-shrink: 0;
+    text-align: right;
+    color: var(--text-secondary);
+  }
+  .ablation-bar-wrap {
+    flex: 1;
+    background: #f5f5f4;
+    border-radius: 6px;
+    height: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ablation-bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+    transition: width 0.5s;
+  }
+  .ablation-val {
+    font-size: 12px;
+    font-weight: 600;
+    width: 50px;
+    flex-shrink: 0;
+  }
+
+  /* Section divider */
+  .section-gap {
+    margin-top: 32px;
+  }
+
+  /* Moodcoco value box */
+  .moodcoco-value {
+    background: linear-gradient(135deg, #ecfdf5 0%, #f0f9ff 100%);
+    border: 1px solid #6ee7b7;
+  }
+
+  /* Formula */
+  .formula {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 10px 0;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 60px; }
+    .header h1 { font-size: 24px; }
+    .pipeline { flex-direction: column; min-height: auto; }
+    .pipe-arrow { transform: rotate(90deg); width: auto; height: 28px; }
+    .decouple-vs { grid-template-columns: 1fr; }
+    .compare-table { font-size: 12px; }
+    .compare-table th, .compare-table td { padding: 7px 8px; }
+    .ablation-label { width: 120px; font-size: 11px; }
+    .hetero-graph { height: 300px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>EmoDynamiX 论文解读</h1>
+    <p class="subtitle">Emotional Support Dialogue Strategy Prediction by Modelling MiXed Emotions and Discourse Dynamics</p>
+    <div class="meta">
+      <span>NAACL 2025 Oral</span>
+      <span>arXiv 2408.08782</span>
+      <span>策略预测框架</span>
+      <span>异构图网络</span>
+    </div>
+  </div>
+
+  <!-- 30 秒版本 -->
+  <div class="card tldr">
+    <h2>30 秒版本</h2>
+    <p>LLM 做情感支持时有策略偏好偏差 (preference bias)：倾向于总给建议，忽略情感反映和自我暴露等策略。EmoDynamiX 的解法是<strong>将策略预测和文本生成解耦</strong>，用异构图 (heterogeneous graph) 建模用户情绪和系统策略之间的话语动态 (discourse dynamics)，先预测策略再生成回复。</p>
+    <div class="tldr-grid">
+      <div class="tldr-item">
+        <div class="num">27.70</div>
+        <div class="label">Macro-F1 (ESConv)</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">0.45</div>
+        <div class="label">Preference Bias (越低越好)</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">-38%</div>
+        <div class="label">偏差降幅 vs TransESC</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">2</div>
+        <div class="label">组成: 语义模块 + 图学习</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心洞察 -->
+  <div class="card">
+    <h2>核心问题：LLM 的策略偏好偏差</h2>
+    <p>当 LLM 端到端生成情感支持回复时，隐式策略规划缺乏透明度，且存在严重偏差：</p>
+    <ul style="margin-top: 12px;">
+      <li><strong>ChatGPT preference bias = 0.88</strong>，接近完全偏向少数策略</li>
+      <li><strong>LLaMA3-8B preference bias = 0.83</strong>，同样严重</li>
+      <li>超过 60% 的情感类策略 (Reflection of Feelings, Self-disclosure) 被错误分类为任务导向策略 (Providing Suggestions)</li>
+      <li>直觉解释：LLM 被训练为"有用的助手"，导致本能倾向于给建议，而不是共情、反映感受或自我暴露</li>
+    </ul>
+    <div class="insight">
+      <strong>关键洞察：</strong>策略预测是一个独立的分类任务，不应该被语言生成的偏好所左右。解耦后，策略选择基于对话动态而非生成概率。
+    </div>
+  </div>
+
+  <!-- 架构对比图 -->
+  <div class="card">
+    <h2>架构对比：端到端 vs 解耦</h2>
+    <div class="decouple-vs">
+      <div class="decouple-box old">
+        <div class="decouple-label">传统 End-to-End LLM</div>
+        <div class="decouple-step"><span class="step-num">1</span>对话历史输入</div>
+        <div class="decouple-step"><span class="step-num">2</span>LLM 隐式规划策略</div>
+        <div class="decouple-step"><span class="step-num">3</span>直接生成回复文本</div>
+        <div style="margin-top: 10px; font-size: 12px; color: #991b1b;">
+          策略选择不透明，受生成偏好影响<br>
+          bias = 0.83 ~ 0.89
+        </div>
+      </div>
+      <div class="decouple-box new">
+        <div class="decouple-label">EmoDynamiX 解耦架构</div>
+        <div class="decouple-step"><span class="step-num">1</span>对话历史 + 情绪识别</div>
+        <div class="decouple-step"><span class="step-num">2</span>异构图建模 discourse</div>
+        <div class="decouple-step"><span class="step-num">3</span>独立预测策略 (分类)</div>
+        <div class="decouple-step"><span class="step-num">4</span>策略指导文本生成</div>
+        <div style="margin-top: 10px; font-size: 12px; color: #166534;">
+          策略可解释、可回溯<br>
+          bias = 0.45
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心架构图 -->
+  <div class="card">
+    <h2>EmoDynamiX 架构详解</h2>
+    <p style="margin-bottom: 16px;">三个模块协作：语义编码捕获全局语义，异构图建模情绪-策略交互，MLP 头做最终分类。</p>
+
+    <div class="pipeline">
+      <!-- Stage 1: Input -->
+      <div class="pipe-stage">
+        <div class="pipe-box" style="border-color: var(--blue);">
+          <div class="pipe-label" style="color: var(--blue);">Module A</div>
+          <div class="pipe-title">Semantic Modelling</div>
+          <div class="pipe-desc">
+            RoBERTa 编码对话历史<br>
+            提取 [CLS] token 作为全局语义向量 C<sub>cls</sub><br>
+            <span class="tag tag-blue">滑动窗口 N=5</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+
+      <!-- Stage 2: Graph -->
+      <div class="pipe-stage">
+        <div class="pipe-box" style="border-color: var(--purple);">
+          <div class="pipe-label" style="color: var(--purple);">Module B</div>
+          <div class="pipe-title">Heterogeneous Graph</div>
+          <div class="pipe-desc">
+            Emotion + Strategy 节点<br>
+            RGAT 多层注意力传播<br>
+            Dummy node 聚合信息<br>
+            <span class="tag tag-purple">Discourse edges</span>
+            <span class="tag tag-teal">Reference edges</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pipe-arrow">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+
+      <!-- Stage 3: Output -->
+      <div class="pipe-stage">
+        <div class="pipe-box" style="border-color: var(--green);">
+          <div class="pipe-label" style="color: var(--green);">Module C</div>
+          <div class="pipe-title">Classification Head</div>
+          <div class="pipe-desc">
+            拼接 C<sub>cls</sub> 和 graph output<br>
+            MLP + Softmax<br>
+            Weighted cross-entropy loss<br>
+            <span class="tag tag-green">输出: 策略概率分布</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="formula">
+      o = softmax( MLP( C<sub>cls</sub> || g<sub>N</sub><sup>(L,N)</sup> ) )
+    </div>
+    <p style="font-size: 12.5px; color: var(--text-secondary); text-align: center;">
+      C<sub>cls</sub> = RoBERTa 全局语义 &nbsp;|&nbsp; g<sub>N</sub> = 第 L 层 RGAT 的 dummy node 输出 &nbsp;|&nbsp; || = 拼接
+    </p>
+  </div>
+
+  <!-- 异构图详解 -->
+  <div class="card">
+    <h2>异构图建模机制</h2>
+    <p>EmoDynamiX 的核心创新是用异构图 (heterogeneous graph) 建模对话中情绪和策略的动态交互。图的结构直接反映了 discourse dynamics。</p>
+
+    <!-- 图可视化 -->
+    <div class="arch-diagram">
+      <div style="position: relative; width: 100%; max-width: 680px; margin: 0 auto; height: 340px;">
+        <!-- SVG edges -->
+        <svg style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;">
+          <!-- Discourse edges: emotion to strategy -->
+          <line x1="18%" y1="22%" x2="38%" y2="22%" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrow-purple)"/>
+          <line x1="18%" y1="50%" x2="38%" y2="50%" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrow-purple)"/>
+          <line x1="18%" y1="78%" x2="38%" y2="78%" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrow-purple)"/>
+
+          <!-- Discourse edges: strategy to emotion -->
+          <line x1="52%" y1="36%" x2="18%" y2="50%" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrow-purple)"/>
+          <line x1="52%" y1="64%" x2="18%" y2="78%" stroke="#7c3aed" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#arrow-purple)"/>
+
+          <!-- Self-ref edges: strategy to dummy -->
+          <line x1="52%" y1="22%" x2="78%" y2="50%" stroke="#0d9488" stroke-width="2" marker-end="url(#arrow-teal)"/>
+          <line x1="52%" y1="50%" x2="78%" y2="50%" stroke="#0d9488" stroke-width="2" marker-end="url(#arrow-teal)"/>
+          <line x1="52%" y1="78%" x2="78%" y2="50%" stroke="#0d9488" stroke-width="2" marker-end="url(#arrow-teal)"/>
+
+          <!-- Inter-ref edges: emotion to dummy -->
+          <line x1="18%" y1="22%" x2="78%" y2="44%" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-orange)"/>
+          <line x1="18%" y1="50%" x2="78%" y2="48%" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-orange)"/>
+          <line x1="18%" y1="78%" x2="78%" y2="52%" stroke="#ea580c" stroke-width="1.5" stroke-dasharray="3,3" marker-end="url(#arrow-orange)"/>
+
+          <!-- Arrow markers -->
+          <defs>
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#7c3aed"/>
+            </marker>
+            <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0d9488"/>
+            </marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#ea580c"/>
+            </marker>
+          </defs>
+        </svg>
+
+        <!-- Emotion nodes (left column) -->
+        <div style="position: absolute; left: 4%; top: 12%; width: 88px; height: 56px; border-radius: 28px; background: #fce7f3; border: 2px solid #db2777; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #db2777; z-index: 2; text-align: center; line-height: 1.2;">
+          User<sub>1</sub><br>Sadness
+        </div>
+        <div style="position: absolute; left: 4%; top: 40%; width: 88px; height: 56px; border-radius: 28px; background: #fce7f3; border: 2px solid #db2777; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #db2777; z-index: 2; text-align: center; line-height: 1.2;">
+          User<sub>2</sub><br>Fear+Sad
+        </div>
+        <div style="position: absolute; left: 4%; top: 68%; width: 88px; height: 56px; border-radius: 28px; background: #fce7f3; border: 2px solid #db2777; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #db2777; z-index: 2; text-align: center; line-height: 1.2;">
+          User<sub>3</sub><br>Sad+Anger
+        </div>
+
+        <!-- Strategy nodes (middle column) -->
+        <div style="position: absolute; left: 36%; top: 12%; width: 100px; height: 56px; border-radius: 28px; background: #dbeafe; border: 2px solid #2563eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #2563eb; z-index: 2; text-align: center; line-height: 1.2;">
+          Sys<sub>1</sub><br>Question
+        </div>
+        <div style="position: absolute; left: 36%; top: 40%; width: 100px; height: 56px; border-radius: 28px; background: #dbeafe; border: 2px solid #2563eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #2563eb; z-index: 2; text-align: center; line-height: 1.2;">
+          Sys<sub>2</sub><br>Reflection
+        </div>
+        <div style="position: absolute; left: 36%; top: 68%; width: 100px; height: 56px; border-radius: 28px; background: #dbeafe; border: 2px solid #2563eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #2563eb; z-index: 2; text-align: center; line-height: 1.2;">
+          Sys<sub>3</sub><br>Affirmation
+        </div>
+
+        <!-- Dummy node (right) -->
+        <div style="position: absolute; left: 72%; top: 36%; width: 96px; height: 80px; border-radius: 40px; background: linear-gradient(135deg, #fef3c7, #fff7ed); border: 2.5px solid #d97706; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #d97706; z-index: 2; text-align: center; line-height: 1.3; box-shadow: 0 4px 12px rgba(217,119,6,0.15);">
+          Dummy<br>Target<br>Node
+        </div>
+
+        <!-- Legend -->
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; gap: 20px; justify-content: center; font-size: 11px; z-index: 3;">
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 20px; height: 2px; background: #7c3aed; display: inline-block;"></span>
+            <span style="color: #7c3aed;">Discourse 边</span>
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 20px; height: 2px; background: #0d9488; display: inline-block;"></span>
+            <span style="color: #0d9488;">Self-ref 边</span>
+          </span>
+          <span style="display: flex; align-items: center; gap: 4px;">
+            <span style="width: 20px; height: 2px; background: #ea580c; display: inline-block; border-top: 1px dashed #ea580c;"></span>
+            <span style="color: #ea580c;">Inter-ref 边</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Node types -->
+    <h3 style="margin-top: 16px;">三类节点</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0;">
+      <div style="background: #fce7f3; border-radius: 10px; padding: 14px; border: 1px solid #f9a8d4;">
+        <div style="font-weight: 600; font-size: 13px; color: #db2777; margin-bottom: 4px;">Emotion Node</div>
+        <div style="font-size: 12px; color: #831843;">用户话语的情绪状态。用混合情绪分布 p<sup>i</sup> 乘以可训练 codebook E 得到初始嵌入 g<sub>e</sub> = p &middot; E</div>
+      </div>
+      <div style="background: #dbeafe; border-radius: 10px; padding: 14px; border: 1px solid #93c5fd;">
+        <div style="font-weight: 600; font-size: 13px; color: #2563eb; margin-bottom: 4px;">Strategy Node</div>
+        <div style="font-size: 12px; color: #1e3a5f;">系统话语的策略标签。用 one-hot s<sup>i</sup> 乘以可训练 codebook S 得到初始嵌入 g<sub>st</sub> = s &middot; S</div>
+      </div>
+      <div style="background: #fef3c7; border-radius: 10px; padding: 14px; border: 1px solid #fcd34d;">
+        <div style="font-weight: 600; font-size: 13px; color: #d97706; margin-bottom: 4px;">Dummy Node</div>
+        <div style="font-size: 12px; color: #78350f;">目标占位符，聚合所有 emotion/strategy 节点信息，输出用于最终预测</div>
+      </div>
+    </div>
+
+    <!-- Edge types -->
+    <h3>三类边</h3>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0;">
+      <div style="background: #ede9fe; border-radius: 10px; padding: 14px; border: 1px solid #c4b5fd;">
+        <div style="font-weight: 600; font-size: 13px; color: #7c3aed; margin-bottom: 4px;">Discourse 边</div>
+        <div style="font-size: 12px; color: #4c1d95;">由 discourse parser 解析的话语关系 (Comment, Elaboration 等)，连接相邻 emotion-strategy 节点</div>
+      </div>
+      <div style="background: #ccfbf1; border-radius: 10px; padding: 14px; border: 1px solid #5eead4;">
+        <div style="font-weight: 600; font-size: 13px; color: #0d9488; margin-bottom: 4px;">Self-ref 边</div>
+        <div style="font-size: 12px; color: #134e4a;">Strategy 节点到 Dummy 节点，让目标节点"看到"之前用过的策略</div>
+      </div>
+      <div style="background: #fff7ed; border-radius: 10px; padding: 14px; border: 1px solid #fed7aa;">
+        <div style="font-weight: 600; font-size: 13px; color: #ea580c; margin-bottom: 4px;">Inter-ref 边</div>
+        <div style="font-size: 12px; color: #7c2d12;">Emotion 节点到 Dummy 节点，让目标节点"看到"用户情绪轨迹</div>
+      </div>
+    </div>
+
+    <!-- Mixed emotion -->
+    <h3 style="margin-top: 16px;">混合情绪建模</h3>
+    <p style="margin-bottom: 8px;">不使用离散情绪标签，而是用概率分布表示混合情绪。通过预训练的 ERC (Emotion Recognition in Conversation) 模型输出 logits，再用可学习温度参数 &tau; 的 softmax 得到分布：</p>
+    <div class="formula">
+      p<sup>i</sup> = [ exp(z<sub>j</sub><sup>i</sup> / &tau;) / &Sigma;<sub>k</sub> exp(z<sub>k</sub><sup>i</sup> / &tau;) ]<sub>j=1...|E|</sub>
+    </div>
+    <p style="font-size: 12.5px; color: var(--text-secondary);">7 种基础情绪：Anger, Disgust, Fear, Joy, Sadness, Surprise, Neutral。温度 &tau; 在训练中学习，控制分布的锐利度。</p>
+
+    <div style="margin-top: 12px;">
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 4px;">示例：一句"我不知道该怎么办了"的混合情绪分布</p>
+      <div class="emotion-bar">
+        <div class="emotion-seg" style="width: 45%; background: #6366f1;">Sadness</div>
+        <div class="emotion-seg" style="width: 28%; background: #f59e0b;">Fear</div>
+        <div class="emotion-seg" style="width: 12%; background: #ef4444;">Anger</div>
+        <div class="emotion-seg" style="width: 10%; background: #a3a3a3;">Neutral</div>
+        <div class="emotion-seg" style="width: 5%; background: #d4d4d4;"></div>
+      </div>
+    </div>
+
+    <!-- RGAT -->
+    <h3 style="margin-top: 16px;">RGAT 注意力机制</h3>
+    <p style="margin-bottom: 8px;">使用 Relational Graph Attention Network，不同关系类型有独立的注意力权重：</p>
+    <div class="formula">
+      &alpha;<sub>i,j</sub><sup>(r,k)</sup> = exp(a<sub>i,j</sub>) / &Sigma;<sub>r</sub>&Sigma;<sub>m</sub> exp(a<sub>i,m</sub>)
+      <br>
+      h<sup>i</sup> = ||<sub>k=1..K</sub> &sigma;( &Sigma;<sub>r</sub> &Sigma;<sub>m</sub> &alpha;<sub>i,m</sub><sup>(r,k)</sup> W<sub>v</sub><sup>(r,k)</sup> g<sup>m</sup> )
+    </div>
+    <p style="font-size: 12.5px; color: var(--text-secondary);">K 个注意力头，L 层 RGAT。不同关系类型 r 有独立参数 W，使模型区分 discourse 边、self-ref 边和 inter-ref 边的语义。</p>
+  </div>
+
+  <!-- 与直接 LLM 生成的对比 -->
+  <div class="card">
+    <h2>实验结果：与 LLM 直接生成的对比</h2>
+
+    <h3>ESConv 数据集 (1,300 对话, 8 策略, 18,376 样本)</h3>
+    <table class="compare-table" style="margin-bottom: 20px;">
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>类型</th>
+          <th>Macro-F1</th>
+          <th>Weighted-F1</th>
+          <th>Preference Bias &darr;</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>MISC</td>
+          <td><span class="tag tag-slate">End-to-End</span></td>
+          <td>20.91</td>
+          <td>--</td>
+          <td class="worst">0.89</td>
+        </tr>
+        <tr>
+          <td>ChatGPT</td>
+          <td><span class="tag tag-slate">End-to-End</span></td>
+          <td>18.14</td>
+          <td>--</td>
+          <td class="worst">0.88</td>
+        </tr>
+        <tr>
+          <td>LLaMA3-8B</td>
+          <td><span class="tag tag-slate">End-to-End</span></td>
+          <td>25.91</td>
+          <td>--</td>
+          <td class="worst">0.83</td>
+        </tr>
+        <tr>
+          <td>MultiESC</td>
+          <td><span class="tag tag-purple">Multi-turn</span></td>
+          <td>25.73</td>
+          <td>--</td>
+          <td>0.61</td>
+        </tr>
+        <tr>
+          <td>TransESC</td>
+          <td><span class="tag tag-blue">Decoupled</span></td>
+          <td>26.28</td>
+          <td>--</td>
+          <td>0.73</td>
+        </tr>
+        <tr class="highlight">
+          <td>EmoDynamiX</td>
+          <td><span class="tag tag-green">Graph+Decoupled</span></td>
+          <td class="best">27.70</td>
+          <td class="best">32.71</td>
+          <td class="best">0.45</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>AnnoMI 数据集 (133 对话, 9 策略, 4,442 样本)</h3>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>Macro-F1</th>
+          <th>Weighted-F1</th>
+          <th>Preference Bias &darr;</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>ChatGPT</td>
+          <td>20.31</td>
+          <td>--</td>
+          <td class="worst">0.88</td>
+        </tr>
+        <tr>
+          <td>LLaMA3-8B</td>
+          <td>23.77</td>
+          <td>--</td>
+          <td class="worst">0.83</td>
+        </tr>
+        <tr class="highlight">
+          <td>EmoDynamiX</td>
+          <td class="best">27.92</td>
+          <td class="best">35.33</td>
+          <td class="best">0.50</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="insight">
+      <strong>关键发现：</strong>EmoDynamiX 在两个数据集上都取得 SOTA，且 preference bias 大幅下降。注意绝对 F1 仍然不高 (27-28)，说明策略预测本身是一个困难任务 -- 同一对话状态下可能有多个合理策略。
+    </div>
+  </div>
+
+  <!-- Ablation -->
+  <div class="card">
+    <h2>消融实验</h2>
+    <p style="margin-bottom: 16px;">各模块对 ESConv Macro-F1 的贡献：</p>
+
+    <div class="ablation-row">
+      <div class="ablation-label">Full EmoDynamiX</div>
+      <div class="ablation-bar-wrap">
+        <div class="ablation-bar" style="width: 100%; background: linear-gradient(90deg, var(--green), #22c55e);">27.70</div>
+      </div>
+      <div class="ablation-val" style="color: var(--green);">27.70</div>
+    </div>
+    <div class="ablation-row">
+      <div class="ablation-label">w/o Dummy Node</div>
+      <div class="ablation-bar-wrap">
+        <div class="ablation-bar" style="width: 92%; background: linear-gradient(90deg, var(--amber), #f59e0b);">25.46</div>
+      </div>
+      <div class="ablation-val" style="color: var(--red);">-2.24</div>
+    </div>
+    <div class="ablation-row">
+      <div class="ablation-label">w/o Graph Learning</div>
+      <div class="ablation-bar-wrap">
+        <div class="ablation-bar" style="width: 93%; background: linear-gradient(90deg, var(--amber), #f59e0b);">25.72</div>
+      </div>
+      <div class="ablation-val" style="color: var(--red);">-1.98</div>
+    </div>
+    <div class="ablation-row">
+      <div class="ablation-label">w/o Mixed Emotion</div>
+      <div class="ablation-bar-wrap">
+        <div class="ablation-bar" style="width: 93.5%; background: linear-gradient(90deg, var(--amber), #f59e0b);">25.90</div>
+      </div>
+      <div class="ablation-val" style="color: var(--red);">-1.80</div>
+    </div>
+    <div class="ablation-row">
+      <div class="ablation-label">w/o Discourse Parser</div>
+      <div class="ablation-bar-wrap">
+        <div class="ablation-bar" style="width: 96%; background: linear-gradient(90deg, #94a3b8, #64748b);">26.64</div>
+      </div>
+      <div class="ablation-val" style="color: var(--red);">-1.06</div>
+    </div>
+
+    <div style="margin-top: 16px;">
+      <h3>Preference Bias 变化 (越低越好)</h3>
+      <table class="compare-table" style="margin-top: 8px;">
+        <thead>
+          <tr>
+            <th>配置</th>
+            <th>ESConv Bias</th>
+            <th>AnnoMI Bias</th>
+            <th>变化</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td>Full Model</td>
+            <td class="best">0.45</td>
+            <td class="best">0.50</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>w/o Graph Learning</td>
+            <td>0.78</td>
+            <td>--</td>
+            <td class="worst">+0.33</td>
+          </tr>
+          <tr>
+            <td>w/o Dummy Node</td>
+            <td>0.73</td>
+            <td>--</td>
+            <td class="worst">+0.28</td>
+          </tr>
+          <tr>
+            <td>w/o Mixed Emotion</td>
+            <td>0.66</td>
+            <td>--</td>
+            <td class="worst">+0.21</td>
+          </tr>
+          <tr>
+            <td>w/o Discourse Parser</td>
+            <td>0.59</td>
+            <td>--</td>
+            <td>+0.14</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="insight">
+      <strong>消融结论：</strong>Graph Learning 整体 (尤其 Dummy Node) 对降低 preference bias 贡献最大 (+0.33)。Mixed Emotion 在 AnnoMI 上掉了 3.21 个点，说明治疗场景中情绪粒度更重要。Discourse Parser 贡献相对最小，可能因为跨域泛化问题 (STAC 训练的 parser 迁移到 ESConv)。
+    </div>
+  </div>
+
+  <!-- 透明性 / 可回溯 -->
+  <div class="card">
+    <h2>Transparency: 决策可回溯</h2>
+    <p>图结构的注意力权重 &alpha; 允许回溯每次策略预测的决策依据：</p>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
+      <div style="background: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid var(--border);">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Case: Dummy Node 注意力转移</div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
+          用户情绪从 Sadness 转为 Fear+Sadness 后，Dummy node 的注意力从"之前用过的策略节点"转向"用户情绪转变节点"，最终选择了 Reflection of Feelings 而非继续 Question。
+        </div>
+      </div>
+      <div style="background: #f8fafc; border-radius: 10px; padding: 16px; border: 1px solid var(--border);">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">可解释性价值</div>
+        <div style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.6;">
+          与 LLM 黑盒不同，可以回答"为什么选这个策略"：因为注意力从 Strategy<sub>2</sub> (Question) 移到了 Emotion<sub>3</sub> (Fear+Sadness)，说明系统检测到情绪变化并做出了响应。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8 个 ESConv 策略 -->
+  <div class="card">
+    <h2>ESConv 8 策略分类</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 12px;">
+      <div style="padding: 12px; background: var(--blue-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--blue);">1. Question</div>
+        <div style="font-size: 12px; color: #1e40af;">提问了解情况</div>
+      </div>
+      <div style="padding: 12px; background: var(--teal-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--teal);">2. Restatement</div>
+        <div style="font-size: 12px; color: #134e4a;">复述/转述用户表达</div>
+      </div>
+      <div style="padding: 12px; background: var(--pink-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--pink);">3. Reflection of Feelings</div>
+        <div style="font-size: 12px; color: #831843;">反映/命名用户的感受</div>
+      </div>
+      <div style="padding: 12px; background: var(--purple-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--purple);">4. Self-disclosure</div>
+        <div style="font-size: 12px; color: #4c1d95;">分享自己的相关经历</div>
+      </div>
+      <div style="padding: 12px; background: var(--green-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--green);">5. Affirmation & Reassurance</div>
+        <div style="font-size: 12px; color: #166534;">肯定用户、给予安慰</div>
+      </div>
+      <div style="padding: 12px; background: var(--amber-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--amber);">6. Providing Suggestions</div>
+        <div style="font-size: 12px; color: #78350f;">提供具体建议</div>
+      </div>
+      <div style="padding: 12px; background: var(--slate-light); border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: var(--slate);">7. Information</div>
+        <div style="font-size: 12px; color: #334155;">提供背景知识/信息</div>
+      </div>
+      <div style="padding: 12px; background: #f5f5f4; border-radius: 10px;">
+        <div style="font-weight: 600; font-size: 13px; color: #78716c;">8. Others</div>
+        <div style="font-size: 12px; color: #78716c;">其他/不属于以上分类</div>
+      </div>
+    </div>
+    <p style="margin-top: 12px; font-size: 13px; color: var(--text-secondary);">
+      LLM 偏差模式：过度使用 Providing Suggestions (策略 6)，不足使用 Reflection of Feelings (策略 3) 和 Self-disclosure (策略 4)。EmoDynamiX 通过 weighted cross-entropy + 图结构有效缓解了这一偏差。
+    </p>
+  </div>
+
+  <!-- 对 moodcoco 的价值 -->
+  <div class="card moodcoco-value">
+    <h2>对 moodcoco 的价值</h2>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px;">
+      <div>
+        <h3 style="color: var(--green);">直接可用</h3>
+        <ul>
+          <li><strong>Thinker 采用解耦架构</strong>：策略预测不交给生成模型隐式处理，Thinker 作为独立策略预测器，输出策略 label 后再指导 Speaker 生成</li>
+          <li><strong>混合情绪表示</strong>：情绪用概率分布而非离散标签，更贴合真实用户 -- "我很焦虑但也有点生气"不应被强制归为单一情绪</li>
+          <li><strong>策略偏差意识</strong>：在评估 moodcoco 时，主动检测是否过度使用 Providing Suggestions，确保 Reflection of Feelings 和 Affirmation 有足够出现频率</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="color: var(--blue);">设计启发</h3>
+        <ul>
+          <li><strong>Discourse dynamics 建模</strong>：Thinker 不只看当前轮，需要建模"之前用了什么策略 + 用户情绪怎么变化"的轨迹</li>
+          <li><strong>可解释性</strong>：策略选择需要有 trace -- 为什么选了这个策略，是因为检测到什么情绪变化</li>
+          <li><strong>Weighted loss</strong>：低频策略 (Self-disclosure, Information) 需要在训练/prompt 中被显式加权，否则模型天然倾向高频策略</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="warning" style="margin-top: 16px;">
+      <strong>注意落地差异：</strong>EmoDynamiX 是训练时的监督学习框架 (RoBERTa + RGAT)，moodcoco 的 Thinker 是 inference-time 的 LLM prompt engineering。核心借鉴的是"解耦"思想和"异构图的信息结构"，不是直接复用模型。Thinker 的 system prompt 应显式包含：当前检测到的情绪分布 + 已用策略序列 + 策略选择的约束规则。
+    </div>
+  </div>
+
+  <!-- 局限性 -->
+  <div class="card">
+    <h2>局限性</h2>
+    <ul>
+      <li><strong>Ground truth 模糊性：</strong>同一对话状态下可能有多个合理策略，但数据集只标注了一个。Macro-F1 = 27.70 的"天花板"可能不只是模型问题，而是任务定义本身的局限</li>
+      <li><strong>仅评估英文数据集：</strong>ESConv 和 AnnoMI 均为英文。中文情感支持对话的策略分布可能不同（如"含蓄表达"在中文文化中更常见），泛化性未验证</li>
+      <li><strong>Discourse parser 跨域问题：</strong>使用 STAC (游戏对话) 训练的 parser 应用到情感对话，消融实验显示其贡献最小 (-1.06)，说明跨域泛化不佳</li>
+      <li><strong>模型架构未充分探索：</strong>仅使用 RoBERTa + RGAT，未实验其他 backbone (如 DeBERTa) 或图网络变体 (GAT, GCN, GraphSAGE)</li>
+      <li><strong>绝对性能仍不够好：</strong>27.70 Macro-F1 意味着策略预测仍有大量错误，说明 emotional support 的策略预测是一个本质困难的任务</li>
+      <li><strong>未验证端到端效果：</strong>论文聚焦策略预测准确率，但未验证"更好的策略预测 → 更好的回复质量 → 更好的用户体验"这条因果链</li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border);">
+    <p style="font-size: 13px; color: var(--text-secondary);">
+      EmoDynamiX: Emotional Support Dialogue Strategy Prediction by Modelling MiXed Emotions and Discourse Dynamics
+    </p>
+    <p style="font-size: 12px; color: #a8a29e; margin-top: 4px;">
+      NAACL 2025 Oral &nbsp;&middot;&nbsp; arXiv 2408.08782 &nbsp;&middot;&nbsp; moodcoco 内部解读
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

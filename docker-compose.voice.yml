@@ -1,0 +1,21 @@
+version: "3.9"
+
+# LiveKit dev server for voice E2E testing.
+# Usage: docker compose -f docker-compose.voice.yml up -d
+#
+# Default credentials: LIVEKIT_API_KEY=devkey, LIVEKIT_API_SECRET=secret
+# Matches .env defaults so no extra configuration needed.
+
+services:
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"   # WebSocket (client + agent)
+      - "7881:7881"   # HTTP API
+      - "7882:7882/udp"  # WebRTC UDP
+    command: >
+      --dev
+      --bind 0.0.0.0
+      --node-ip 127.0.0.1
+    environment:
+      LIVEKIT_KEYS: "devkey: secret"

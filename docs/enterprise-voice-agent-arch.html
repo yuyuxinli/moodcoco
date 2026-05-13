@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Enterprise Realtime Voice Agent 架构解析</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --stt: #0891b2;
+      --stt-bg: #ecfeff;
+      --llm: #2563eb;
+      --llm-bg: #eff6ff;
+      --buf: #7c3aed;
+      --buf-bg: #f5f3ff;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+      --tool: #059669;
+      --tool-bg: #ecfdf5;
+      --user: #64748b;
+      --danger: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-stt { background: var(--stt-bg); color: var(--stt); }
+    .tag-llm { background: var(--llm-bg); color: var(--llm); }
+    .tag-buf { background: var(--buf-bg); color: var(--buf); }
+    .tag-tts { background: var(--tts-bg); color: var(--tts); }
+    .tag-tool { background: var(--tool-bg); color: var(--tool); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* Pipeline flow */
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .pipe-node {
+      flex: 1;
+      min-width: 140px;
+      padding: 16px;
+      border-radius: 8px;
+      text-align: center;
+      position: relative;
+    }
+    .pipe-node .pipe-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+    .pipe-node .pipe-desc {
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .pipe-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 24px;
+      color: var(--muted);
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    .node-stt { background: var(--stt-bg); border: 2px solid var(--stt); color: var(--stt); }
+    .node-llm { background: var(--llm-bg); border: 2px solid var(--llm); color: var(--llm); }
+    .node-buf { background: var(--buf-bg); border: 2px solid var(--buf); color: var(--buf); }
+    .node-tts { background: var(--tts-bg); border: 2px solid var(--tts); color: var(--tts); }
+    .node-tool { background: var(--tool-bg); border: 2px solid var(--tool); color: var(--tool); }
+    .node-user { background: #f1f5f9; border: 2px solid var(--user); color: var(--user); }
+
+    /* Timeline */
+    .timeline { position: relative; margin: 20px 0 40px; }
+    .tl-row {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      min-height: 48px;
+      align-items: start;
+    }
+    .tl-time {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      padding-top: 10px;
+      text-align: right;
+      padding-right: 16px;
+    }
+    .tl-content {
+      position: relative;
+      padding: 8px 0 8px 24px;
+      border-left: 3px solid var(--border);
+    }
+    .tl-content::before {
+      content: '';
+      position: absolute;
+      left: -7px; top: 14px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+    .tl-stt::before { background: var(--stt); }
+    .tl-llm::before { background: var(--llm); }
+    .tl-buf::before { background: var(--buf); }
+    .tl-tts::before { background: var(--tts); }
+    .tl-tool::before { background: var(--tool); }
+    .tl-user::before { background: var(--user); }
+
+    .tl-card {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .tl-card-stt { background: var(--stt-bg); color: var(--stt); border-left: 3px solid var(--stt); }
+    .tl-card-llm { background: var(--llm-bg); color: var(--llm); border-left: 3px solid var(--llm); }
+    .tl-card-buf { background: var(--buf-bg); color: var(--buf); border-left: 3px solid var(--buf); }
+    .tl-card-tts { background: var(--tts-bg); color: var(--tts); border-left: 3px solid var(--tts); }
+    .tl-card-tool { background: var(--tool-bg); color: var(--tool); border-left: 3px solid var(--tool); }
+    .tl-card-user { background: #f1f5f9; color: var(--user); border-left: 3px solid var(--user); }
+
+    .overlap-zone {
+      border: 2px dashed #f59e0b;
+      border-radius: 10px;
+      padding: 4px 0;
+      margin: 4px 0;
+      position: relative;
+    }
+    .overlap-label {
+      position: absolute;
+      top: -11px; left: 16px;
+      background: var(--bg);
+      padding: 0 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #92400e;
+    }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: var(--buf-bg); border-left: 3px solid var(--buf); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .src { color: var(--muted); font-size: 14px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term {
+      flex-shrink: 0;
+      width: 200px;
+      font-weight: 600;
+    }
+    .gl-def { color: var(--muted); }
+
+    /* Chapter grid */
+    .ch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    @media (max-width: 800px) { .ch-grid { grid-template-columns: 1fr 1fr; } }
+    .ch-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .ch-num {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .ch-name { font-size: 15px; font-weight: 600; }
+    .ch-desc { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .ch-highlight {
+      border-color: var(--llm);
+      background: var(--llm-bg);
+    }
+    .ch-highlight .ch-name { color: var(--llm); }
+
+    /* Loop diagram */
+    .loop-box {
+      border: 2px solid var(--tool);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+      background: var(--tool-bg);
+      position: relative;
+    }
+    .loop-label {
+      position: absolute;
+      top: -12px; left: 20px;
+      background: var(--tool);
+      color: white;
+      padding: 2px 12px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .loop-steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+    .loop-step {
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .loop-arrow {
+      font-size: 20px;
+      color: var(--tool);
+      padding: 0 6px;
+    }
+    .loop-back {
+      display: block;
+      text-align: center;
+      font-size: 14px;
+      color: var(--tool);
+      font-weight: 700;
+      margin-top: 10px;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+    .metric-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>Enterprise Realtime Voice Agent 架构解析 <small>— Salesforce AI Research</small></h1>
+<p class="subtitle">源码：github.com/SalesforceAIResearch/enterprise-realtime-voice-agent · 9 章渐进式教程</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- GLOSSARY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:#f1f5f9; color:var(--user);">术语速查</h2>
+
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">STT（语音转文字）</div>
+    <div class="gl-def">Speech-to-Text，把用户说的话变成文字。本项目用 Deepgram 实时流式识别。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTS（文字转语音）</div>
+    <div class="gl-def">Text-to-Speech，把 AI 回复变成声音。本项目用 ElevenLabs，按句子逐条合成。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LLM 流式生成</div>
+    <div class="gl-def">大模型不是一次性输出全部文字，而是一个词一个词地"吐"出来（像打字机）。每个词叫一个 token。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">断句缓冲区（SentenceBuffer）</div>
+    <div class="gl-def">积攒 LLM 吐出的 token，检测到完整句子（遇到句号、问号等）就立刻交给 TTS。避免把半句话送去合成。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">函数调用（Function Calling）</div>
+    <div class="gl-def">LLM 发现需要查数据时，不直接回答，而是"调用"一个预定义函数（如查医生排班），拿到结果后再生成回复。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTFT（首 token 时间）</div>
+    <div class="gl-def">Time To First Token，用户说完话到 LLM 吐出第一个字的等待时间。越短体验越流畅。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTFA（首音频时间）</div>
+    <div class="gl-def">Time To First Audio，用户说完话到听到第一句回复声音的等待时间。这才是用户真正感知的延迟。</div>
+  </div>
+  <div class="gl-item" style="border-bottom:none;">
+    <div class="gl-term">流水线重叠</div>
+    <div class="gl-def">核心优化：LLM 还在生成后续内容时，前面已完成的句子已经在 TTS 合成了。两个阶段在时间上重叠，而非串行等待。</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PROJECT STRUCTURE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--llm-bg); color:var(--llm);">项目结构：9 章渐进式构建</h2>
+
+<p style="margin:0 0 12px; font-size:15px; color:var(--muted);">
+  每一章解决语音 Agent 的一个子问题，最终组合成完整系统。<strong>高亮</strong>的两章是核心架构。
+</p>
+
+<div class="ch-grid">
+  <div class="ch-card">
+    <div class="ch-num">Chapter 01</div>
+    <div class="ch-name">流式语音识别</div>
+    <div class="ch-desc">Deepgram 实时 STT，麦克风 → 文字</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 02</div>
+    <div class="ch-name">LLM 流式对话</div>
+    <div class="ch-desc">OpenAI/vLLM 流式生成 token</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 03</div>
+    <div class="ch-name">语音合成</div>
+    <div class="ch-desc">ElevenLabs TTS，文字 → 音频</div>
+  </div>
+  <div class="ch-card ch-highlight">
+    <div class="ch-num">Chapter 04 ★</div>
+    <div class="ch-name">流式管线</div>
+    <div class="ch-desc">LLM → 断句 → TTS 流水线重叠</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 05</div>
+    <div class="ch-name">打断处理</div>
+    <div class="ch-desc">用户开口时停止播放、取消生成</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 06</div>
+    <div class="ch-name">WebSocket 服务</div>
+    <div class="ch-desc">双向音频流：浏览器 ↔ 服务端</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 07</div>
+    <div class="ch-name">浏览器前端</div>
+    <div class="ch-desc">录音 + 播放的 Web UI</div>
+  </div>
+  <div class="ch-card ch-highlight">
+    <div class="ch-num">Chapter 08 ★</div>
+    <div class="ch-name">企业 Agent</div>
+    <div class="ch-desc">函数调用循环 + 工具集成</div>
+  </div>
+  <div class="ch-card">
+    <div class="ch-num">Chapter 09</div>
+    <div class="ch-name">生产部署</div>
+    <div class="ch-desc">完整系统集成 + 监控</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CORE PIPELINE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--llm-bg); color:var(--llm);">核心架构：流式管线（Chapter 04）</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  用户说完话后，经过下面四个阶段。关键优化是<strong>阶段重叠</strong>——LLM 还在吐后续 token 的同时，已完成的句子已经在被 TTS 合成。
+</p>
+
+<div class="overview">
+  <div class="overview-title">数据流向：从语音到语音</div>
+
+  <div class="pipeline">
+    <div class="pipe-node node-stt">
+      <div class="pipe-title">STT</div>
+      <div class="pipe-desc">用户语音 → 文字</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-llm">
+      <div class="pipe-title">LLM 流式生成</div>
+      <div class="pipe-desc">逐 token 输出回复</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-buf">
+      <div class="pipe-title">断句缓冲区</div>
+      <div class="pipe-desc">积攒 token，检测句子边界</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-tts">
+      <div class="pipe-title">TTS 合成</div>
+      <div class="pipe-desc">每句话立刻合成音频</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-user">
+      <div class="pipe-title">用户</div>
+      <div class="pipe-desc">听到回复</div>
+    </div>
+  </div>
+
+  <div class="note note-key" style="margin-top:16px;">
+    <strong>重叠而非串行：</strong>假设 LLM 生成了 3 句话。传统做法要等 3 句全部生成完才开始 TTS。
+    这里的做法是第 1 句完成就立刻送 TTS，与此同时 LLM 继续生成第 2、3 句。用户在 LLM 还没说完时就已经开始听到回复了。
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIMELINE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--tts-bg); color:var(--tts);">时间线：一次完整请求的处理过程</h2>
+
+<p style="margin:0 0 12px; font-size:15px; color:var(--muted);">
+  以用户问"帮我预约 Johnson 医生"为例，展示各阶段的时间重叠。
+</p>
+
+<div class="timeline">
+  <div class="tl-row">
+    <div class="tl-time">0 ms</div>
+    <div class="tl-content tl-user">
+      <div class="tl-card tl-card-user">
+        <strong>用户说完话</strong><br />
+        STT 已将语音转为文字："帮我预约下周一 Johnson 医生的门诊"
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~50 ms</div>
+    <div class="tl-content tl-llm">
+      <div class="tl-card tl-card-llm">
+        <strong>LLM 开始流式输出</strong> <span class="tag tag-llm">TTFT</span><br />
+        token 一个接一个流入断句缓冲区
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~300 ms</div>
+    <div class="tl-content tl-buf">
+      <div class="overlap-zone">
+        <div class="overlap-label">⚡ 流水线重叠开始</div>
+        <div style="padding:12px 14px 8px;">
+          <div class="tl-card tl-card-buf" style="margin-bottom:8px;">
+            <strong>断句缓冲区检测到第 1 句</strong><br />
+            "好的，我帮您查看 Johnson 医生的排班。"<br />
+            → 立刻送往 TTS
+          </div>
+          <div class="tl-card tl-card-llm">
+            <strong>同一时刻：LLM 继续生成第 2 句</strong><br />
+            token 持续流入缓冲区...
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~600 ms</div>
+    <div class="tl-content tl-tts">
+      <div class="tl-card tl-card-tts">
+        <strong>第 1 句音频合成完成</strong> <span class="tag tag-tts">TTFA</span><br />
+        用户开始听到回复。此时 LLM 可能还在生成第 2、3 句。
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~800 ms</div>
+    <div class="tl-content tl-buf">
+      <div class="tl-card tl-card-buf">
+        <strong>第 2 句就绪</strong><br />
+        "下周一有 9:00、10:30、14:00、15:30 四个时段。"<br />
+        → 送往 TTS（与第 1 句音频播放重叠）
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~1200 ms</div>
+    <div class="tl-content tl-llm">
+      <div class="tl-card tl-card-llm">
+        <strong>LLM 输出结束</strong><br />
+        缓冲区 flush 剩余文字 → 最后一句送 TTS
+      </div>
+    </div>
+  </div>
+
+  <div class="tl-row">
+    <div class="tl-time">~1500 ms</div>
+    <div class="tl-content tl-tts">
+      <div class="tl-card tl-card-tts">
+        <strong>全部音频播放完毕</strong><br />
+        用户在 ~600ms 就开始听，而非等到 ~1500ms
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--llm);">~50ms</div>
+    <div class="metric-label">TTFT（首 token）</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--tts);">~600ms</div>
+    <div class="metric-label">TTFA（首音频 = 用户感知延迟）</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--tool);">~60%</div>
+    <div class="metric-label">延迟缩减（vs 等全部生成完）</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SENTENCE BUFFER -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--buf-bg); color:var(--buf);">断句缓冲区：流水线的桥梁</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  LLM 吐出的是零碎 token（"好"、"的，"、"我"、"帮"...），TTS 需要完整句子。
+  断句缓冲区就是这两者之间的"翻译官"。
+</p>
+
+<div class="two-col">
+  <div class="card">
+    <h3>工作原理</h3>
+    <ul>
+      <li>token 持续追加到缓冲区</li>
+      <li>检测句末标点：<code>.</code> <code>!</code> <code>?</code> 后跟空格</li>
+      <li>检测到 → 提取整句 → 送 TTS</li>
+      <li>LLM 结束 → flush 剩余文字</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>防误判机制</h3>
+    <ul>
+      <li><strong>缩写词</strong>：Dr. / Mr. / Mrs. / U.S.A. 等不算句末</li>
+      <li><strong>小数</strong>：98.6 度中的 <code>.</code> 不算句末</li>
+      <li><strong>最小长度</strong>：太短的片段（如 "Hi."）不单独发送，继续等后续内容</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-insight" style="margin-top:16px;">
+  <strong>为什么不直接按固定长度切分？</strong>
+  TTS 在句子边界处停顿才自然。如果把 "Johnson 医生下周一有空，" 切成 "Johnson 医生下周" 和 "一有空，"，
+  合成的语音会在奇怪的地方断开，听起来像机器人。按语义句子切分是语音 Agent 的基本要求。
+</div>
+
+<p class="src" style="margin-top:8px;">
+  源码：<code>chapters/04_streaming_pipeline/sentence_buffer.py</code> — SentenceBuffer 类，~130 行
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- FUNCTION CALLING -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--tool-bg); color:var(--tool);">函数调用循环（Chapter 08）</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  当 Agent 需要查询外部数据（如医生排班）时，不能直接回答。它需要先调用工具函数，拿到数据后再生成回复。
+  这形成了一个<strong>循环</strong>：可能需要多轮工具调用才能收集够信息。
+</p>
+
+<div class="loop-box">
+  <div class="loop-label">Agent 循环</div>
+  <div class="loop-steps">
+    <div class="loop-step" style="background:var(--card); border:1px solid var(--border);">
+      用户输入
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step" style="background:var(--llm-bg); border:1px solid var(--llm); color:var(--llm);">
+      LLM 思考
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step" style="background:var(--tool-bg); border:1px solid var(--tool); color:var(--tool);">
+      返回 tool_call?
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step" style="background:var(--tts-bg); border:1px solid var(--tts); color:var(--tts);">
+      执行工具函数
+    </div>
+    <div class="loop-arrow">→</div>
+    <div class="loop-step" style="background:var(--llm-bg); border:1px solid var(--llm); color:var(--llm);">
+      结果喂回 LLM
+    </div>
+  </div>
+  <div class="loop-back">↩ 如果 LLM 还需要调更多工具 → 继续循环</div>
+  <div style="text-align:center; margin-top:12px; font-size:15px;">
+    循环结束条件：LLM 输出<strong>文字回复</strong>（而非 tool_call）→ 流式生成 → 断句 → TTS
+  </div>
+</div>
+
+<div class="two-col" style="margin-top:16px;">
+  <div class="card">
+    <h3>5 个内置工具</h3>
+    <ul>
+      <li><span class="tag tag-tool">check_availability</span> 查医生排班</li>
+      <li><span class="tag tag-tool">schedule_appointment</span> 预约挂号</li>
+      <li><span class="tag tag-tool">cancel_appointment</span> 取消预约</li>
+      <li><span class="tag tag-tool">get_patient_info</span> 查患者信息</li>
+      <li><span class="tag tag-tool">get_doctor_info</span> 查医生信息</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>两种模式</h3>
+    <ul>
+      <li><strong>非流式 <code>process()</code></strong>：工具调用 + 最终回复都是同步完成，适合测试</li>
+      <li><strong>流式 <code>process_streaming()</code></strong>：工具调用仍是同步循环，但最终文字回复切换为流式输出 → 送入断句 → TTS</li>
+    </ul>
+    <div class="note note-key" style="margin-top:10px;">
+      <strong>关键设计：</strong>工具调用阶段不流式（因为需要完整 JSON 参数），只有最终回复阶段才流式。
+    </div>
+  </div>
+</div>
+
+<p class="src" style="margin-top:12px;">
+  源码：<code>chapters/08_enterprise_agent/agent.py</code> — Agent 类 · <code>tools.py</code> — 工具定义 + mock 数据
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPARISON -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:#fefce8; color:#92400e;">与 VoiceAgentRAG / moodcoco 的对比</h2>
+
+<div style="overflow-x:auto; margin:16px 0;">
+  <table style="width:100%; border-collapse:collapse; font-size:15px;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border);">
+        <th style="text-align:left; padding:10px; width:22%;">维度</th>
+        <th style="text-align:left; padding:10px; width:26%;">本项目<br /><small style="color:var(--muted);">Enterprise Voice Agent</small></th>
+        <th style="text-align:left; padding:10px; width:26%;">VoiceAgentRAG<br /><small style="color:var(--muted);">Salesforce Research</small></th>
+        <th style="text-align:left; padding:10px; width:26%;">moodcoco<br /><small style="color:var(--muted);">快慢思考</small></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">架构模式</td>
+        <td style="padding:10px;"><span class="tag" style="background:#fee2e2; color:var(--danger);">单 Agent 串行</span><br />STT → LLM → TTS 一条线</td>
+        <td style="padding:10px;"><span class="tag" style="background:#d1fae5; color:#059669;">双 Agent 并行</span><br />Fast 前台 + Slow 后台</td>
+        <td style="padding:10px;"><span class="tag" style="background:#d1fae5; color:#059669;">双 Agent 并行</span><br />Fast 即时 + Slow 深度</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">Fast/Slow 协作</td>
+        <td style="padding:10px; color:var(--muted);">无（单一 LLM）</td>
+        <td style="padding:10px;">通过语义缓存解耦<br />Slow 预填充 → Fast 查缓存</td>
+        <td style="padding:10px;">共享 Python 对象<br />Slow 直接写入 Fast 的上下文</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">延迟优化手段</td>
+        <td style="padding:10px;">流水线重叠（LLM 边生成、TTS 边合成）</td>
+        <td style="padding:10px;">缓存命中跳过检索（110ms → &lt;1ms）</td>
+        <td style="padding:10px;">Fast 先回复，Slow 结果注入下一轮</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">工具/函数调用</td>
+        <td style="padding:10px;">5 个医疗工具，同步循环执行</td>
+        <td style="padding:10px;">无（纯 RAG 检索）</td>
+        <td style="padding:10px;">Pydantic-AI 工具集（Skill 系统）</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">Slow 的职责</td>
+        <td style="padding:10px; color:var(--muted);">无 Slow</td>
+        <td style="padding:10px;">预测用户下一步会问什么 → 提前检索</td>
+        <td style="padding:10px;">深度理解当前情绪 → 选择应对策略</td>
+      </tr>
+      <tr>
+        <td style="padding:10px; font-weight:600;">适用场景</td>
+        <td style="padding:10px;">任务型对话（挂号、客服）</td>
+        <td style="padding:10px;">知识问答（文档/数据库）</td>
+        <td style="padding:10px;">情绪陪伴（心理支持）</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note note-compare">
+  <strong>核心差异：</strong>
+  Enterprise Voice Agent 是一个<strong>教科书级的基础管线</strong>——把 STT、LLM、TTS 串起来，用断句实现流水线重叠。
+  它没有并行思考的概念，但它的断句缓冲区和流式管线是所有语音 Agent 的底层基础设施，
+  VoiceAgentRAG 和 moodcoco 都需要这一层。
+</div>
+
+<div class="note note-insight">
+  <strong>对 moodcoco 的启发：</strong>
+  <ul style="margin:8px 0 0 18px;">
+    <li><strong>断句缓冲区</strong>可以直接复用——moodcoco 的 Voice Streaming 模式也需要按句子切分送 TTS</li>
+    <li><strong>工具调用阶段不流式</strong>的设计值得参考——函数调用需要完整 JSON，强行流式会增加复杂度</li>
+    <li><strong>TTFA 而非 TTFT</strong>才是用户感知指标——moodcoco 应该以用户听到第一句话的时间为优化目标</li>
+  </ul>
+</div>
+
+<p style="margin-top:24px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于源码分析，2026-05-11 —
+</p>
+
+</body>
+</html>

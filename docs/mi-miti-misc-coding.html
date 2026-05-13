@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MI / MITI / MISC 编码体系解读</title>
+<style>
+  :root {
+    --bg: #fafaf9; --card: #ffffff; --border: #e7e5e4;
+    --text: #1c1917; --text-sec: #78716c; --text-light: #a8a29e;
+    --green: #16a34a; --green-bg: #f0fdf4; --green-border: #86efac;
+    --red: #dc2626; --red-bg: #fef2f2; --red-border: #fca5a5;
+    --blue: #2563eb; --blue-bg: #eff6ff; --blue-border: #bfdbfe;
+    --purple: #9333ea; --purple-bg: #faf5ff; --purple-border: #d8b4fe;
+    --amber: #d97706; --amber-bg: #fffbeb; --amber-border: #fcd34d;
+    --teal: #0d9488; --teal-bg: #f0fdfa; --teal-border: #5eead4;
+    --orange: #ea580c; --orange-bg: #fff7ed;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.8; font-size: 15px;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1000px; margin: 0 auto; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 48px 20px 24px; }
+  .hero h1 { font-size: 2.2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 12px; }
+  .hero .subtitle { font-size: 1.05rem; color: var(--text-sec); max-width: 640px; margin: 0 auto; line-height: 1.7; }
+
+  /* 30 sec */
+  .tldr {
+    background: var(--blue-bg); border: 1px solid var(--blue-border); border-radius: 14px;
+    padding: 24px 28px; margin: 32px 0 48px; position: relative;
+  }
+  .tldr::before {
+    content: "30s"; position: absolute; top: -12px; left: 24px;
+    background: var(--blue); color: #fff; font-size: 0.75rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 8px;
+  }
+  .tldr p { font-size: 0.93rem; color: #1e3a5f; }
+  .tldr strong { color: var(--blue); }
+
+  /* Section */
+  section { margin-bottom: 56px; }
+  section > h2 {
+    font-size: 1.4rem; font-weight: 700; margin-bottom: 6px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  }
+  section > .lead { color: var(--text-sec); margin-bottom: 24px; font-size: 0.93rem; }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .card .sub { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 14px; }
+
+  /* Four-grid */
+  .four-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0;
+  }
+  @media (max-width: 640px) { .four-grid { grid-template-columns: 1fr; } }
+  .four-grid .cell {
+    border-radius: 12px; padding: 20px 22px; text-align: center;
+    border: 1px solid var(--border);
+  }
+  .four-grid .cell .icon { font-size: 1.6rem; margin-bottom: 6px; }
+  .four-grid .cell h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; }
+  .four-grid .cell .en { font-size: 0.78rem; color: var(--text-sec); margin-bottom: 8px; }
+  .four-grid .cell p { font-size: 0.82rem; color: var(--text-sec); line-height: 1.5; }
+
+  /* Process flow */
+  .process-flow {
+    display: flex; align-items: center; justify-content: center; gap: 0;
+    margin: 24px 0; flex-wrap: wrap;
+  }
+  .process-flow .step {
+    border-radius: 12px; padding: 16px 22px; text-align: center;
+    min-width: 140px; position: relative;
+  }
+  .process-flow .arrow {
+    font-size: 1.2rem; color: var(--text-light); padding: 0 4px;
+  }
+  .process-flow .step h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
+  .process-flow .step .en { font-size: 0.75rem; color: var(--text-sec); }
+
+  /* MITI structure */
+  .miti-tree {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0;
+  }
+  @media (max-width: 640px) { .miti-tree { grid-template-columns: 1fr; } }
+  .miti-branch {
+    border-radius: 14px; padding: 22px 24px; border: 1px solid;
+  }
+  .miti-branch h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 10px; }
+  .miti-branch ul { list-style: none; padding: 0; }
+  .miti-branch ul li {
+    font-size: 0.85rem; padding: 5px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .miti-branch ul li:last-child { border-bottom: none; }
+  .miti-branch .dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  }
+  .miti-branch .label { font-weight: 600; }
+  .miti-branch .desc { color: var(--text-sec); }
+
+  /* Comparison table */
+  .compare-section { margin: 28px 0; }
+  .compare-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 20px; overflow: hidden;
+  }
+  .compare-header {
+    padding: 18px 24px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .compare-header .num {
+    width: 28px; height: 28px; border-radius: 8px; display: flex;
+    align-items: center; justify-content: center; font-size: 0.8rem;
+    font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .compare-header h4 { font-size: 1rem; font-weight: 700; }
+  .compare-header .en-name { font-size: 0.82rem; color: var(--text-sec); margin-left: 4px; }
+  .compare-body { display: grid; grid-template-columns: 1fr 1fr; }
+  @media (max-width: 640px) { .compare-body { grid-template-columns: 1fr; } }
+  .compare-side { padding: 18px 24px; }
+  .compare-side.bad { background: var(--red-bg); border-right: 1px solid var(--border); }
+  .compare-side.good { background: var(--green-bg); }
+  @media (max-width: 640px) {
+    .compare-side.bad { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+  .compare-side .tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 700;
+    padding: 2px 8px; border-radius: 6px; margin-bottom: 10px;
+  }
+  .compare-side.bad .tag { background: var(--red); color: #fff; }
+  .compare-side.good .tag { background: var(--green); color: #fff; }
+  .compare-side .label-sm { font-size: 0.78rem; font-weight: 600; color: var(--text-sec); margin-bottom: 6px; }
+  .compare-side .example {
+    font-size: 0.88rem; line-height: 1.6; padding: 10px 14px;
+    border-radius: 10px; margin-bottom: 8px; font-style: italic;
+  }
+  .compare-side.bad .example { background: rgba(220,38,38,0.06); border: 1px solid rgba(220,38,38,0.12); }
+  .compare-side.good .example { background: rgba(22,163,74,0.06); border: 1px solid rgba(22,163,74,0.12); }
+  .compare-side .explain { font-size: 0.8rem; color: var(--text-sec); line-height: 1.5; }
+
+  /* Gauge / Meter */
+  .meters { display: grid; grid-template-columns: 1fr; gap: 20px; margin: 24px 0; }
+  .meter-row {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .meter-row .meter-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .meter-row .meter-label h4 { font-size: 0.9rem; font-weight: 700; }
+  .meter-row .meter-label .vals { font-size: 0.78rem; color: var(--text-sec); }
+  .meter-track {
+    height: 24px; background: #f5f5f4; border-radius: 12px; position: relative;
+    overflow: visible; margin-bottom: 6px;
+  }
+  .meter-fill {
+    height: 100%; border-radius: 12px; position: relative; transition: width 0.6s;
+  }
+  .meter-marker {
+    position: absolute; top: -6px; width: 2px; height: 36px;
+    border-radius: 1px; z-index: 2;
+  }
+  .meter-marker-label {
+    position: absolute; top: -22px; font-size: 0.65rem; font-weight: 700;
+    white-space: nowrap; transform: translateX(-50%);
+  }
+  .meter-legend {
+    display: flex; gap: 16px; font-size: 0.75rem; color: var(--text-sec);
+  }
+  .meter-legend span { display: flex; align-items: center; gap: 4px; }
+  .meter-legend .swatch {
+    width: 10px; height: 10px; border-radius: 3px; display: inline-block;
+  }
+
+  /* Box callout */
+  .box {
+    border-radius: 10px; padding: 16px 20px; margin: 18px 0; font-size: 0.9rem;
+    border-left: 4px solid;
+  }
+  .box.green { background: var(--green-bg); border-color: var(--green); }
+  .box.red { background: var(--red-bg); border-color: var(--red); }
+  .box.amber { background: var(--amber-bg); border-color: var(--amber); }
+  .box.blue { background: var(--blue-bg); border-color: var(--blue); }
+  .box.purple { background: var(--purple-bg); border-color: var(--purple); }
+  .box.teal { background: var(--teal-bg); border-color: var(--teal); }
+  .box strong { font-weight: 700; }
+
+  /* Table */
+  .clean-table {
+    width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem;
+  }
+  .clean-table th {
+    text-align: left; padding: 10px 14px; font-weight: 700; font-size: 0.8rem;
+    border-bottom: 2px solid var(--border); color: var(--text-sec);
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .clean-table td {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+  }
+  .clean-table tr:last-child td { border-bottom: none; }
+
+  .tag-inline {
+    display: inline-block; font-size: 0.7rem; font-weight: 700;
+    padding: 1px 7px; border-radius: 5px;
+  }
+  .tag-inline.red { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .tag-inline.green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+  .tag-inline.amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+  .tag-inline.blue { background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue-border); }
+
+  /* Evolution diagram */
+  .evo-flow {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    margin: 24px 0; flex-wrap: wrap;
+  }
+  .evo-flow .evo-box {
+    border-radius: 10px; padding: 14px 20px; text-align: center;
+    border: 1px solid var(--border); background: var(--card); min-width: 120px;
+  }
+  .evo-flow .evo-box h4 { font-size: 0.88rem; font-weight: 700; }
+  .evo-flow .evo-box .yr { font-size: 0.72rem; color: var(--text-sec); }
+  .evo-flow .evo-arr { font-size: 1.2rem; color: var(--text-light); }
+  .evo-flow .evo-box.active { border-color: var(--blue); background: var(--blue-bg); }
+
+  /* Footer */
+  footer { text-align: center; color: var(--text-light); font-size: 0.78rem; padding: 32px 0 16px; border-top: 1px solid var(--border); margin-top: 40px; }
+  footer a { color: var(--text-sec); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>MI / MITI / MISC 编码体系</h1>
+  <div class="subtitle">Motivational Interviewing 的质量评估框架：<br>从精神到行为编码，从定性到量化</div>
+</div>
+
+<!-- 30s TL;DR -->
+<div class="tldr">
+  <p><strong>MI</strong>（动机式晤谈）是一种以来访者为中心、引导行为改变的咨询方法。<strong>MITI 4.2</strong> 是评估咨询师 MI 忠实度的编码系统，包含 4 个全局评分维度（1-5 分）和 10 种行为计数。核心原则：<strong>不对抗、不说教、不命令</strong>——用反映代替对抗，用提问代替告知，用选项代替指令。MISC 是早期更细致的编码版本，已被 MITI 4 简化替代。</p>
+</div>
+
+<!-- 演化关系 -->
+<section>
+  <h2>编码体系演化</h2>
+  <p class="lead">从研究工具到临床标准</p>
+  <div class="evo-flow">
+    <div class="evo-box">
+      <h4>MISC 1.0</h4>
+      <div class="yr">2000</div>
+    </div>
+    <div class="evo-arr">&rarr;</div>
+    <div class="evo-box">
+      <h4>MISC 2.0/2.1</h4>
+      <div class="yr">2003-2008</div>
+    </div>
+    <div class="evo-arr">&rarr;</div>
+    <div class="evo-box">
+      <h4>MITI 3.0/3.1</h4>
+      <div class="yr">2005-2010</div>
+    </div>
+    <div class="evo-arr">&rarr;</div>
+    <div class="evo-box active">
+      <h4>MITI 4.2.1</h4>
+      <div class="yr">2015 (当前)</div>
+    </div>
+  </div>
+  <div class="card">
+    <table class="clean-table">
+      <thead>
+        <tr><th>体系</th><th>特点</th><th>适用场景</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MISC</strong></td>
+          <td>同时编码咨询师+来访者行为，粒度极细（28+ 类别），包含来访者 Change Talk / Sustain Talk</td>
+          <td>MI 机制研究，但编码成本高，信度较低</td>
+        </tr>
+        <tr>
+          <td><strong>MITI 4.2</strong></td>
+          <td>只编码咨询师行为，10 种行为计数 + 4 个全局维度，简化可靠</td>
+          <td>临床培训、质量监控、AI 系统评估</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- MI 四大精神 -->
+<section>
+  <h2>MI 四大精神 (Spirit)</h2>
+  <p class="lead">MI 不是技巧集合，而是一种精神态度</p>
+  <div class="four-grid">
+    <div class="cell" style="background: var(--blue-bg); border-color: var(--blue-border);">
+      <div class="icon" style="color: var(--blue);">&#9829;</div>
+      <h4>合作</h4>
+      <div class="en">Partnership</div>
+      <p>咨询师与来访者是平等的合作关系，不是专家-病人关系。尊重来访者的专业知识（关于自己的生活）</p>
+    </div>
+    <div class="cell" style="background: var(--purple-bg); border-color: var(--purple-border);">
+      <div class="icon" style="color: var(--purple);">&#10003;</div>
+      <h4>接纳</h4>
+      <div class="en">Acceptance</div>
+      <p>无条件积极关注 + 准确共情 + 强调自主权 + 肯定来访者的优势和努力</p>
+    </div>
+    <div class="cell" style="background: var(--green-bg); border-color: var(--green-border);">
+      <div class="icon" style="color: var(--green);">&#9733;</div>
+      <h4>慈悲</h4>
+      <div class="en">Compassion</div>
+      <p>优先考虑来访者的福祉和利益，而非机构、咨询师或第三方的目标</p>
+    </div>
+    <div class="cell" style="background: var(--amber-bg); border-color: var(--amber-border);">
+      <div class="icon" style="color: var(--amber);">&#9650;</div>
+      <h4>唤起</h4>
+      <div class="en">Evocation</div>
+      <p>改变的动力和资源存在于来访者内部，咨询师的工作是唤起它们，而不是灌输</p>
+    </div>
+  </div>
+</section>
+
+<!-- MI 四大过程 -->
+<section>
+  <h2>MI 四大过程 (Processes)</h2>
+  <p class="lead">非线性但有方向的工作流程</p>
+  <div class="process-flow">
+    <div class="step" style="background: var(--teal-bg); border: 1px solid var(--teal-border);">
+      <h4 style="color: var(--teal);">投入</h4>
+      <div class="en">Engaging</div>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="step" style="background: var(--blue-bg); border: 1px solid var(--blue-border);">
+      <h4 style="color: var(--blue);">聚焦</h4>
+      <div class="en">Focusing</div>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="step" style="background: var(--purple-bg); border: 1px solid var(--purple-border);">
+      <h4 style="color: var(--purple);">唤起</h4>
+      <div class="en">Evoking</div>
+    </div>
+    <div class="arrow">&rarr;</div>
+    <div class="step" style="background: var(--green-bg); border: 1px solid var(--green-border);">
+      <h4 style="color: var(--green);">计划</h4>
+      <div class="en">Planning</div>
+    </div>
+  </div>
+  <div class="card">
+    <table class="clean-table">
+      <thead>
+        <tr><th>过程</th><th>核心任务</th><th>关键技能</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Engaging</strong></td>
+          <td>建立治疗关系和工作联盟</td>
+          <td>开放式提问、反映式倾听、肯定</td>
+        </tr>
+        <tr>
+          <td><strong>Focusing</strong></td>
+          <td>找到并维持对话方向</td>
+          <td>议程设定、优先级排序</td>
+        </tr>
+        <tr>
+          <td><strong>Evoking</strong></td>
+          <td>唤起来访者自身的改变动机</td>
+          <td>引出 Change Talk、探索矛盾</td>
+        </tr>
+        <tr>
+          <td><strong>Planning</strong></td>
+          <td>将动机转化为具体行动计划</td>
+          <td>承诺语言、实施意向、巩固</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- MITI 4.2 编码结构 -->
+<section>
+  <h2>MITI 4.2 完整编码结构</h2>
+  <p class="lead">两大维度：全局评分（质量）+ 行为计数（频率）</p>
+
+  <div class="miti-tree">
+    <!-- Global Scores -->
+    <div class="miti-branch" style="border-color: var(--purple-border); background: var(--purple-bg);">
+      <h4 style="color: var(--purple);">Global Scores (1-5 Likert)</h4>
+      <ul>
+        <li>
+          <span class="dot" style="background: var(--purple);"></span>
+          <div><span class="label">Cultivating Change Talk</span><br><span class="desc">咨询师主动引导来访者说出改变理由的程度</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--purple);"></span>
+          <div><span class="label">Softening Sustain Talk</span><br><span class="desc">咨询师减少/重定向来访者维持现状话语的程度</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--purple);"></span>
+          <div><span class="label">Partnership</span><br><span class="desc">合作与权力共享的程度</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--purple);"></span>
+          <div><span class="label">Empathy</span><br><span class="desc">咨询师理解来访者显性和隐性视角的深度、准确性和一致性</span></div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Behavior Counts -->
+    <div class="miti-branch" style="border-color: var(--blue-border); background: var(--blue-bg);">
+      <h4 style="color: var(--blue);">Behavior Counts (频次计数)</h4>
+      <ul>
+        <li>
+          <span class="dot" style="background: var(--green);"></span>
+          <div><span class="label">Affirm</span> <span class="tag-inline green">MI-A</span><br><span class="desc">肯定来访者的积极特质、行为或努力</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--green);"></span>
+          <div><span class="label">Seek Collaboration</span> <span class="tag-inline green">MI-A</span><br><span class="desc">寻求合作，重视来访者的观点</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--green);"></span>
+          <div><span class="label">Emphasize Autonomy</span> <span class="tag-inline green">MI-A</span><br><span class="desc">强调来访者的自主权和选择自由</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--red);"></span>
+          <div><span class="label">Confront</span> <span class="tag-inline red">MI-NA</span><br><span class="desc">对抗、不认同、嘲讽、质疑诚实</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: var(--red);"></span>
+          <div><span class="label">Persuade</span> <span class="tag-inline red">MI-NA</span><br><span class="desc">未经允许的说服、说教、辩论</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: #64748b;"></span>
+          <div><span class="label">Persuade with Permission</span> <span class="tag-inline blue">中性</span><br><span class="desc">在获得许可/强调自主的前提下说服</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: #64748b;"></span>
+          <div><span class="label">Question</span> <span class="tag-inline blue">中性</span><br><span class="desc">所有提问（含开放式 + 封闭式）</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: #64748b;"></span>
+          <div><span class="label">Simple Reflection</span> <span class="tag-inline blue">中性</span><br><span class="desc">简单反映：重复/轻微改述来访者的话</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: #64748b;"></span>
+          <div><span class="label">Complex Reflection</span> <span class="tag-inline blue">中性</span><br><span class="desc">复杂反映：增加含义、情感或隐喻</span></div>
+        </li>
+        <li>
+          <span class="dot" style="background: #64748b;"></span>
+          <div><span class="label">Giving Information</span> <span class="tag-inline blue">中性</span><br><span class="desc">提供信息或教育内容（中性，非说服）</span></div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="box blue">
+    <strong>MITI 4 vs MITI 3 的关键变化：</strong> 移除了旧版的 MI-Adherent / MI Non-Adherent 大类，改为具体行为编码。旧版的 "open question / closed question" 合并为 "Question"。新增 "Persuade with Permission" 捕捉有技巧的说服。新增两个 Global 维度：Cultivating Change Talk 和 Softening Sustain Talk。
+  </div>
+</section>
+
+<!-- 核心对比：Adherent vs Non-Adherent -->
+<section>
+  <h2>MI-Adherent vs Non-Adherent 行为对比</h2>
+  <p class="lead">这是 MI 实践中最关键的分界线 -- 同样的临床意图，不同的表达方式决定了效果</p>
+
+  <!-- 1. Confront -->
+  <div class="compare-card">
+    <div class="compare-header">
+      <div class="num" style="background: var(--red);">1</div>
+      <h4>对抗 <span class="en-name">Confront</span></h4>
+    </div>
+    <div class="compare-body">
+      <div class="compare-side bad">
+        <div class="tag">NON-ADHERENT</div>
+        <div class="label-sm">直接对抗：否认、嘲讽、质疑诚实</div>
+        <div class="example">"你说你每天只喝两瓶啤酒？你的检查报告可不是这么说的。你自己骗自己呢。"</div>
+        <div class="explain">权力不平等、带有批判和不信任。来访者会产生防御和抵抗（Sustain Talk 增加）。</div>
+      </div>
+      <div class="compare-side good">
+        <div class="tag">ADHERENT 替代</div>
+        <div class="label-sm">反映矛盾：呈现差异让来访者自己发现</div>
+        <div class="example">"一方面你觉得自己喝得不多，另一方面检查结果显示肝指标偏高。你怎么看这两个信息之间的关系？"</div>
+        <div class="explain">Complex Reflection + Open Question。把矛盾交还给来访者，让他自己整合，而不是被指控。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Persuade -->
+  <div class="compare-card">
+    <div class="compare-header">
+      <div class="num" style="background: var(--red);">2</div>
+      <h4>说服 <span class="en-name">Persuade (without permission)</span></h4>
+    </div>
+    <div class="compare-body">
+      <div class="compare-side bad">
+        <div class="tag">NON-ADHERENT</div>
+        <div class="label-sm">未经允许的说教、单方面论证</div>
+        <div class="example">"你真的应该开始运动了。运动对抑郁症有很好的效果，研究证明每周三次有氧运动和抗抑郁药效果差不多。"</div>
+        <div class="explain">咨询师扮演专家角色，单方面灌输信息。来访者没有被邀请参与决策。</div>
+      </div>
+      <div class="compare-side good">
+        <div class="tag">ADHERENT 替代</div>
+        <div class="label-sm">引导探索 / Persuade with Permission</div>
+        <div class="example">"你提到想找一些方法来改善心情。有一些人发现运动对他们有帮助——你有兴趣听听这方面的信息吗？"</div>
+        <div class="explain">先连接来访者的动机，再请求许可。如果来访者说不想听，就停。自主权始终在来访者手中。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Warn (MITI 3 时代，现归入 Persuade/Confront) -->
+  <div class="compare-card">
+    <div class="compare-header">
+      <div class="num" style="background: var(--red);">3</div>
+      <h4>威胁后果 <span class="en-name">Warn (MITI 3) / Persuade + Confront (MITI 4)</span></h4>
+    </div>
+    <div class="compare-body">
+      <div class="compare-side bad">
+        <div class="tag">NON-ADHERENT</div>
+        <div class="label-sm">用负面后果威胁来访者</div>
+        <div class="example">"如果你继续这样吃下去，五年之内你一定会得糖尿病。到时候就来不及了。"</div>
+        <div class="explain">恐吓式沟通。激发来访者的恐惧但不提供掌控感，通常导致回避而非改变。</div>
+      </div>
+      <div class="compare-side good">
+        <div class="tag">ADHERENT 替代</div>
+        <div class="label-sm">探索来访者自己的担忧</div>
+        <div class="example">"你对自己的饮食习惯有什么担心吗？如果继续目前的方式，你觉得可能会怎样？"</div>
+        <div class="explain">让来访者自己说出后果（Change Talk: reasons），比咨询师说出来有力 100 倍。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Direct -->
+  <div class="compare-card">
+    <div class="compare-header">
+      <div class="num" style="background: var(--red);">4</div>
+      <h4>命令 <span class="en-name">Direct (MITI 3) / Confront (MITI 4)</span></h4>
+    </div>
+    <div class="compare-body">
+      <div class="compare-side bad">
+        <div class="tag">NON-ADHERENT</div>
+        <div class="label-sm">直接命令来访者做某事</div>
+        <div class="example">"你必须戒烟。从明天开始，把家里的烟全扔了。"</div>
+        <div class="explain">剥夺来访者的选择权。即使来访者想改变，被命令的感觉也会触发心理抗拒（reactance）。</div>
+      </div>
+      <div class="compare-side good">
+        <div class="tag">ADHERENT 替代</div>
+        <div class="label-sm">提供选项 + 强调自主权（Emphasize Autonomy）</div>
+        <div class="example">"有些人选择一次性戒烟，有些人选择逐步减少，也有些人用替代品过渡。当然，这完全是你的决定。你觉得哪种方式最适合你？"</div>
+        <div class="explain">提供菜单（menu of options）+ 明确表达"你决定"。来访者感受到掌控感，更可能真正行动。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Unsolicited Advice -->
+  <div class="compare-card">
+    <div class="compare-header">
+      <div class="num" style="background: var(--red);">5</div>
+      <h4>未经允许的建议 <span class="en-name">Unsolicited Advice / Persuade (MITI 4)</span></h4>
+    </div>
+    <div class="compare-body">
+      <div class="compare-side bad">
+        <div class="tag">NON-ADHERENT</div>
+        <div class="label-sm">来访者没有要求就给建议</div>
+        <div class="example">"你应该试试正念冥想。我有很多来访者用了之后焦虑明显减轻了。我推荐你每天做 10 分钟。"</div>
+        <div class="explain">即使建议本身是好的，未经邀请就给出 = Persuade。来访者的内心反应是"你又不是我，你怎么知道什么适合我"。</div>
+      </div>
+      <div class="compare-side good">
+        <div class="tag">ADHERENT 替代</div>
+        <div class="label-sm">Ask - Tell - Ask（E-P-E 框架）</div>
+        <div class="example">"你已经试过哪些方法来应对焦虑？<br><br>（来访者回答后）<br><br>有一种方法是正念练习，一些人觉得有帮助——你想了解一下吗？<br><br>（获得许可后分享，然后：）听了这些，你有什么想法？"</div>
+        <div class="explain">Elicit &rarr; Provide &rarr; Elicit。先了解来访者已有的知识和尝试，获得许可后再分享，分享后再收回主动权。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MITI 4.2 量化指标 -->
+<section>
+  <h2>MITI 4.2 量化指标仪表盘</h2>
+  <p class="lead">基于专家共识的阈值（非标准化常模，使用时需注意局限性）</p>
+
+  <div class="meters">
+    <!-- Technical Global -->
+    <div class="meter-row">
+      <div class="meter-label">
+        <h4>Technical Global（Cultivating Change Talk + Softening Sustain Talk 均值）</h4>
+        <div class="vals">Fair &lt; 3.0 &nbsp;|&nbsp; 合格 &ge; 3.0 &nbsp;|&nbsp; 优秀 &ge; 4.0</div>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, var(--red) 0%, var(--red) 40%, var(--amber) 40%, var(--amber) 60%, #facc15 60%, #facc15 80%, var(--green) 80%);"></div>
+        <div class="meter-marker" style="left: 60%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--amber);">3.0 合格</div>
+        </div>
+        <div class="meter-marker" style="left: 80%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--green);">4.0 优秀</div>
+        </div>
+      </div>
+      <div class="meter-legend">
+        <span><span class="swatch" style="background: var(--red);"></span>需改善 (&lt;3.0)</span>
+        <span><span class="swatch" style="background: var(--amber);"></span>合格 (3.0-3.9)</span>
+        <span><span class="swatch" style="background: var(--green);"></span>优秀 (&ge;4.0)</span>
+      </div>
+    </div>
+
+    <!-- Relational Global -->
+    <div class="meter-row">
+      <div class="meter-label">
+        <h4>Relational Global（Partnership + Empathy 均值）</h4>
+        <div class="vals">Fair &lt; 3.5 &nbsp;|&nbsp; 合格 &ge; 3.5 &nbsp;|&nbsp; 优秀 &ge; 4.0</div>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, var(--red) 0%, var(--red) 50%, var(--amber) 50%, var(--amber) 70%, #facc15 70%, #facc15 80%, var(--green) 80%);"></div>
+        <div class="meter-marker" style="left: 70%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--amber);">3.5 合格</div>
+        </div>
+        <div class="meter-marker" style="left: 80%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--green);">4.0 优秀</div>
+        </div>
+      </div>
+      <div class="meter-legend">
+        <span><span class="swatch" style="background: var(--red);"></span>需改善 (&lt;3.5)</span>
+        <span><span class="swatch" style="background: var(--amber);"></span>合格 (3.5-3.9)</span>
+        <span><span class="swatch" style="background: var(--green);"></span>优秀 (&ge;4.0)</span>
+      </div>
+    </div>
+
+    <!-- Complex Reflection % -->
+    <div class="meter-row">
+      <div class="meter-label">
+        <h4>% Complex Reflection（复杂反映 / 总反映）</h4>
+        <div class="vals">合格 &ge; 40% &nbsp;|&nbsp; 优秀 &ge; 50%</div>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, var(--red) 0%, var(--red) 40%, var(--amber) 40%, var(--amber) 50%, var(--green) 50%);"></div>
+        <div class="meter-marker" style="left: 40%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--amber);">40% 合格</div>
+        </div>
+        <div class="meter-marker" style="left: 50%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--green);">50% 优秀</div>
+        </div>
+      </div>
+      <div class="meter-legend">
+        <span><span class="swatch" style="background: var(--red);"></span>需改善 (&lt;40%)</span>
+        <span><span class="swatch" style="background: var(--amber);"></span>合格 (40-49%)</span>
+        <span><span class="swatch" style="background: var(--green);"></span>优秀 (&ge;50%)</span>
+      </div>
+    </div>
+
+    <!-- R:Q Ratio -->
+    <div class="meter-row">
+      <div class="meter-label">
+        <h4>R:Q Ratio（总反映 / 总提问）</h4>
+        <div class="vals">合格 &ge; 1.0 &nbsp;|&nbsp; 优秀 &ge; 2.0</div>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, var(--red) 0%, var(--red) 25%, var(--amber) 25%, var(--amber) 50%, var(--green) 50%);"></div>
+        <div class="meter-marker" style="left: 25%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--amber);">1.0 合格</div>
+        </div>
+        <div class="meter-marker" style="left: 50%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--green);">2.0 优秀</div>
+        </div>
+      </div>
+      <div class="meter-legend">
+        <span><span class="swatch" style="background: var(--red);"></span>需改善 (&lt;1.0)</span>
+        <span><span class="swatch" style="background: var(--amber);"></span>合格 (1.0-1.9)</span>
+        <span><span class="swatch" style="background: var(--green);"></span>优秀 (&ge;2.0)</span>
+      </div>
+    </div>
+
+    <!-- % MI-Adherent -->
+    <div class="meter-row">
+      <div class="meter-label">
+        <h4>% MI-Adherent（MI-A / (MI-A + MI-NA)）</h4>
+        <div class="vals">理想：Confront = 0, Persuade = 0</div>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" style="width: 100%; background: linear-gradient(90deg, var(--red) 0%, var(--red) 30%, var(--amber) 30%, var(--amber) 60%, var(--green) 60%);"></div>
+        <div class="meter-marker" style="left: 60%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--amber);">~90%</div>
+        </div>
+        <div class="meter-marker" style="left: 80%; background: #1c1917;">
+          <div class="meter-marker-label" style="color: var(--green);">~100%</div>
+        </div>
+      </div>
+      <div class="meter-legend">
+        <span><span class="swatch" style="background: var(--green);"></span>目标：Non-Adherent 行为为 0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="box amber">
+    <strong>注意：</strong>这些阈值基于专家共识（expert opinion），目前缺乏标准化常模数据支持。不应机械套用。MITI 设计用于 20 分钟编码段。
+  </div>
+</section>
+
+<!-- 研究数据集 -->
+<section>
+  <h2>MI 相关公开数据集</h2>
+  <p class="lead">用于训练和评估 MI 忠实度的基准</p>
+  <div class="card">
+    <table class="clean-table">
+      <thead>
+        <tr><th>数据集</th><th>规模</th><th>标注内容</th><th>用途</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>AnnoMI</strong></td>
+          <td>~133 段对话</td>
+          <td>咨询师话语级 MI-adherent/non-adherent 标注 + 来访者 Change Talk/Sustain Talk 标注</td>
+          <td>MI 忠实度自动评估、NLP 模型训练</td>
+        </tr>
+        <tr>
+          <td><strong>MI-Bench</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">arXiv 2603.03846</span></td>
+          <td>96 手工 + 34 真实临床</td>
+          <td>多维度 MI 能力评估，覆盖 Open Question / Reflection / Affirmation / Autonomy 等</td>
+          <td>LLM 作为 MI 咨询师的能力基准测试</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- moodcoco 实用映射 -->
+<section>
+  <h2>moodcoco 实用价值映射</h2>
+  <p class="lead">将 MI Non-Adherent 行为映射为 AI 系统的硬性禁忌</p>
+
+  <div class="card">
+    <table class="clean-table">
+      <thead>
+        <tr><th>Non-Adherent 行为</th><th>moodcoco 禁忌规则</th><th>检测方法</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag-inline red">Confront</span></td>
+          <td>绝不质疑用户的感受真实性、不否认用户的自我评估、不讽刺</td>
+          <td>检测含 "但实际上" / "你不觉得" / "事实是" 等反驳模式</td>
+        </tr>
+        <tr>
+          <td><span class="tag-inline red">Persuade</span></td>
+          <td>绝不主动推荐方案、不引用研究来"证明"用户应该做什么</td>
+          <td>检测含 "你应该" / "研究表明" / "最好的方法是" 等说教模式</td>
+        </tr>
+        <tr>
+          <td><span class="tag-inline red">Warn</span></td>
+          <td>绝不用负面后果威胁用户（"如果你不...就会..."）</td>
+          <td>检测 "如果你不" + 负面结果的条件句</td>
+        </tr>
+        <tr>
+          <td><span class="tag-inline red">Direct</span></td>
+          <td>绝不命令用户做任何事，永远提供选项而非指令</td>
+          <td>检测祈使句 + 缺少 "你可以" / "也许" 等缓冲词</td>
+        </tr>
+        <tr>
+          <td><span class="tag-inline red">Unsolicited Advice</span></td>
+          <td>必须先获得许可再给建议（Ask-Tell-Ask），或至少说 "你想听听一些想法吗"</td>
+          <td>建议前缺少许可请求的检测</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="box green">
+    <strong>核心原则：</strong>moodcoco 应追求 0 Confront + 0 Persuade。所有信息提供必须走 Persuade with Permission 路径（先问 &rarr; 再说 &rarr; 再问感受）。反映与提问的比例应 &ge; 1.0，复杂反映占比 &ge; 40%。
+  </div>
+
+  <div class="box teal">
+    <strong>Adherent 行为应当高频出现：</strong>Affirm（肯定用户的努力和进步）、Seek Collaboration（"你觉得呢"、"你怎么看"）、Emphasize Autonomy（"这完全由你决定"、"没有对错"）。这三种行为是 moodcoco 的正向骨架。
+  </div>
+</section>
+
+<!-- 局限性 -->
+<section>
+  <h2>局限性：MI 不是万能框架</h2>
+  <p class="lead">使用 MI/MITI 作为 AI 心理陪伴的参考框架时，必须理解其边界</p>
+
+  <div class="card">
+    <table class="clean-table">
+      <thead>
+        <tr><th>局限</th><th>说明</th><th>对 moodcoco 的影响</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>MI 专为行为改变设计</strong></td>
+          <td>MI 的核心目标是解决"矛盾心理"（ambivalence），推动行为改变。它不是通用心理陪伴、不处理创伤、不做深度情感探索</td>
+          <td>moodcoco 不能全盘照搬 MI。当用户只是需要被听到（无改变目标时），过度 evoke Change Talk 反而有害</td>
+        </tr>
+        <tr>
+          <td><strong>MITI 假设人类咨询师</strong></td>
+          <td>MITI 的评分维度（Partnership、Empathy）假设咨询师有真实情感和判断力。AI 系统的 "empathy" 性质不同</td>
+          <td>不应声称 moodcoco "共情分 4.5"。可以用 MITI 行为计数指标，但 Global Scores 对 AI 的适用性存疑</td>
+        </tr>
+        <tr>
+          <td><strong>MITI 不评估安全</strong></td>
+          <td>MITI 不包含自杀风险评估、危机干预等安全维度的编码</td>
+          <td>moodcoco 的安全边界需要额外的评估框架，不能依赖 MITI</td>
+        </tr>
+        <tr>
+          <td><strong>文化适应性</strong></td>
+          <td>MI 和 MITI 均基于西方（主要是美国）临床实践发展。"自主权"在集体主义文化中的含义不同</td>
+          <td>面向中国/印尼用户时，Emphasize Autonomy 的表达方式需要本土化调整</td>
+        </tr>
+        <tr>
+          <td><strong>计数不等于质量</strong></td>
+          <td>行为频次高不等于使用得当。10 个低质量的 Complex Reflection 不如 3 个精准的</td>
+          <td>moodcoco 不应只追求 R:Q 比值达标，而应关注每次反映是否真正命中了来访者的体验</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="box amber">
+    <strong>建议定位：</strong>MI/MITI 的 Non-Adherent 行为清单是优秀的<strong>禁忌清单</strong>（不该做什么）。Adherent 行为是好的<strong>技能参考</strong>（可以怎么做）。但 moodcoco 的整体框架应更宽——它需要整合 person-centered therapy 的无条件接纳、emotion-focused therapy 的情感探索、以及独立的安全评估体系。MI 是其中一个重要但非唯一的组件。
+  </div>
+</section>
+
+<footer>
+  MI / MITI / MISC Coding Systems &mdash; moodcoco internal reference<br>
+  Sources: <a href="https://motivationalinterviewing.org/sites/default/files/miti_4.2.pdf">MITI 4.2 Manual</a> |
+  <a href="https://casaa.unm.edu/assets/docs/miti4_21.pdf">MITI 4.2.1 Manual</a> |
+  <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5539964/">MITI 4 Rationale &amp; Validity (PMC)</a> |
+  Miller &amp; Rollnick (2013) <em>Motivational Interviewing</em>, 3rd ed.
+</footer>
+
+</div>
+</body>
+</html>

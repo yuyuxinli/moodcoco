@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hill 帮助技能体系 — 给非心理学背景的人</title>
+<style>
+  :root {
+    --bg: #fafaf9; --card: #ffffff; --border: #e7e5e4;
+    --text: #1c1917; --text-sec: #78716c; --text-light: #a8a29e;
+    --explore: #2563eb; --explore-bg: #eff6ff; --explore-border: #bfdbfe;
+    --insight: #9333ea; --insight-bg: #faf5ff; --insight-border: #d8b4fe;
+    --action: #16a34a; --action-bg: #f0fdf4; --action-border: #86efac;
+    --danger: #dc2626; --danger-bg: #fef2f2;
+    --warm: #ea580c; --warm-bg: #fff7ed;
+    --accent: #0d9488; --accent-bg: #f0fdfa;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.8; font-size: 15px;
+    padding: 40px 20px;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 48px 20px 36px; }
+  .hero h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .hero .subtitle { font-size: 1.05rem; color: var(--text-sec); max-width: 560px; margin: 0 auto; line-height: 1.7; }
+
+  /* Sections */
+  section { margin-bottom: 56px; }
+  section > h2 {
+    font-size: 1.3rem; font-weight: 700; margin-bottom: 6px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border);
+  }
+  section > .lead { color: var(--text-sec); margin-bottom: 24px; font-size: 0.93rem; }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .card .subtitle-sm { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 14px; }
+
+  /* Insight box */
+  .box {
+    border-radius: 10px; padding: 16px 20px; margin: 18px 0; font-size: 0.9rem;
+    border-left: 4px solid;
+  }
+  .box.explore { background: var(--explore-bg); border-color: var(--explore); }
+  .box.insight { background: var(--insight-bg); border-color: var(--insight); }
+  .box.action { background: var(--action-bg); border-color: var(--action); }
+  .box.danger { background: var(--danger-bg); border-color: var(--danger); }
+  .box.warm { background: var(--warm-bg); border-color: var(--warm); }
+  .box.accent { background: var(--accent-bg); border-color: var(--accent); }
+  .box strong { font-weight: 700; }
+
+  /* Dialogue */
+  .dialogue { margin: 16px 0; }
+  .dialogue .line {
+    display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start;
+  }
+  .dialogue .avatar {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: #fff;
+  }
+  .dialogue .avatar.user { background: #94a3b8; }
+  .dialogue .avatar.helper { background: var(--explore); }
+  .dialogue .avatar.helper-i { background: var(--insight); }
+  .dialogue .avatar.helper-a { background: var(--action); }
+  .dialogue .bubble {
+    background: #f5f5f4; border-radius: 12px; padding: 10px 14px;
+    font-size: 0.88rem; max-width: 80%; line-height: 1.6;
+  }
+  .dialogue .bubble.right {
+    background: var(--explore-bg); margin-left: auto;
+  }
+  .dialogue .annotation {
+    font-size: 0.76rem; color: var(--text-sec); font-style: italic;
+    margin: -4px 0 10px 44px;
+  }
+
+  /* Stage header */
+  .stage-header {
+    display: flex; align-items: center; gap: 14px;
+    margin: 36px 0 20px; padding: 16px 20px;
+    border-radius: 12px;
+  }
+  .stage-header.explore { background: var(--explore-bg); }
+  .stage-header.insight { background: var(--insight-bg); }
+  .stage-header.action { background: var(--action-bg); }
+  .stage-header .stage-num {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3rem; font-weight: 800; color: #fff;
+  }
+  .stage-header .stage-info h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 2px; }
+  .stage-header .stage-info p { font-size: 0.85rem; color: var(--text-sec); }
+
+  /* Skill card */
+  .skill-row {
+    display: flex; gap: 16px; margin-bottom: 16px;
+    padding: 18px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 12px;
+    align-items: flex-start;
+  }
+  .skill-num {
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; color: #fff;
+  }
+  .skill-body { flex: 1; }
+  .skill-body h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 2px; }
+  .skill-body .en { font-size: 0.78rem; color: var(--text-light); margin-bottom: 6px; }
+  .skill-body .desc { font-size: 0.85rem; color: var(--text-sec); margin-bottom: 8px; }
+  .skill-body .example {
+    background: #f8f8f7; border-radius: 8px; padding: 10px 12px;
+    font-size: 0.83rem; color: var(--text); line-height: 1.6;
+  }
+  .skill-body .example .label {
+    font-size: 0.72rem; font-weight: 600; color: var(--text-light);
+    text-transform: uppercase; margin-bottom: 3px;
+  }
+
+  /* Analogy */
+  .analogy {
+    display: flex; gap: 20px; margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  .analogy-item {
+    flex: 1; min-width: 200px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px; text-align: center;
+  }
+  .analogy-item .emoji { font-size: 2rem; margin-bottom: 8px; }
+  .analogy-item h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+  .analogy-item p { font-size: 0.8rem; color: var(--text-sec); }
+
+  /* Mistake cards */
+  .mistake {
+    display: flex; gap: 16px; margin-bottom: 16px;
+    padding: 18px; border-radius: 12px;
+  }
+  .mistake.wrong { background: var(--danger-bg); border: 1px solid #fecaca; }
+  .mistake.right { background: var(--action-bg); border: 1px solid var(--action-border); }
+  .mistake .icon {
+    flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem; color: #fff;
+  }
+  .mistake.wrong .icon { background: var(--danger); }
+  .mistake.right .icon { background: var(--action); }
+  .mistake .content h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+  .mistake .content p { font-size: 0.83rem; color: var(--text-sec); }
+
+  /* Flow arrow */
+  .flow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; margin: 28px 0;
+  }
+  .flow-step {
+    padding: 14px 20px; border-radius: 10px;
+    text-align: center; font-weight: 700; font-size: 0.9rem; color: #fff;
+    min-width: 120px;
+  }
+  .flow-arrow {
+    font-size: 1.4rem; color: var(--text-light); padding: 0 8px;
+  }
+
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .footer {
+    text-align: center; color: var(--text-light); font-size: 0.78rem;
+    margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border);
+  }
+
+  /* TOC */
+  .toc { margin-bottom: 40px; }
+  .toc a {
+    display: block; padding: 6px 0; color: var(--text);
+    text-decoration: none; font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc a:hover { color: var(--explore); }
+  .toc a .num { color: var(--text-light); margin-right: 8px; font-size: 0.82rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Hill 帮助技能体系</h1>
+  <p class="subtitle">
+    心理咨询师在对话中到底在做什么？<br>
+    Clara Hill 把它拆成了 3 个阶段、15 个具体技能。<br>
+    这是全球咨询师培训的标准教材，也是理解 moodcoco 大脑的钥匙。
+  </p>
+</div>
+
+<!-- ==================== 一句话版本 ==================== -->
+<section id="one-line">
+  <h2>30 秒版本</h2>
+
+  <div class="flow">
+    <div class="flow-step" style="background:var(--explore);">探索<br><span style="font-weight:400;font-size:0.78rem;">「你怎么了？」</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:var(--insight);">洞察<br><span style="font-weight:400;font-size:0.78rem;">「原来如此」</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step" style="background:var(--action);">行动<br><span style="font-weight:400;font-size:0.78rem;">「那怎么办？」</span></div>
+  </div>
+
+  <div class="box warm">
+    <strong>核心规律：不能跳阶段。</strong><br>
+    一个人还在哭的时候（探索），你跟他讲道理（洞察）或者给建议（行动），他不会听进去。<br>
+    必须先让人说完、感觉被理解了，才能往下走。
+  </div>
+</section>
+
+<!-- ==================== 类比 ==================== -->
+<section id="analogy">
+  <h2>用生活场景理解</h2>
+  <p class="lead">想象你的好朋友深夜给你发消息：「我不想干了，太累了。」</p>
+
+  <div class="analogy">
+    <div class="analogy-item" style="border-top: 4px solid var(--explore);">
+      <div class="emoji">&#x1F3E5;</div>
+      <h4 style="color:var(--explore);">探索 = 急诊分诊</h4>
+      <p>先搞清楚怎么了、多严重。<br>不是立刻开药，而是先听、先看、先问。</p>
+    </div>
+    <div class="analogy-item" style="border-top: 4px solid var(--insight);">
+      <div class="emoji">&#x1F50D;</div>
+      <h4 style="color:var(--insight);">洞察 = 诊断</h4>
+      <p>帮他看到「为什么会这样」。<br>不是你告诉他答案，而是他自己发现。</p>
+    </div>
+    <div class="analogy-item" style="border-top: 4px solid var(--action);">
+      <div class="emoji">&#x1F48A;</div>
+      <h4 style="color:var(--action);">行动 = 开处方</h4>
+      <p>一起想接下来怎么做。<br>具体的、可操作的下一步。</p>
+    </div>
+  </div>
+
+  <div class="box accent">
+    <strong>为什么不能直接开处方？</strong><br>
+    因为你不知道他是「工作太累」还是「被领导针对」还是「家里出事了」。不同的原因需要不同的处方。急着给建议 = 还没分诊就开药，可能开错。
+  </div>
+</section>
+
+<!-- ==================== 阶段 1：探索 ==================== -->
+<section id="explore">
+  <div class="stage-header explore">
+    <div class="stage-num" style="background:var(--explore);">1</div>
+    <div class="stage-info">
+      <h3 style="color:var(--explore);">探索阶段</h3>
+      <p>让对方说出来、感觉被听见。这是一切的基础。</p>
+    </div>
+  </div>
+  <p class="lead">这个阶段的核心不是「搞懂他的问题」，而是「让他感觉到你在认真听」。大部分人来找你聊天，最需要的就是这个。</p>
+
+  <!-- Skill 1 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">1</div>
+    <div class="skill-body">
+      <h4>专注倾听</h4>
+      <div class="en">Attending / Listening</div>
+      <div class="desc">用你的全部注意力告诉对方：我在这里，我在听。在面对面咨询中是眼神、点头、身体前倾。在文字/语音对话中，是不打断、不急着回应。</div>
+      <div class="example">
+        <div class="label">日常例子</div>
+        朋友说了三分钟她和男朋友吵架的事，你没有插嘴，没有看手机，她说完后你说：「嗯，你继续说。」——这就是专注倾听。
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 2 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">2</div>
+    <div class="skill-body">
+      <h4>开放式提问</h4>
+      <div class="en">Open Questions</div>
+      <div class="desc">问那些不能用「是/否」回答的问题，帮对方打开话匣子。</div>
+      <div class="example">
+        <div class="label">对比</div>
+        <strong style="color:var(--danger);">封闭：</strong>「你是不是跟他吵架了？」→ 对方只能说是或否<br>
+        <strong style="color:var(--action);">开放：</strong>「发生了什么事？」→ 对方可以自由展开
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 3 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">3</div>
+    <div class="skill-body">
+      <h4>封闭式提问</h4>
+      <div class="en">Closed Questions</div>
+      <div class="desc">用「是/否」「A 还是 B」来确认具体事实。适合在对方说了很多之后，帮忙缩小范围。</div>
+      <div class="example">
+        <div class="label">用法</div>
+        对方说了一大段混乱的事，你问：「所以你最难受的部分，是他说的那句话，还是他说完就走了？」——帮她聚焦。
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 4 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">4</div>
+    <div class="skill-body">
+      <h4>内容重述</h4>
+      <div class="en">Restatement</div>
+      <div class="desc">用你自己的话，把对方说的事情重复一遍。不加评价，不加解释。目的是让对方确认「你听懂了」。</div>
+      <div class="example">
+        <div class="label">示例</div>
+        对方：「昨天加班到 11 点，回家发现他连饭都没给我留。」<br>
+        你：「你加班到很晚，回家发现他没给你留饭。」<br>
+        <span style="color:var(--text-sec);font-size:0.8rem;">看起来像复读机？但对方会觉得：你真的在听。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 5 -->
+  <div class="skill-row" style="border: 2px solid var(--explore);">
+    <div class="skill-num" style="background:var(--explore);">5</div>
+    <div class="skill-body">
+      <h4>情感反映 <span style="font-size:0.8rem;color:var(--explore);font-weight:400;">← 探索阶段最核心的技能</span></h4>
+      <div class="en">Reflection of Feelings</div>
+      <div class="desc">
+        不只重复她说的事，而是<strong>说出她还没说出口的感受</strong>。这是「内容重述」的升级版——从事情到情绪。
+      </div>
+      <div class="example">
+        <div class="label">对比「内容重述」vs「情感反映」</div>
+        <strong>内容重述：</strong>「你加班到很晚，回家发现他没留饭。」<br>
+        <strong>情感反映：</strong>「你不是真的在意那顿饭，你是觉得自己在这段关系里不被在乎。」<br>
+        <span style="color:var(--explore);font-size:0.82rem;">后者让对方瞬间觉得：你真的懂我。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 6 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">6</div>
+    <div class="skill-body">
+      <h4>最小鼓励</h4>
+      <div class="en">Minimal Encouragers</div>
+      <div class="desc">「嗯」「然后呢」「我在听」「继续说」。看似没内容，但它在说：我没走开，你可以继续。</div>
+      <div class="example">
+        <div class="label">什么时候用</div>
+        对方说到一半停下来了，你不确定该说什么。最安全的做法就是：「嗯，你继续。」比沉默好，比插嘴安全。
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 7 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">7</div>
+    <div class="skill-body">
+      <h4>肯定-安慰</h4>
+      <div class="en">Approval and Reassurance</div>
+      <div class="desc">告诉对方：你的反应是正常的，你没有问题。降低她的自我怀疑和羞耻感。</div>
+      <div class="example">
+        <div class="label">示例</div>
+        对方：「是不是我太矫情了，别人都能扛住。」<br>
+        你：「在你经历了这些之后，有这样的反应很正常。不是你矫情。」<br>
+        <span style="color:var(--text-sec);font-size:0.8rem;">注意：不是说「你做得对」，而是说「你的感受可以理解」。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 8 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--explore);">8</div>
+    <div class="skill-body">
+      <h4>相似性自我暴露</h4>
+      <div class="en">Disclosure of Similarity</div>
+      <div class="desc">分享你自己类似的经历，让对方知道她不是一个人。但要克制——重点是她，不是你。</div>
+      <div class="example">
+        <div class="label">好的 vs 坏的</div>
+        <strong style="color:var(--action);">好：</strong>「我之前也有过类似的时候，那种感觉真的很难受。」（一句话，然后回到她）<br>
+        <strong style="color:var(--danger);">坏：</strong>「我跟你说我那次更惨……」（变成你在倒苦水）
+      </div>
+    </div>
+  </div>
+
+  <div class="box explore">
+    <strong>探索阶段的底线：不评价、不建议、不分析。</strong><br>
+    你唯一的任务是让对方感觉到：「这个人在听我说话，而且听懂了。」<br>
+    做到这一步，信任就建立了。信任是后面所有事情的前提。
+  </div>
+</section>
+
+<!-- ==================== 阶段 2：洞察 ==================== -->
+<section id="insight-stage">
+  <div class="stage-header insight">
+    <div class="stage-num" style="background:var(--insight);">2</div>
+    <div class="stage-info">
+      <h3 style="color:var(--insight);">洞察阶段</h3>
+      <p>帮对方看见自己没看见的东西：矛盾、模式、深层原因。</p>
+    </div>
+  </div>
+  <p class="lead">只有在对方已经觉得被理解之后，你才能进入这个阶段。否则你说的话再对，对方也会觉得「你不懂我还要教我」。</p>
+
+  <!-- Skill 9 -->
+  <div class="skill-row" style="border: 2px solid var(--insight);">
+    <div class="skill-num" style="background:var(--insight);">9</div>
+    <div class="skill-body">
+      <h4>挑战 <span style="font-size:0.8rem;color:var(--insight);font-weight:400;">← 最容易用错的技能</span></h4>
+      <div class="en">Challenge (formerly Confrontation)</div>
+      <div class="desc">
+        指出对方言行中的<strong>矛盾</strong>或<strong>不一致</strong>。不是攻击，而是温和地帮她看到自己没注意到的冲突。
+      </div>
+      <div class="example">
+        <div class="label">示例</div>
+        对方：「我已经完全放下他了。」（但前面讲了 20 分钟他的事）<br>
+        你：「你说你放下了，但我注意到你今天大部分时间都在讲他的事。你觉得这中间有什么？」
+      </div>
+      <div class="box danger" style="margin-top:12px;margin-bottom:0;">
+        <strong>危险技能：</strong>在对方还在哭/还在自责/还没信任你的时候用「挑战」= 二次伤害。这就像伤口还在流血的时候你去戳它。必须在充分的探索之后才能用。
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 10 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--insight);">10</div>
+    <div class="skill-body">
+      <h4>解释</h4>
+      <div class="en">Interpretation</div>
+      <div class="desc">
+        给对方提供一个新的理解角度——「也许这背后是……」。不是定论，而是假设。让对方自己判断这个角度是否说得通。
+      </div>
+      <div class="example">
+        <div class="label">示例</div>
+        对方总是在关系里先道歉、先让步。<br>
+        你：「你有没有注意到，每次你和别人有冲突，你都会先让步？我在想，这会不会是因为你害怕被抛弃，所以宁愿先委屈自己？」<br>
+        <span style="color:var(--insight);font-size:0.82rem;">注意：这是一个邀请对方思考的问题，不是一个诊断。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 11 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--insight);">11</div>
+    <div class="skill-body">
+      <h4>洞察性自我暴露</h4>
+      <div class="en">Disclosure of Insight</div>
+      <div class="desc">分享你此刻对这段对话的感受或想法，帮对方从另一个角度看自己。</div>
+      <div class="example">
+        <div class="label">示例</div>
+        「你刚才说到这里的时候，我能感觉到你的声音变了。好像一直在笑着说一件让你很痛的事。」
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 12 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--insight);">12</div>
+    <div class="skill-body">
+      <h4>即时性</h4>
+      <div class="en">Immediacy</div>
+      <div class="desc">
+        谈论「此时此刻我们之间正在发生什么」。把你们的对话本身当作一面镜子。
+      </div>
+      <div class="example">
+        <div class="label">示例</div>
+        「你跟我说这件事的时候，一直在试探我会不会评价你。我能感觉到。你现在觉得安全吗？」<br>
+        <span style="color:var(--text-sec);font-size:0.8rem;">这个技能比较高级。AI 很少用到，真人咨询师在建立关系时会用。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="box insight">
+    <strong>洞察阶段的核心：帮对方自己发现，而不是你告诉她答案。</strong><br>
+    「你不觉得你总是这样吗？」= 教训。<br>
+    「你有没有注意到一个模式？」= 引导。<br>
+    同样的内容，方式不同，效果天差地别。
+  </div>
+</section>
+
+<!-- ==================== 阶段 3：行动 ==================== -->
+<section id="action-stage">
+  <div class="stage-header action">
+    <div class="stage-num" style="background:var(--action);">3</div>
+    <div class="stage-info">
+      <h3 style="color:var(--action);">行动阶段</h3>
+      <p>一起想接下来怎么做。把理解转化为行动。</p>
+    </div>
+  </div>
+  <p class="lead">到了这一步，对方已经被听见（探索）、看到了问题的深层原因（洞察）。现在她准备好了，可以开始想「怎么办」。</p>
+
+  <!-- Skill 13 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--action);">13</div>
+    <div class="skill-body">
+      <h4>信息提供</h4>
+      <div class="en">Information Giving</div>
+      <div class="desc">提供客观事实、知识或资源。不是观点，是信息。</div>
+      <div class="example">
+        <div class="label">示例</div>
+        「如果你决定想找人聊聊，学校有免费的心理咨询中心，可以预约。」<br>
+        <span style="color:var(--text-sec);font-size:0.8rem;">注意：这不是建议（「你应该去」），而是信息（「有这个资源」）。选择权在对方。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 14 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--action);">14</div>
+    <div class="skill-body">
+      <h4>直接指导</h4>
+      <div class="en">Direct Guidance</div>
+      <div class="desc">给出具体建议或方向。这是最「危险」的技能之一——太早用会让人反感，但在对方准备好的时候用，很有帮助。</div>
+      <div class="example">
+        <div class="label">时机很重要</div>
+        <strong style="color:var(--danger);">太早：</strong>对方刚说完心情不好，你就说「你应该去运动」<br>
+        <strong style="color:var(--action);">合适：</strong>对方自己说「我知道我需要做点什么」，你说「你觉得这周先试试每天走 15 分钟怎么样？」
+      </div>
+    </div>
+  </div>
+
+  <!-- Skill 15 -->
+  <div class="skill-row">
+    <div class="skill-num" style="background:var(--action);">15</div>
+    <div class="skill-body">
+      <h4>过程建议</h4>
+      <div class="en">Process Advisement</div>
+      <div class="desc">建议对方在对话之外做一些练习、实验或作业。是行为改变的起点。</div>
+      <div class="example">
+        <div class="label">示例</div>
+        「这周如果再遇到想发火的时候，你可以试试先暂停 10 秒，注意一下你身体哪里紧了。下次我们聊的时候你可以说说感觉怎么样。」
+      </div>
+    </div>
+  </div>
+
+  <div class="box action">
+    <strong>行动阶段的原则：对方主导，你协助。</strong><br>
+    不是你替她做决定，而是帮她把模糊的「我想改变」变成具体的「这周我先试试 X」。
+  </div>
+</section>
+
+<!-- ==================== 最容易犯的错 ==================== -->
+<section id="mistakes">
+  <h2>最容易犯的 3 个错</h2>
+  <p class="lead">这些错不只是新手咨询师会犯，大部分 AI 对话产品也在犯。</p>
+
+  <div class="card">
+    <h3>错误 1：跳过探索，直接给建议</h3>
+    <div class="subtitle-sm">最常见的错，因为「给建议」让你感觉自己有用</div>
+
+    <div class="dialogue">
+      <div class="line">
+        <div class="avatar user">她</div>
+        <div class="bubble">我今天真的很累，不想干了。</div>
+      </div>
+    </div>
+
+    <div class="mistake wrong">
+      <div class="icon">&#x2717;</div>
+      <div class="content">
+        <h4>跳到行动阶段</h4>
+        <p>「你应该好好休息一下，去做点运动，别太焦虑了。」<br>
+        <span style="color:var(--danger);">→ 她还没说完就被堵回去了。感觉：你根本不想听我说。</span></p>
+      </div>
+    </div>
+    <div class="mistake right">
+      <div class="icon">&#x2713;</div>
+      <div class="content">
+        <h4>留在探索阶段</h4>
+        <p>「听起来今天很难。是什么事让你有这种感觉？」<br>
+        <span style="color:var(--action);">→ 她可以继续说。感觉：你在听我。</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>错误 2：在对方自责时用挑战</h3>
+    <div class="subtitle-sm">技能用对了场景才叫帮助，用错了场景叫伤害</div>
+
+    <div class="dialogue">
+      <div class="line">
+        <div class="avatar user">她</div>
+        <div class="bubble">是不是我太差劲了，别人都能扛住，就我不行。</div>
+      </div>
+    </div>
+
+    <div class="mistake wrong">
+      <div class="icon">&#x2717;</div>
+      <div class="content">
+        <h4>用挑战（洞察阶段技能）</h4>
+        <p>「你说你差劲，但你又在努力工作，这不矛盾吗？」<br>
+        <span style="color:var(--danger);">→ 她正在自我攻击，你指出矛盾 = 否定她的感受 = 加重羞耻。</span></p>
+      </div>
+    </div>
+    <div class="mistake right">
+      <div class="icon">&#x2713;</div>
+      <div class="content">
+        <h4>用肯定-安慰（探索阶段技能）</h4>
+        <p>「在你经历了这些之后，有这种感觉是可以理解的。不是你差劲。」<br>
+        <span style="color:var(--action);">→ 先降低自我攻击，让她不再觉得自己有问题。</span></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>错误 3：一直停在探索，不往下走</h3>
+    <div class="subtitle-sm">有些人只会说「我理解你」但不推进——这也是问题</div>
+
+    <div class="dialogue">
+      <div class="line">
+        <div class="avatar user">她</div>
+        <div class="bubble">我现在最纠结的就是要不要分手。</div>
+      </div>
+    </div>
+
+    <div class="mistake wrong">
+      <div class="icon">&#x2717;</div>
+      <div class="content">
+        <h4>继续探索（该进洞察了）</h4>
+        <p>「嗯，听起来你很纠结。」（第 5 轮了还在重复这句）<br>
+        <span style="color:var(--danger);">→ 她已经说完了，你不推进，她会觉得：你到底能不能帮我？</span></p>
+      </div>
+    </div>
+    <div class="mistake right">
+      <div class="icon">&#x2713;</div>
+      <div class="content">
+        <h4>推进到洞察</h4>
+        <p>「你纠结的核心是什么？是怕分开后更孤单，还是怕后悔？」<br>
+        <span style="color:var(--action);">→ 帮她看清自己纠结的深层原因，推进对话。</span></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 判断时机 ==================== -->
+<section id="timing">
+  <h2>怎么判断该不该换阶段？</h2>
+  <p class="lead">没有精确的时间点，但有几个信号。</p>
+
+  <div class="grid-2">
+    <div class="card" style="border-top: 3px solid var(--explore);">
+      <h3 style="color:var(--explore);">还在探索</h3>
+      <ul style="font-size:0.88rem; padding-left:18px; color:var(--text-sec);">
+        <li>对方还在倒情绪，没说完</li>
+        <li>说话不连贯、反复、混乱</li>
+        <li>明显在自责或自我怀疑</li>
+        <li>你还没搞清楚她到底怎么了</li>
+        <li>她说「你不懂」「不是这个意思」</li>
+      </ul>
+      <div class="box explore" style="margin-bottom:0;">
+        <strong>应对：</strong>继续倾听、反映情感、肯定安慰。不要急。
+      </div>
+    </div>
+
+    <div class="card" style="border-top: 3px solid var(--insight);">
+      <h3 style="color:var(--insight);">可以进洞察</h3>
+      <ul style="font-size:0.88rem; padding-left:18px; color:var(--text-sec);">
+        <li>对方情绪稳定了，能组织语言了</li>
+        <li>开始反思：「我也不知道我为什么会这样」</li>
+        <li>主动问：「你觉得我是不是有什么问题？」</li>
+        <li>核心事件已经说清楚了</li>
+        <li>她看起来准备好听一些不同的角度</li>
+      </ul>
+      <div class="box insight" style="margin-bottom:0;">
+        <strong>应对：</strong>尝试解释或温和的挑战。但随时准备退回探索——如果她不接受，说明还没准备好。
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-top: 3px solid var(--action); margin-top: 16px;">
+    <h3 style="color:var(--action);">可以进行动</h3>
+    <ul style="font-size:0.88rem; padding-left:18px; color:var(--text-sec);">
+      <li>对方自己说「我知道该怎么做了」或「那我接下来应该怎么办」</li>
+      <li>她能清楚描述问题的核心和原因</li>
+      <li>从「为什么」转向了「怎么办」</li>
+    </ul>
+    <div class="box action" style="margin-bottom:0;">
+      <strong>应对：</strong>协助制定具体计划。但即使到了行动阶段，也不替她做决定。
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 一张总表 ==================== -->
+<section id="summary">
+  <h2>15 个技能总表</h2>
+  <p class="lead">一页看完。</p>
+
+  <div class="card" style="overflow-x:auto;">
+    <table style="width:100%; font-size:0.85rem; border-collapse:collapse;">
+      <thead>
+        <tr style="background:#f5f5f4;">
+          <th style="padding:10px 12px; text-align:left; border-bottom:2px solid var(--border); width:30px;">#</th>
+          <th style="padding:10px 12px; text-align:left; border-bottom:2px solid var(--border);">技能</th>
+          <th style="padding:10px 12px; text-align:left; border-bottom:2px solid var(--border);">英文</th>
+          <th style="padding:10px 12px; text-align:left; border-bottom:2px solid var(--border);">一句话</th>
+          <th style="padding:10px 12px; text-align:left; border-bottom:2px solid var(--border);">阶段</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">1</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">专注倾听</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Attending</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">用全部注意力表示「我在」</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">2</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">开放式提问</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Open Questions</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">打开话匣子</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">3</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">封闭式提问</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Closed Questions</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">确认具体事实</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">4</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">内容重述</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Restatement</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">用你的话复述她说的事</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr style="background:var(--explore-bg);"><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">5</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);font-weight:700;">情感反映</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Reflection of Feelings</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">说出她没说出口的感受</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);font-weight:700;">探索 ★</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">6</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">最小鼓励</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Minimal Encouragers</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">「嗯」「继续说」</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--explore);font-weight:700;">7</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">肯定-安慰</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Approval-Reassurance</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">「你的反应是正常的」</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:2px solid var(--border);color:var(--explore);font-weight:700;">8</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);">相似性自我暴露</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);color:var(--text-sec);">Disclosure of Similarity</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);">「我也有过类似的」</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);"><span style="color:var(--explore);">探索</span></td></tr>
+        <tr style="background:var(--insight-bg);"><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--insight);font-weight:700;">9</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);font-weight:700;">挑战</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Challenge</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">指出矛盾（需要强信任）</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--insight);font-weight:700;">洞察 ⚠</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--insight);font-weight:700;">10</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">解释</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Interpretation</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">「也许这背后是……」</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--insight);">洞察</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--insight);font-weight:700;">11</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">洞察性自我暴露</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Disclosure of Insight</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">分享你此刻的感受</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--insight);">洞察</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:2px solid var(--border);color:var(--insight);font-weight:700;">12</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);">即时性</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);color:var(--text-sec);">Immediacy</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);">谈论「我们之间此刻」</td><td style="padding:8px 12px;border-bottom:2px solid var(--border);"><span style="color:var(--insight);">洞察</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--action);font-weight:700;">13</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">信息提供</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Information Giving</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">给客观事实和资源</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--action);">行动</span></td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--action);font-weight:700;">14</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">直接指导</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text-sec);">Direct Guidance</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);">给具体建议</td><td style="padding:8px 12px;border-bottom:1px solid var(--border);"><span style="color:var(--action);">行动</span></td></tr>
+        <tr><td style="padding:8px 12px;color:var(--action);font-weight:700;">15</td><td style="padding:8px 12px;">过程建议</td><td style="padding:8px 12px;color:var(--text-sec);">Process Advisement</td><td style="padding:8px 12px;">布置练习/实验</td><td style="padding:8px 12px;"><span style="color:var(--action);">行动</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== moodcoco 映射 ==================== -->
+<section id="moodcoco">
+  <h2>moodcoco 的 6 个 Skill 在 Hill 体系中的位置</h2>
+  <p class="lead">moodcoco 的大脑里有 6 个核心技能。它们不是随便定义的——每一个都对应 Hill 体系中的具体位置。</p>
+
+  <div class="card">
+    <div class="skill-row" style="border-left: 4px solid var(--explore);">
+      <div class="skill-body">
+        <h4><code style="background:var(--explore-bg);color:var(--explore);">listen</code> — 共情倾听</h4>
+        <div class="desc">对应 Hill 的 <strong>专注倾听 + 最小鼓励 + 内容重述</strong>（技能 1、4、6）。是大部分对话的默认起手。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          用户带着情绪进来，还没说完，最需要的是被接住。
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-row" style="border-left: 4px solid var(--explore);">
+      <div class="skill-body">
+        <h4><code style="background:var(--explore-bg);color:var(--explore);">validation</code> — 情绪验证</h4>
+        <div class="desc">对应 Hill 的 <strong>肯定-安慰 + 情感反映</strong>（技能 5、7）。当用户在自责、自我怀疑时优先使用。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          「是不是我太差劲了」「别人都没事就我不行」——先降低羞耻和自我攻击。
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-row" style="border-left: 4px solid var(--insight);">
+      <div class="skill-body">
+        <h4><code style="background:var(--insight-bg);color:var(--insight);">untangle</code> — 理清混乱</h4>
+        <div class="desc">对应 Hill 的 <strong>解释 + 开放式提问 + 挑战</strong>（技能 2、9、10）。横跨探索和洞察两个阶段。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          「工作、家里、感情全挤在一起了，不知道从哪说起」——帮她理出线头。
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-row" style="border-left: 4px solid var(--insight);">
+      <div class="skill-body">
+        <h4><code style="background:var(--insight-bg);color:var(--insight);">face-decision</code> — 两难权衡</h4>
+        <div class="desc">对应 Hill 的 <strong>直接指导 + 即时性 + 挑战</strong>（技能 9、12、14）。横跨洞察和行动两个阶段。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          「要不要辞职」「要不要分手」——帮她充分探索两边，不替她做决定。
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-row" style="border-left: 4px solid var(--action);">
+      <div class="skill-body">
+        <h4><code style="background:var(--action-bg);color:var(--action);">calm-body</code> — 身体稳定化</h4>
+        <div class="desc">对应 Hill 的 <strong>过程建议</strong>（技能 15）。当用户出现恐慌、手抖、呼吸困难等高唤醒症状时使用。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          「心跳很快，手在抖，呼吸上不来」——先稳定身体，再处理情绪。
+        </div>
+      </div>
+    </div>
+
+    <div class="skill-row" style="border-left: 4px solid var(--danger);">
+      <div class="skill-body">
+        <h4><code style="background:var(--danger-bg);color:var(--danger);">crisis</code> — 危机干预</h4>
+        <div class="desc"><strong>Hill 体系不覆盖这个。</strong>Hill 假设来访者不处于即时危险中。但 moodcoco 必须处理自杀、自伤、暴力等紧急情况。这是独立的安全层。</div>
+        <div class="example">
+          <div class="label">什么时候触发</div>
+          「不想活了」「想结束掉」「他又动手了」——立即退出所有正常对话，推进现实安全支持。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box warm">
+    <strong>为什么 moodcoco 只有 6 个 skill 而不是 15 个？</strong><br>
+    因为 moodcoco 是语音陪伴产品，不是完整的心理咨询。它不需要用到 Hill 的所有技能，但它用到的每一个都有 Hill 体系的理论支撑。<br>
+    而且 Hill 的 15 个技能中有些是面对面咨询专属的（如眼神接触、身体前倾），语音/文字对话用不上。
+  </div>
+</section>
+
+<div class="footer">
+  基于 Clara E. Hill (2020). <em>Helping Skills: Facilitating Exploration, Insight, and Action</em> (5th ed.) · moodcoco 内部参考 · 2026-05-13
+</div>
+
+</div>
+</body>
+</html>

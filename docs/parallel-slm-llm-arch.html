@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SLM+LLM 并行降延迟 架构解析 · WebRTC.ventures</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --slm: #059669;
+      --slm-bg: #ecfdf5;
+      --llm: #2563eb;
+      --llm-bg: #eff6ff;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+      --stt: #0891b2;
+      --stt-bg: #ecfeff;
+      --vad: #7c3aed;
+      --vad-bg: #f5f3ff;
+      --user: #64748b;
+      --danger: #dc2626;
+      --win: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-slm { background: var(--slm-bg); color: var(--slm); }
+    .tag-llm { background: var(--llm-bg); color: var(--llm); }
+    .tag-tts { background: var(--tts-bg); color: var(--tts); }
+    .tag-stt { background: var(--stt-bg); color: var(--stt); }
+    .tag-vad { background: var(--vad-bg); color: var(--vad); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .pipe-node {
+      flex: 1;
+      min-width: 110px;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .pipe-node .pipe-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .pipe-node .pipe-desc { font-size: 14px; line-height: 1.4; }
+    .pipe-arrow { display: flex; align-items: center; font-size: 22px; color: var(--muted); padding: 0 3px; flex-shrink: 0; }
+
+    .node-slm { background: var(--slm-bg); border: 2px solid var(--slm); color: var(--slm); }
+    .node-llm { background: var(--llm-bg); border: 2px solid var(--llm); color: var(--llm); }
+    .node-tts { background: var(--tts-bg); border: 2px solid var(--tts); color: var(--tts); }
+    .node-stt { background: var(--stt-bg); border: 2px solid var(--stt); color: var(--stt); }
+    .node-vad { background: var(--vad-bg); border: 2px solid var(--vad); color: var(--vad); }
+    .node-user { background: #f1f5f9; border: 2px solid var(--user); color: var(--user); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: var(--slm-bg); border-left: 3px solid var(--slm); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: #fef2f2; border-left: 3px solid var(--danger); }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .src { color: var(--muted); font-size: 14px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term { flex-shrink: 0; width: 200px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    @media (max-width: 800px) { .metric-row { grid-template-columns: 1fr 1fr; } }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric-value { font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .metric-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* Gantt-style timeline */
+    .gantt {
+      margin: 20px 0;
+      font-size: 14px;
+    }
+    .gantt-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 12px;
+      color: var(--ink);
+    }
+    .gantt-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      height: 36px;
+    }
+    .gantt-label {
+      width: 100px;
+      flex-shrink: 0;
+      font-weight: 600;
+      font-size: 13px;
+      text-align: right;
+      padding-right: 12px;
+    }
+    .gantt-track {
+      flex: 1;
+      position: relative;
+      height: 100%;
+      background: #f9fafb;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .gantt-bar {
+      position: absolute;
+      top: 3px;
+      height: calc(100% - 6px);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .gantt-scale {
+      display: flex;
+      margin-top: 4px;
+      padding-left: 100px;
+    }
+    .gantt-scale span {
+      flex: 1;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .gantt-marker {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      width: 2px;
+      z-index: 2;
+    }
+    .gantt-marker-label {
+      position: absolute;
+      top: -18px;
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+      transform: translateX(-50%);
+    }
+
+    /* Parallel fork diagram */
+    .fork-diagram {
+      position: relative;
+      margin: 20px 0;
+      padding: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .fork-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .fork-node {
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 120px;
+    }
+    .fork-arrow { color: var(--muted); font-size: 20px; }
+    .fork-branch {
+      border: 2px dashed;
+      border-radius: 10px;
+      padding: 14px;
+      position: relative;
+    }
+    .fork-branch-label {
+      position: absolute;
+      top: -11px;
+      left: 16px;
+      background: var(--bg);
+      padding: 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .fork-branch-slm { border-color: var(--slm); }
+    .fork-branch-slm .fork-branch-label { color: var(--slm); }
+    .fork-branch-llm { border-color: var(--llm); }
+    .fork-branch-llm .fork-branch-label { color: var(--llm); }
+
+    pre.code-block {
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 16px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    pre.code-block .comment { color: #6b7280; }
+    pre.code-block .keyword { color: #c084fc; }
+    pre.code-block .string { color: #86efac; }
+    pre.code-block .func { color: #93c5fd; }
+    pre.code-block .param { color: #fbbf24; }
+  </style>
+</head>
+<body>
+
+<h1>SLM + LLM 并行降延迟 <small>— WebRTC.ventures, 2025.06</small></h1>
+<p class="subtitle">
+  小模型先顶上、大模型后补位 · LiveKit Agents · 感知延迟从 900ms 降到 329ms<br />
+  原文：webrtc.ventures · 作者：Alberto Gonzalez
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- GLOSSARY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:#f1f5f9; color:var(--user);">术语速查</h2>
+
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">SLM（小语言模型）</div>
+    <div class="gl-def">Small Language Model，参数量小、推理快、质量一般。本文用 SmolLM2-135M，只有 1.35 亿参数，TTFT 约 329ms。用来"先说一句顶住"。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LLM（大语言模型）</div>
+    <div class="gl-def">Large Language Model，参数量大、推理慢、质量高。本文用 OpenAI GPT 系列，TTFT 约 900ms。用来"后面补上高质量回复"。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTFT（首 token 时间）</div>
+    <div class="gl-def">Time To First Token，从请求发出到模型吐出第一个字的时间。直接决定用户感知延迟。SLM 快 = 用户更早听到回应。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LiveKit Agents</div>
+    <div class="gl-def">基于 WebRTC 的开源实时通信框架的 Agent SDK。提供 VAD、STT、TTS 集成和会话管理，是本文方案的运行框架。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">轮次检测（Turn Detection）</div>
+    <div class="gl-def">用小模型（而非纯 VAD）判断"用户是否说完了"，比纯静音检测更准，但会增加 100-200ms 延迟。</div>
+  </div>
+  <div class="gl-item" style="border-bottom:none;">
+    <div class="gl-term">Chat Context</div>
+    <div class="gl-def">对话上下文——之前说过什么。SLM 的快回复<strong>不加入</strong>上下文（防止低质量内容污染），只有 LLM 的正式回复才加入。</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CORE IDEA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--slm-bg); color:var(--slm);">核心思想</h2>
+
+<div class="note note-key" style="font-size:16px;">
+  用户说完后，<strong>同时启动两个模型</strong>：<br /><br />
+  <span class="tag tag-slm">SLM 快车道</span> 小模型 329ms 就开口，先说一句简短回复（"好的，让我帮你查一下"）让用户知道系统在响应。<br /><br />
+  <span class="tag tag-llm">LLM 慢车道</span> 大模型 900ms 后才就绪，但生成高质量完整回复。SLM 说完后 LLM 接上，用户<strong>感知延迟降低约 60%</strong>。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TIMELINE COMPARISON -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--llm-bg); color:var(--llm);">串行 vs 并行：时间线对比</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  下面两张甘特图展示同一次请求，在串行和并行方案下用户<strong>什么时候开始听到回复</strong>。
+</p>
+
+<!-- Sequential -->
+<div class="gantt">
+  <div class="gantt-title" style="color:var(--danger);">方案 A：串行（传统）—— 等大模型想完才说</div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--stt);">STT</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:0; width:15%; background:var(--stt);">转写</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--vad);">轮次检测</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:15%; width:8%; background:var(--vad);">~150ms</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--llm);">LLM</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:23%; width:42%; background:var(--llm);">TTFT ~900ms ···生成中···</div>
+      <div class="gantt-marker" style="left:48%; background:var(--llm);">
+        <div class="gantt-marker-label" style="color:var(--llm);">首 token</div>
+      </div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--tts);">TTS</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:48%; width:30%; background:var(--tts);">合成 + 播放</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--danger);">用户等待</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:0; width:52%; background:var(--danger); opacity:0.7;">😤 等了 ~1.29s 才听到</div>
+    </div>
+  </div>
+</div>
+
+<!-- Parallel -->
+<div class="gantt" style="margin-top:28px;">
+  <div class="gantt-title" style="color:var(--win);">方案 B：并行（本文）—— 小模型先顶上</div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--stt);">STT</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:0; width:15%; background:var(--stt);">转写</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--vad);">轮次检测</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:15%; width:8%; background:var(--vad);">~150ms</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--slm);">SLM ⚡</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:23%; width:18%; background:var(--slm);">TTFT 329ms → 快回复</div>
+      <div class="gantt-marker" style="left:33%; background:var(--slm);">
+        <div class="gantt-marker-label" style="color:var(--slm);">首 token!</div>
+      </div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--llm);">LLM（并行）</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:23%; width:42%; background:var(--llm); opacity:0.7;">TTFT ~900ms ···生成高质量回复···</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--tts);">TTS</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:33%; width:15%; background:var(--tts); opacity:0.6;">SLM 回复</div>
+      <div class="gantt-bar" style="left:52%; width:30%; background:var(--tts);">LLM 回复</div>
+    </div>
+  </div>
+  <div class="gantt-row">
+    <div class="gantt-label" style="color:var(--win);">用户等待</div>
+    <div class="gantt-track">
+      <div class="gantt-bar" style="left:0; width:35%; background:var(--win); opacity:0.7;">😊 ~0.5s 就听到了！</div>
+    </div>
+  </div>
+</div>
+
+<div class="metric-row" style="margin-top:20px;">
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--danger);">~900ms</div>
+    <div class="metric-label">串行 LLM TTFT</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--slm);">~329ms</div>
+    <div class="metric-label">并行 SLM TTFT</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--win);">~571ms</div>
+    <div class="metric-label">感知延迟减少</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--win);">~63%</div>
+    <div class="metric-label">延迟缩减比例</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ARCHITECTURE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--slm-bg); color:var(--slm);">架构：分叉-合流</h2>
+
+<div class="fork-diagram">
+  <!-- Pre-fork: linear -->
+  <div class="fork-row">
+    <div class="fork-node node-user">用户说话</div>
+    <div class="fork-arrow">→</div>
+    <div class="fork-node node-stt">Deepgram STT<br /><small>语音转文字</small></div>
+    <div class="fork-arrow">→</div>
+    <div class="fork-node node-vad">轮次检测<br /><small>100-200ms</small></div>
+    <div class="fork-arrow">→</div>
+    <div style="font-size:28px; color:var(--ink); font-weight:700;">⑂</div>
+  </div>
+
+  <!-- Parallel branches -->
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:12px 0 12px 60px;">
+    <div class="fork-branch fork-branch-slm">
+      <div class="fork-branch-label">⚡ 快车道 · asyncio 并发</div>
+      <div class="fork-row" style="margin:8px 0 0;">
+        <div class="fork-node node-slm" style="min-width:auto; padding:8px 12px;">SLM<br /><small>SmolLM2-135M</small></div>
+        <div class="fork-arrow">→</div>
+        <div class="fork-node node-tts" style="min-width:auto; padding:8px 12px;">TTS<br /><small>立刻合成</small></div>
+        <div class="fork-arrow">→</div>
+        <div class="fork-node node-user" style="min-width:auto; padding:8px 12px;">🔊<br /><small>用户先听到</small></div>
+      </div>
+      <div style="font-size:13px; color:var(--slm); margin-top:8px; font-weight:600;">
+        add_to_chat_ctx = False（不污染上下文）
+      </div>
+    </div>
+
+    <div class="fork-branch fork-branch-llm">
+      <div class="fork-branch-label">🧠 精车道 · asyncio 并发</div>
+      <div class="fork-row" style="margin:8px 0 0;">
+        <div class="fork-node node-llm" style="min-width:auto; padding:8px 12px;">LLM<br /><small>OpenAI GPT</small></div>
+        <div class="fork-arrow">→</div>
+        <div class="fork-node node-tts" style="min-width:auto; padding:8px 12px;">TTS<br /><small>后续合成</small></div>
+        <div class="fork-arrow">→</div>
+        <div class="fork-node node-user" style="min-width:auto; padding:8px 12px;">🔊<br /><small>用户接着听</small></div>
+      </div>
+      <div style="font-size:13px; color:var(--llm); margin-top:8px; font-weight:600;">
+        add_to_chat_ctx = True（加入正式上下文）
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note note-key">
+  <strong>关键设计：SLM 的回复不进入对话历史。</strong>
+  它只是一个"填空器"——让用户在等待大模型时不会觉得系统死了。
+  LLM 的回复才是正式答案，会被记录到对话上下文中，影响后续对话。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PIPELINE DETAIL -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--stt-bg); color:var(--stt);">完整管线 6 个阶段</h2>
+
+<div class="overview">
+  <div class="overview-title">从用户开口到听到回复的完整流程</div>
+  <div class="pipeline">
+    <div class="pipe-node node-user">
+      <div class="pipe-title">① 音频流</div>
+      <div class="pipe-desc">WebRTC<br />实时传输</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-vad">
+      <div class="pipe-title">② VAD</div>
+      <div class="pipe-desc">检测有人<br />在说话</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:#faf5ff; border:2px solid #a855f7; color:#7c3aed;">
+      <div class="pipe-title">③ 轮次检测</div>
+      <div class="pipe-desc">小模型判断<br />是否说完</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-stt">
+      <div class="pipe-title">④ STT</div>
+      <div class="pipe-desc">Deepgram<br />转文字</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:linear-gradient(135deg, var(--slm-bg), var(--llm-bg)); border:2px solid var(--ink);">
+      <div class="pipe-title">⑤ 并行推理</div>
+      <div class="pipe-desc">SLM + LLM<br />同时启动</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-tts">
+      <div class="pipe-title">⑥ TTS</div>
+      <div class="pipe-desc">OpenAI TTS<br />先 SLM 后 LLM</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CODE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--vad-bg); color:var(--vad);">核心代码逻辑</h2>
+
+<p style="margin:0 0 12px; font-size:15px;">
+  文章给出的 Python 代码片段（基于 LiveKit Agents SDK），展示并行调用的实现。
+</p>
+
+<pre class="code-block"><span class="comment"># 创建一个 Future 来捕获 SLM 完整回复</span>
+fast_llm_fut = asyncio.Future[str]()
+
+<span class="keyword">async def</span> <span class="func">_fast_llm_reply</span>() -> AsyncIterable[str]:
+    filler_response: str = <span class="string">""</span>
+    <span class="keyword">async for</span> chunk <span class="keyword">in</span> self._fast_llm.chat(
+        chat_ctx=fast_llm_ctx    <span class="comment"># SLM 用截断的上下文</span>
+    ).to_str_iterable():
+        filler_response += chunk
+        <span class="keyword">yield</span> chunk              <span class="comment"># 逐 token 流式输出 → TTS</span>
+    fast_llm_fut.set_result(filler_response)
+
+<span class="comment"># SLM 回复流式播放，但不加入对话上下文</span>
+self.session.say(
+    _fast_llm_reply(),
+    <span class="param">add_to_chat_ctx</span>=<span class="keyword">False</span>   <span class="comment"># ← 关键！不污染历史</span>
+)
+
+<span class="comment"># 等 SLM 说完，同时 LLM 在另一个协程中并行生成</span>
+filler_response = <span class="keyword">await</span> fast_llm_fut
+</pre>
+
+<div class="two-col" style="margin-top:16px;">
+  <div class="card">
+    <h3>SLM 配置要点</h3>
+    <ul>
+      <li><strong>截断上下文</strong>：只给最近几轮，减少输入 token</li>
+      <li><strong>低 temperature</strong>：更确定性，避免乱说</li>
+      <li><strong>专用 prompt</strong>："请给出简短的初步回应"</li>
+      <li><strong>不入上下文</strong>：<code>add_to_chat_ctx=False</code></li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>LLM 配置要点</h3>
+    <ul>
+      <li><strong>完整上下文</strong>：包含所有历史对话</li>
+      <li><strong>标准 temperature</strong>：正常推理</li>
+      <li><strong>正式回复</strong>：SLM 说完后接上</li>
+      <li><strong>入上下文</strong>：作为正式 assistant 消息记录</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPARISON -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:#fefce8; color:#92400e;">与其他调研方案的对比</h2>
+
+<div style="overflow-x:auto; margin:16px 0;">
+  <table style="width:100%; border-collapse:collapse; font-size:15px;">
+    <thead>
+      <tr style="border-bottom:2px solid var(--border);">
+        <th style="text-align:left; padding:10px; width:18%;">维度</th>
+        <th style="text-align:left; padding:10px; width:27%;">本文 SLM+LLM 并行</th>
+        <th style="text-align:left; padding:10px; width:27%;">DuplexCascade</th>
+        <th style="text-align:left; padding:10px; width:28%;">VoiceAgentRAG</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">并行的是什么</td>
+        <td style="padding:10px;"><span class="tag tag-slm">两个 LM</span> 小模型 + 大模型</td>
+        <td style="padding:10px;"><span class="tag tag-vad">ASR + LLM</span> 微轮次流式</td>
+        <td style="padding:10px;"><span class="tag tag-llm">两个 Agent</span> Fast + Slow</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">快响应来源</td>
+        <td style="padding:10px;">SLM 的低质量快回复</td>
+        <td style="padding:10px;">LLM 每 0.6s 的控制 token</td>
+        <td style="padding:10px;">Fast Agent + 语义缓存命中</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">延迟优化幅度</td>
+        <td style="padding:10px;">TTFT 900ms → 329ms（~63%）</td>
+        <td style="padding:10px;">去掉 VAD 延迟 + 流式</td>
+        <td style="padding:10px;">缓存命中 110ms → &lt;1ms</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">全双工</td>
+        <td style="padding:10px; color:var(--muted);">否（半双工）</td>
+        <td style="padding:10px; color:var(--slm); font-weight:600;">是（无 VAD）</td>
+        <td style="padding:10px; color:var(--muted);">否（半双工）</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f0f0f0;">
+        <td style="padding:10px; font-weight:600;">需要额外训练</td>
+        <td style="padding:10px; color:var(--slm); font-weight:600;">不需要</td>
+        <td style="padding:10px;">需要 LoRA 微调（5h）</td>
+        <td style="padding:10px; color:var(--slm); font-weight:600;">不需要</td>
+      </tr>
+      <tr>
+        <td style="padding:10px; font-weight:600;">实现复杂度</td>
+        <td style="padding:10px; color:var(--slm); font-weight:600;">低（asyncio 并发）</td>
+        <td style="padding:10px;">高（3 个流式服务 + 控制 token）</td>
+        <td style="padding:10px;">中（缓存 + 事件总线）</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MOODCOCO -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的启发</h2>
+
+<div class="note note-insight" style="font-size:15px;">
+  <strong>moodcoco 已有类似架构：</strong>Fast Agent 快回复 + Slow Agent 深度分析。
+  本文方案是这个思路的<strong>最简工程实现</strong>——不需要自定义训练，只需要 asyncio 并发调两个模型。
+</div>
+
+<div class="two-col" style="margin-top:12px;">
+  <div class="card">
+    <h3>直接可借鉴的</h3>
+    <ul>
+      <li><strong><code>add_to_chat_ctx=False</code></strong> 思路：moodcoco 的 Fast 快回复也不应该污染 Slow 的深度分析上下文</li>
+      <li><strong>SLM prompt 设计</strong>："给出简短初步回应"——情绪场景可以是"先表达共情和倾听"</li>
+      <li><strong>Grafana 可观测性</strong>：监控 TTFT / TTS 首字节 / 总感知延迟，找到实际瓶颈</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>moodcoco 的差异化</h3>
+    <ul>
+      <li><strong>Slow 不只是"更好的回复"</strong>——还做策略选择（选哪个 Skill）、情绪判断、模式识别</li>
+      <li><strong>Fast 不只是"填空"</strong>——通过 Slow 注入的上下文，Fast 的回复质量可以接近 LLM 水平</li>
+      <li><strong>跨轮记忆</strong>：Slow 的分析结果 carryover 到下一轮，本文方案没有</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-compare" style="margin-top:12px;">
+  <strong>本质区别：</strong>本文的 SLM 是"用低质量换低延迟"——SLM 回复就是比 LLM 差，这是已知的代价。
+  moodcoco 的 Fast Agent 则是"用 Slow 注入的高质量上下文，让 Fast 的回复也有质量"——不是降级，而是提前准备。
+  这是更高级的并行策略。
+</div>
+
+<p style="margin-top:24px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于 WebRTC.ventures 文章分析，2026-05-11 —
+</p>
+
+</body>
+</html>

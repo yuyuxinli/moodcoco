@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>moodcoco · 快慢思考现状架构 · 源码时序图</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --fast-color: #2563eb;
+      --fast-bg: #eff6ff;
+      --slow-color: #7c3aed;
+      --slow-bg: #f5f3ff;
+      --voice-color: #059669;
+      --voice-bg: #ecfdf5;
+      --file-color: #d97706;
+      --file-bg: #fffbeb;
+      --danger-color: #dc2626;
+      --accent: #0ea5e9;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.6;
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.6em; margin-bottom: 6px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 32px; font-size: 15px; }
+    h2 {
+      font-size: 1.15em;
+      margin: 32px 0 12px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    h2.mode-voice { background: var(--voice-bg); color: var(--voice-color); }
+    h2.mode-stream { background: var(--slow-bg); color: var(--slow-color); }
+    h2.mode-carryover { background: var(--file-bg); color: var(--file-color); }
+
+    /* Sequence diagram */
+    .seq { position: relative; margin: 16px 0 40px; overflow-x: auto; }
+    .seq table { border-collapse: collapse; width: 100%; min-width: 760px; }
+    .seq th {
+      text-align: center;
+      padding: 8px 6px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 2px solid var(--border);
+      white-space: nowrap;
+    }
+    .seq th.col-user { color: var(--ink); }
+    .seq th.col-fast { color: var(--fast-color); }
+    .seq th.col-slow { color: var(--slow-color); }
+    .seq th.col-voice { color: var(--voice-color); }
+    .seq th.col-file { color: var(--file-color); }
+    .seq th.col-tts { color: #b45309; }
+
+    .seq td {
+      padding: 4px 6px;
+      vertical-align: top;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+      position: relative;
+    }
+    .seq td.lifeline {
+      text-align: center;
+      color: #ccc;
+    }
+    .seq td.lifeline::after {
+      content: '│';
+      color: #ddd;
+    }
+    /* Arrow cells */
+    .seq .arrow {
+      position: relative;
+      padding: 6px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .arrow-fast { background: var(--fast-bg); color: var(--fast-color); border-left: 3px solid var(--fast-color); }
+    .arrow-slow { background: var(--slow-bg); color: var(--slow-color); border-left: 3px solid var(--slow-color); }
+    .arrow-voice { background: var(--voice-bg); color: var(--voice-color); border-left: 3px solid var(--voice-color); }
+    .arrow-file { background: var(--file-bg); color: var(--file-color); border-left: 3px solid var(--file-color); }
+    .arrow-danger { background: #fef2f2; color: var(--danger-color); border-left: 3px solid var(--danger-color); }
+    .arrow-muted { background: #f9fafb; color: var(--muted); border-left: 3px solid #d1d5db; }
+    .arrow-accent { background: #f0f9ff; color: var(--accent); border-left: 3px solid var(--accent); }
+
+    .step-num {
+      display: inline-block;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 22px;
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .step-fast { background: var(--fast-color); }
+    .step-slow { background: var(--slow-color); }
+    .step-voice { background: var(--voice-color); }
+    .step-file { background: var(--file-color); }
+
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .tag-loop { background: #dbeafe; color: var(--fast-color); }
+    .tag-tool { background: #fce7f3; color: #be185d; }
+    .tag-file { background: var(--file-bg); color: var(--file-color); }
+    .tag-mut { background: #ede9fe; color: var(--slow-color); }
+    .tag-parallel { background: #d1fae5; color: #065f46; }
+
+    .note {
+      margin: 8px 0;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .note-info { background: #f0f9ff; border-left: 3px solid var(--accent); }
+    .note-warn { background: #fffbeb; border-left: 3px solid #f59e0b; }
+    .note-key { background: #f5f3ff; border-left: 3px solid var(--slow-color); }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .src { color: var(--muted); font-size: 14px; }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      margin: 20px 0;
+      padding: 12px 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 14px;
+    }
+    .legend-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+    }
+
+    .parallel-bracket {
+      border: 2px dashed #10b981;
+      border-radius: 8px;
+      padding: 2px;
+      position: relative;
+    }
+    .parallel-label {
+      position: absolute;
+      top: -10px; left: 12px;
+      background: var(--bg);
+      padding: 0 6px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #065f46;
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 2px dashed var(--border);
+      margin: 40px 0 20px;
+    }
+    .file-box {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .file-mem { background: #fef3c7; color: #92400e; }
+    .file-guid { background: #e0e7ff; color: #3730a3; }
+    .file-skill { background: #fce7f3; color: #9d174d; }
+
+    /* Layout helpers */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 4px; }
+
+    .muted-text { color: #ccc; text-align: center; font-size: 14px; }
+    .center-note { text-align: center; padding: 12px; color: var(--muted); font-size: 14px; }
+    .mono-block { font-size: 14px; font-family: monospace; line-height: 2; }
+  </style>
+</head>
+<body>
+
+<h1>moodcoco 快慢思考架构 <small>— 源码时序图 v2 (2026-05-11)</small></h1>
+<p class="subtitle">基于 coordinator.py / fast.py / slow.py / bridge_agent.py / streaming_bridge_agent.py / streaming_responder.py / entrypoint.py 源码绘制</p>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--fast-color)"></div>Fast Agent (pydantic-ai loop)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--slow-color)"></div>Slow Agent (pydantic-ai loop)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--voice-color)"></div>Voice / LiveKit</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--file-color)"></div>持久文件</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#be185d"></div>UI Tool 调用</div>
+  <span class="tag tag-parallel">PARALLEL</span>
+  <span class="tag tag-loop">AGENTIC LOOP</span>
+  <span class="tag tag-mut">同轮突变</span>
+</div>
+
+<!-- ================================================================== -->
+<!-- MODE 1: VOICE NON-STREAMING -->
+<!-- ================================================================== -->
+<h2 class="mode-voice">模式 1：Voice 非流式 — 并行快慢 <span class="tag tag-parallel">PARALLEL</span></h2>
+<p class="src">bridge_agent.py → VoiceBridgeAgent.on_user_turn_completed()</p>
+
+<div class="note note-info">
+  <strong>核心机制：</strong>Fast 和 Slow 通过 <code>asyncio.create_task</code> <strong>同时启动</strong>，共享 <code>fast_deps</code> 对象。Slow 可以在自己的 agentic loop 中<strong>实时突变</strong> Fast 的上下文（skill_bundle / retrieval_block / dynamic_inject）。
+</div>
+
+<div class="seq">
+<table>
+  <thead>
+    <tr>
+      <th class="col-user" style="width:10%">User</th>
+      <th class="col-voice" style="width:12%">LiveKit</th>
+      <th class="col-fast" style="width:24%">Fast Agent</th>
+      <th class="col-slow" style="width:24%">Slow Agent</th>
+      <th class="col-file" style="width:14%">持久文件</th>
+      <th class="col-tts" style="width:8%">TTS</th>
+      <th style="width:8%">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Step 1: user speaks -->
+    <tr>
+      <td><div class="arrow arrow-muted">🎤 语音</div></td>
+      <td><div class="arrow arrow-voice">STT→文字</div></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td></td>
+    </tr>
+    <!-- Step 2: read + create deps -->
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td colspan="2">
+        <div class="arrow arrow-file">
+          <span class="step-num step-file">1</span>
+          读 <span class="file-box file-mem">MEMORY.md</span> +
+          <span class="file-box file-guid">SLOW_GUIDANCE.md</span>
+        </div>
+      </td>
+      <td><div class="arrow arrow-file">← 读</div></td>
+      <td class="lifeline"></td>
+      <td class="src">L128-135</td>
+    </tr>
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-fast">
+          <span class="step-num step-fast">2</span>
+          创建 <code>FastThinkDeps</code><br>
+          包含上轮 carryover：<br>
+          <code>skill_bundle</code> / <code>retrieval_block</code> / <code>dynamic_inject</code>
+        </div>
+      </td>
+      <td>
+        <div class="arrow arrow-slow">
+          <span class="step-num step-slow">2</span>
+          创建 <code>SlowThinkDeps</code><br>
+          <strong><code>fast_deps = fast_deps</code></strong><br>
+          <span class="tag tag-mut">共享对象引用</span>
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="src">L137-173</td>
+    </tr>
+    <!-- Step 3: parallel launch -->
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td colspan="2">
+        <div class="parallel-bracket" style="padding:8px;">
+          <div class="parallel-label">asyncio.create_task × 2 并行</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+            <!-- Fast loop -->
+            <div class="arrow arrow-fast" style="border-width:3px;">
+              <span class="step-num step-fast">3</span>
+              <span class="tag tag-loop">AGENTIC LOOP</span><br>
+              <code>fast_agent.run()</code><br><br>
+              LLM → tool → LLM → …<br><br>
+              instructions 动态注入：<br>
+              • <code>voice_system_extras()</code><br>
+              → 读 skill_bundle / retrieval / inject<br>
+              （Slow 可实时往这些字段写入）<br><br>
+              <span class="tag tag-tool">ai_message</span> →<br>
+              <code>session.say(text)</code><br>
+              → <span style="color:var(--danger-color)">raise VoiceAiMessageDelivered</span><br>
+              <em>(说完一句就退出 loop)</em>
+            </div>
+            <!-- Slow loop -->
+            <div class="arrow arrow-slow" style="border-width:3px;">
+              <span class="step-num step-slow">3</span>
+              <span class="tag tag-loop">AGENTIC LOOP</span><br>
+              <code>slow_agent.run()</code><br><br>
+              LLM → tool → LLM → …<br><br>
+              <strong>Mutation Tools：</strong><br>
+              <span class="tag tag-mut">slow_inject_to_fast</span><br>
+              → <code>fast_deps.dynamic_inject</code><br><br>
+              <span class="tag tag-mut">slow_attach_skill_to_fast</span><br>
+              → <code>fast_deps.skill_bundle</code><br><br>
+              <span class="tag tag-mut">slow_set_fast_retrieval</span><br>
+              → <code>fast_deps.retrieval_block</code><br><br>
+              <span class="tag tag-tool">write_memory</span> → MEMORY.md<br>
+              <span class="tag tag-tool">list_skills</span> / <span class="tag tag-tool">read_skill</span><br><br>
+              <em>+ 关键词路由 fallback</em><br>
+              <code>_auto_complete_voice_mutations()</code>
+            </div>
+          </div>
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="src">L175-185</td>
+    </tr>
+    <!-- Step 4: Fast speaks -->
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-voice">
+          <span class="step-num step-voice">4</span>
+          <code>session.say(text)</code><br>
+          → TTS → 🔊 用户听到语音
+        </div>
+      </td>
+      <td class="muted-text">(可能仍在跑…)</td>
+      <td class="lifeline"></td>
+      <td><div class="arrow arrow-voice">🔊</div></td>
+      <td class="src">fast.py L166-181</td>
+    </tr>
+    <!-- Step 5: persist slow state -->
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-slow">
+          <span class="step-num step-slow">5</span>
+          Slow 完成 → <code>_on_slow_done()</code><br>
+          → <code>_persist_slow_state()</code><br><br>
+          把同轮突变写入 <code>self._slow_state</code>：<br>
+          <code>carryover_inject[-3:]</code><br>
+          <code>carryover_skills[-2:]</code><br>
+          <code>carryover_retrieval</code>
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="src">L187-228<br>L230-285</td>
+    </tr>
+    <!-- Next turn -->
+    <tr>
+      <td colspan="7" class="center-note" style="border-bottom:2px dashed var(--border);">
+        ⏳ <strong>下一轮</strong>：<code>self._slow_state.carryover_*</code> → 新 FastThinkDeps 的 skill_bundle / retrieval_block / dynamic_inject
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note note-key">
+  <strong>关键点：</strong><br>
+  1. <strong>共享对象突变</strong>：<code>slow_deps.fast_deps = fast_deps</code>（同一个 Python 对象）。Slow 的 mutation tools 直接写入 fast_deps 的字段，Fast 的 <code>voice_system_extras()</code> 实时读取。<br>
+  2. <strong>同轮 vs 跨轮</strong>：如果 Slow 比 Fast 跑得快，Fast 的当轮 instructions 就能拿到 Slow 注入的 skill/inject；否则走 carryover → 下一轮生效。<br>
+  3. <strong>Fast 说完就退</strong>：<code>ai_message</code> → <code>session.say()</code> → <code>raise VoiceAiMessageDelivered</code>，Fast loop 提前终止。Slow 可能还在后台跑。<br>
+  4. <strong>关键词路由 fallback</strong>：<code>_select_voice_skill()</code> 在 slow.py L150-202，当 Slow agent 没主动 attach skill 时自动触发。
+</div>
+
+<!-- ================================================================== -->
+<!-- MODE 3: VOICE STREAMING -->
+<!-- ================================================================== -->
+<hr class="section-divider">
+<h2 class="mode-stream">模式 2：Voice 流式 — 纯嘴（Fast Stream Only）</h2>
+<p class="src">streaming_bridge_agent.py → StreamingVoiceBridgeAgent + streaming_responder.py</p>
+
+<div class="note note-warn">
+  <strong>设计意图：</strong>Voice 就是嘴。流式路径只负责把话说出来，不承载思考决策。<code>_slow_state</code> 初始化为空，无 Slow agent。<br>
+  Slow 的运行位置（进程内异步 / 独立服务 / 其它）属于融合方案待设计部分。
+</div>
+
+<div class="seq">
+<table>
+  <thead>
+    <tr>
+      <th class="col-user" style="width:12%">User</th>
+      <th class="col-voice" style="width:14%">LiveKit</th>
+      <th class="col-fast" style="width:30%">VoiceStreamingResponder</th>
+      <th class="col-tts" style="width:18%">TTS (session.say / MiniMax WS)</th>
+      <th class="col-file" style="width:14%">持久文件</th>
+      <th style="width:12%">说明</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><div class="arrow arrow-muted">🎤 语音</div></td>
+      <td><div class="arrow arrow-voice">STT→文字</div></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td></td>
+    </tr>
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-file">
+          <span class="step-num step-file">1</span>
+          读 <span class="file-box file-mem">MEMORY.md</span> +
+          <span class="file-box file-guid">SLOW_GUIDANCE.md</span>
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td><div class="arrow arrow-file">← 读</div></td>
+      <td class="src">L100-107</td>
+    </tr>
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-fast" style="border-width:3px;">
+          <span class="step-num step-fast">2</span>
+          <strong>⚡ 直接 LLM 流式调用</strong><br>
+          <code>chat.completions.create(stream=True)</code><br><br>
+          <strong>非 Agentic Loop！</strong><br>
+          无 tool calls，无 pydantic-ai<br><br>
+          system prompt 拼接：<br>
+          • 固定 voice prompt<br>
+          • memory_text<br>
+          • slow_guidance（上轮）<br>
+          • dynamic_inject（carryover，当前始终空）<br>
+          • skill_bundle（carryover，当前始终空）<br>
+          • retrieval_block（carryover，当前始终空）
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td class="src">streaming_responder.py L54-70</td>
+    </tr>
+    <tr>
+      <td class="lifeline"></td>
+      <td class="lifeline"></td>
+      <td>
+        <div class="arrow arrow-voice">
+          <span class="step-num step-voice">3</span>
+          <code>SentenceChunker</code> 切句<br>
+          逐句 yield → 发布 <code>coco_sentence</code> 事件
+        </div>
+      </td>
+      <td>
+        <div class="arrow arrow-voice">
+          逐句 TTS → 🔊<br>
+          <code>session.say()</code> 或<br>
+          MiniMax WS → PCM AudioSource
+        </div>
+      </td>
+      <td class="lifeline"></td>
+      <td class="src">L109-161</td>
+    </tr>
+    <tr>
+      <td colspan="6" class="center-note">
+        ⚠ <code>_slow_state</code> 全程空（L56-60）：carryover_inject=[], carryover_skills=[], carryover_retrieval=""<br>
+        <strong>没有 Slow Agent 运行</strong>，下一轮 carryover 也是空的
+      </td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ================================================================== -->
+<!-- CROSS-TURN STATE FLOW -->
+<!-- ================================================================== -->
+<hr class="section-divider">
+<h2 class="mode-carryover">跨轮状态流转机制</h2>
+
+<div class="two-col">
+  <div class="card">
+    <h3>📁 文件级桥接（Text / Web 模式）</h3>
+    <ul>
+      <li><span class="file-box file-guid">SLOW_GUIDANCE.md</span> — Slow output → 文件 → 下轮 Fast 的 <code>slow_guidance</code> instruction</li>
+      <li><span class="file-box file-mem">MEMORY.md</span> — Slow <code>write_memory()</code> → 文件 → 下轮 Fast 的 <code>memory_text</code> instruction</li>
+      <li>Fast 有最终决定权，可参考/忽略 slow_guidance</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>🔄 内存级桥接（Voice 非流式模式）</h3>
+    <ul>
+      <li><strong>同轮</strong>：<code>slow_deps.fast_deps</code> 共享对象 → 三个 mutation tools 实时写入 fast_deps 字段</li>
+      <li><strong>跨轮</strong>：<code>_persist_slow_state()</code> → <code>self._slow_state.carryover_*</code> → 下一轮 FastThinkDeps 构造</li>
+      <li>carryover 有 LRU 限制：inject[-3:], skills[-2:]</li>
+    </ul>
+  </div>
+</div>
+
+<div style="margin-top:16px;">
+<div class="card">
+  <h3>⚡ Voice 流式模式（当前状态）</h3>
+  <ul>
+    <li><code>_slow_state</code> 初始化为空 dict，无任何 writer</li>
+    <li>只读 MEMORY.md + SLOW_GUIDANCE.md（但无 Slow 去写这两个文件）</li>
+    <li>stream_reply 的 dynamic_inject / skill_bundle / retrieval_block 参数始终为空</li>
+    <li><strong>结论</strong>：当前流式路径是纯粹的"嘴"——只管把 LLM 的输出流式说出来，没有任何思考决策注入</li>
+  </ul>
+</div>
+</div>
+
+<!-- ================================================================== -->
+<!-- AGENTIC LOOP DETAIL -->
+<!-- ================================================================== -->
+<hr class="section-divider">
+<h2 class="mode-text">Agentic Loop 内部机制</h2>
+
+<div class="two-col">
+  <div class="card">
+    <h3 style="color:var(--fast-color)">🧠 Fast Agent Loop (pydantic-ai)</h3>
+    <ul>
+      <li><strong>模型</strong>：<code>create_fast_model()</code>（Doubao lite）</li>
+      <li><strong>System prompt</strong>：SOUL + IDENTITY + AGENTS + fast-instructions + fast-tools</li>
+      <li><strong>动态 instructions</strong>（每次 LLM 调用前注入）：
+        <ul>
+          <li><code>inject_memory()</code> — MEMORY.md 内容</li>
+          <li><code>inject_slow_guidance()</code> — 上轮 SLOW_GUIDANCE.md</li>
+          <li><code>inject_voice_extras()</code> — Voice 模式下 Slow 同轮注入</li>
+        </ul>
+      </li>
+      <li><strong>7 个 UI tools</strong>：ai_message / ai_options / ai_mood_select / ai_praise_popup / ai_body_sensation / ai_complete_conversation / ai_safety_brake</li>
+      <li>Voice 模式下 <code>ai_message</code> → <code>session.say()</code> → raise 退出 loop</li>
+      <li>Text 模式下 loop 正常结束（agent 决定不再调用 tool）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--slow-color)">🔮 Slow Agent Loop (pydantic-ai)</h3>
+    <ul>
+      <li><strong>模型</strong>：<code>create_slow_model()</code>（Minimax m2.7）</li>
+      <li><strong>System prompt</strong>：SOUL + IDENTITY + AGENTS + slow-instructions + VOICE_MUTATION_TOOL_GUIDE</li>
+      <li><strong>动态 instructions</strong>：
+        <ul>
+          <li><code>inject_context()</code> — user_message + fast_reply_text + MEMORY.md</li>
+        </ul>
+      </li>
+      <li><strong>读写 tools</strong>：list_skills / read_skill / write_memory</li>
+      <li><strong>Voice mutation tools</strong>（仅 fast_deps 存在时生效）：
+        <ul>
+          <li><code>slow_inject_to_fast</code> → fast_deps.dynamic_inject</li>
+          <li><code>slow_attach_skill_to_fast</code> → fast_deps.skill_bundle</li>
+          <li><code>slow_set_fast_retrieval</code> → fast_deps.retrieval_block</li>
+        </ul>
+      </li>
+      <li><strong>output</strong>（text 模式）→ 写入 SLOW_GUIDANCE.md</li>
+      <li>UsageLimits: request=4, tool_calls=4</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- KEYWORD ROUTING (to be replaced) -->
+<!-- ================================================================== -->
+<hr class="section-divider">
+<h2 style="background:#fef2f2; color:var(--danger-color); display:inline-block; padding:8px 14px; border-radius:6px;">⚠ 待替换：关键词路由</h2>
+<p class="src">slow.py L150-223 — <code>_select_voice_skill()</code> + <code>_auto_complete_voice_mutations()</code></p>
+
+<div class="card" style="border-color:#fca5a5;">
+  <h3 style="color:var(--danger-color)">当前关键词路由 fallback</h3>
+  <p style="font-size:15px; margin-bottom:10px;">当 Slow agent 本轮未主动 attach skill 时，<code>_auto_complete_voice_mutations()</code> 用关键词匹配补位：</p>
+  <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px;">
+    <div class="arrow arrow-danger">
+      <strong>crisis_terms</strong><br>
+      想死 / 不想活 / 伤害自己 / 活着没意思 / 消失<br>
+      → <span class="file-box file-skill">crisis</span>
+    </div>
+    <div class="arrow arrow-danger">
+      <strong>body_terms</strong><br>
+      喘不上气 / 心跳 / 发抖 / 手抖 / 慌 / 恐慌 / 失眠<br>
+      → <span class="file-box file-skill">calm-body</span>
+    </div>
+    <div class="arrow arrow-danger">
+      <strong>decision_terms</strong><br>
+      该不该 / 要不要 / 拿不定 / 不知道怎么选<br>
+      → <span class="file-box file-skill">face-decision</span>
+    </div>
+    <div class="arrow arrow-danger">
+      <strong>untangle_terms</strong><br>
+      好乱 / 脑子很乱 / 说不清 / 一团乱<br>
+      → <span class="file-box file-skill">untangle</span>
+    </div>
+    <div class="arrow arrow-danger">
+      <strong>relationship_terms</strong><br>
+      吵 / 冷战 / 妈妈 / 男朋友 / 分手 / 沟通…<br>
+      → <span class="file-box file-skill">relationship-guide</span>
+    </div>
+    <div class="arrow arrow-danger">
+      <strong>emotion_terms</strong><br>
+      委屈 / 难过 / 生气 / 烦 / 崩溃 / 哭 / 焦虑…<br>
+      → <span class="file-box file-skill">listen</span>
+    </div>
+  </div>
+  <div class="note note-warn" style="margin-top:12px;">
+    <strong>问题：</strong>关键词匹配脆弱（比喻/隐喻/上下文全丢）。融合方案目标：由 Slow agent 的语义理解来选择 skill，删除所有关键词路由 fallback。
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<!-- ENTRYPOINT ROUTING -->
+<!-- ================================================================== -->
+<hr class="section-divider">
+<h2 class="mode-voice">入口路由 <span class="src">entrypoint.py</span></h2>
+
+<div class="card">
+  <div class="mono-block">
+    <code>VOICE_STREAMING_MODE=true</code><br>
+    &nbsp;&nbsp;└─ <strong style="color:var(--slow-color)">StreamingVoiceBridgeAgent</strong> + VoiceStreamingResponder<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• 纯流式 LLM（非 agentic）<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• 无 Slow agent<br><br>
+    <code>VOICE_STREAMING_MODE≠true</code> (默认)<br>
+    &nbsp;&nbsp;└─ <strong style="color:var(--voice-color)">VoiceBridgeAgent</strong><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• Fast + Slow 双 agentic loop 并行<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;• pydantic-ai 驱动<br><br>
+    <code>VOICE_STREAMING_STT_MODE=true</code><br>
+    &nbsp;&nbsp;└─ XfyunStreamingSTTPlugin（流式 STT）<br>
+    <code>否则</code><br>
+    &nbsp;&nbsp;└─ XfyunSTTPlugin + StreamAdapter + Silero VAD<br><br>
+    <code>VOICE_STREAMING_TTS_MODE=minimax_ws</code><br>
+    &nbsp;&nbsp;└─ MiniMaxStreamingTTSClient → PCM AudioSource（流式 TTS）<br>
+    <code>否则</code><br>
+    &nbsp;&nbsp;└─ MinimaxTTSPlugin（session.say）
+  </div>
+</div>
+
+</body>
+</html>

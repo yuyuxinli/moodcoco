@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DuplexCascade 架构解析 · 全双工语音对话</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --asr: #0891b2;
+      --asr-bg: #ecfeff;
+      --llm: #2563eb;
+      --llm-bg: #eff6ff;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+      --ctrl: #7c3aed;
+      --ctrl-bg: #f5f3ff;
+      --micro: #059669;
+      --micro-bg: #ecfdf5;
+      --user: #64748b;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-asr { background: var(--asr-bg); color: var(--asr); }
+    .tag-llm { background: var(--llm-bg); color: var(--llm); }
+    .tag-tts { background: var(--tts-bg); color: var(--tts); }
+    .tag-ctrl { background: var(--ctrl-bg); color: var(--ctrl); }
+    .tag-micro { background: var(--micro-bg); color: var(--micro); }
+    .tag-danger { background: var(--danger-bg); color: var(--danger); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .pipe-node {
+      flex: 1;
+      min-width: 120px;
+      padding: 14px;
+      border-radius: 8px;
+      text-align: center;
+      position: relative;
+    }
+    .pipe-node .pipe-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .pipe-node .pipe-desc { font-size: 14px; line-height: 1.5; }
+    .pipe-arrow { display: flex; align-items: center; font-size: 22px; color: var(--muted); padding: 0 3px; flex-shrink: 0; }
+
+    .node-asr { background: var(--asr-bg); border: 2px solid var(--asr); color: var(--asr); }
+    .node-llm { background: var(--llm-bg); border: 2px solid var(--llm); color: var(--llm); }
+    .node-tts { background: var(--tts-bg); border: 2px solid var(--tts); color: var(--tts); }
+    .node-ctrl { background: var(--ctrl-bg); border: 2px solid var(--ctrl); color: var(--ctrl); }
+    .node-micro { background: var(--micro-bg); border: 2px solid var(--micro); color: var(--micro); }
+    .node-user { background: #f1f5f9; border: 2px solid var(--user); color: var(--user); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    @media (max-width: 800px) { .two-col, .three-col { grid-template-columns: 1fr; } }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: var(--ctrl-bg); border-left: 3px solid var(--ctrl); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: var(--danger-bg); border-left: 3px solid var(--danger); }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .src { color: var(--muted); font-size: 14px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term { flex-shrink: 0; width: 220px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    /* Token table */
+    .token-table { width: 100%; border-collapse: collapse; font-size: 15px; margin: 16px 0; }
+    .token-table th {
+      text-align: left; padding: 10px 12px;
+      border-bottom: 2px solid var(--border);
+      font-weight: 700; font-size: 14px;
+    }
+    .token-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    .token-table tr:last-child td { border-bottom: none; }
+    .token-name {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px;
+      background: var(--ctrl-bg);
+      color: var(--ctrl);
+      padding: 2px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+
+    /* Figure */
+    .fig {
+      margin: 20px 0;
+      text-align: center;
+    }
+    .fig img {
+      max-width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .fig-caption {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Timeline micro-turn */
+    .mt-timeline {
+      display: flex;
+      gap: 2px;
+      margin: 16px 0;
+      align-items: flex-end;
+      flex-wrap: wrap;
+    }
+    .mt-block {
+      padding: 6px 10px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.3;
+    }
+    .mt-user { background: #dbeafe; color: var(--llm); border: 1px solid #93c5fd; }
+    .mt-sys { background: var(--micro-bg); color: var(--micro); border: 1px solid #6ee7b7; }
+    .mt-ctrl { background: var(--ctrl-bg); color: var(--ctrl); border: 1px solid #c4b5fd; font-family: monospace; font-size: 12px; }
+    .mt-silence { background: #f3f4f6; color: #9ca3af; border: 1px dashed #d1d5db; }
+    .mt-arrow { color: var(--muted); font-size: 16px; display: flex; align-items: center; padding: 0 2px; }
+    .mt-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 2px;
+    }
+    .mt-group { display: flex; flex-direction: column; align-items: center; }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    @media (max-width: 800px) { .metric-row { grid-template-columns: 1fr 1fr; } }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric-value { font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .metric-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* Scenario cards */
+    .scenario {
+      border-radius: 8px;
+      padding: 16px;
+      margin: 8px 0;
+    }
+    .scenario-title { font-weight: 700; font-size: 15px; margin-bottom: 8px; }
+    .scenario-flow { font-size: 14px; line-height: 1.7; }
+    .scenario-flow .step { margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>DuplexCascade 架构解析 <small>— SB Intuitions / arXiv 2603.09180, 2026.03</small></h1>
+<p class="subtitle">
+  全双工语音对话 · 无 VAD · 微轮次 · 控制 token · 级联 ASR-LLM-TTS<br />
+  源码：github.com/sbintuitions/DuplexCascade · 论文：arxiv.org/abs/2603.09180
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- GLOSSARY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:#f1f5f9; color:var(--user);">术语速查</h2>
+
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">全双工（Full-Duplex）</div>
+    <div class="gl-def">双方可以同时说话和听，就像真人面对面聊天。对比"半双工"：一方说完另一方才能说（对讲机模式）。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">VAD（语音活动检测）</div>
+    <div class="gl-def">Voice Activity Detection，检测"用户是否在说话"的模块。传统方案靠它判断用户说完了没有。本文的核心创新就是<strong>去掉 VAD</strong>，改由 LLM 自己判断。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">微轮次（Micro-Turn）</div>
+    <div class="gl-def">每 0.6 秒把 ASR 识别到的文字打包成一个小片段，送给 LLM。不再等用户说完整句话才处理，而是<strong>边听边想</strong>。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">控制 token</div>
+    <div class="gl-def">一组特殊标记（如 &lt;user is speaking&gt;），LLM 输出它们来<strong>控制自己的行为</strong>：继续等、开口回复、发出"嗯嗯"、或停下来让用户打断。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">级联（Cascaded）</div>
+    <div class="gl-def">ASR → LLM → TTS 三个独立模块串成管线，每个模块可以单独替换升级。对比"端到端"：一个大模型直接吃音频吐音频。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Backchannel（附和）</div>
+    <div class="gl-def">对话中的"嗯""对""是的"——不是正式回复，只是表示"我在听"。人类对话中平均每 10 秒就会有一次。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LoRA（低秩微调）</div>
+    <div class="gl-def">一种轻量训练方法：冻结大模型的大部分参数，只训练一小部分"适配层"。本文用 LoRA 让 Qwen2-7B 学会控制 token，只需 8 张 H100 训 5 小时。</div>
+  </div>
+  <div class="gl-item" style="border-bottom:none;">
+    <div class="gl-term">TOR（接管率）</div>
+    <div class="gl-def">Take-Over Rate，衡量系统在各种场景下是否正确地"抢话"或"沉默"。不同场景方向不同：该沉默时抢话 = 差，该接话时沉默 = 也差。</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CORE IDEA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--ctrl-bg); color:var(--ctrl);">核心思想：一句话版</h2>
+
+<div class="note note-key" style="font-size:16px;">
+  <strong>传统语音 Agent</strong> 用 VAD 判断"用户说完了吗？"，说完才送 LLM，LLM 想完才送 TTS——<strong>半双工、高延迟</strong>。<br /><br />
+  <strong>DuplexCascade</strong> 每 0.6 秒把 ASR 的部分结果送给 LLM，LLM 自己通过输出控制 token 来决定"继续听"还是"开口说"——<strong>全双工、低延迟、不需要 VAD</strong>。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- ARCHITECTURE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--llm-bg); color:var(--llm);">系统架构</h2>
+
+<div class="fig">
+  <img src="assets/duplex-cascade/fig1-overview.png" alt="DuplexCascade 系统架构图" />
+  <div class="fig-caption">论文 Figure 1：系统整体架构。用户音频 → 流式 ASR → 每 Δt 秒聚合微轮次 → LLM 生成控制 token + 回复 → 流式 TTS → 系统音频</div>
+</div>
+
+<p style="margin:16px 0; font-size:15px;">
+  四个模块全部是<strong>流式</strong>的，持续并行运行。关键区别：LLM 不等用户说完——每 0.6 秒就收到一次 ASR 的部分结果，每次都要做一个决策。
+</p>
+
+<div class="overview">
+  <div class="overview-title">数据流：从音频到音频（全双工）</div>
+  <div class="pipeline">
+    <div class="pipe-node node-user">
+      <div class="pipe-title">用户音频</div>
+      <div class="pipe-desc">持续输入</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-asr">
+      <div class="pipe-title">流式 ASR</div>
+      <div class="pipe-desc">实时转文字</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-micro">
+      <div class="pipe-title">微轮次聚合</div>
+      <div class="pipe-desc">每 0.6s 打包</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-llm">
+      <div class="pipe-title">LLM</div>
+      <div class="pipe-desc">生成控制 token<br />+ 回复文本</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-tts">
+      <div class="pipe-title">流式 TTS</div>
+      <div class="pipe-desc">增量合成</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-user">
+      <div class="pipe-title">系统音频</div>
+      <div class="pipe-desc">播放给用户</div>
+    </div>
+  </div>
+
+  <div class="note note-insight" style="margin-top:16px;">
+    <strong>与传统级联的关键区别：</strong>传统方案在 ASR 和 LLM 之间有一个 VAD 模块当"门卫"，只有 VAD 判定"用户说完了"才放行。
+    DuplexCascade 拆掉了这个门卫——ASR 的输出每 0.6s 无条件送给 LLM，由 LLM 自己决定要不要回话。
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MICRO-TURN -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--micro-bg); color:var(--micro);">微轮次（Micro-Turn）：把对话切碎</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  传统对话是<strong>整句交替</strong>：用户说完一整句 → 系统回完一整句。
+  DuplexCascade 把双方的话都切成 0.6 秒的小片段，交替送进 LLM。
+</p>
+
+<div class="card" style="margin:16px 0;">
+  <h3>一次对话的微轮次序列示意</h3>
+  <p style="font-size:14px; color:var(--muted); margin-bottom:12px;">用户问"明天天气怎么样？"，系统回复。每格 = 一个微轮次（~0.6s）。</p>
+
+  <div class="mt-timeline">
+    <div class="mt-group"><div class="mt-block mt-user">明天天气</div><div class="mt-label">用户</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-ctrl">&lt;user is speaking&gt;</div><div class="mt-label">系统决策</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-user">怎么样？</div><div class="mt-label">用户</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-ctrl">&lt;user finish speaking&gt;</div><div class="mt-label">系统决策</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-sys">明天晴转</div><div class="mt-label">系统回复</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-silence">&lt;no voice&gt;</div><div class="mt-label">用户沉默</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-sys">多云，气温</div><div class="mt-label">系统继续</div></div>
+    <div class="mt-arrow">→</div>
+    <div class="mt-group"><div class="mt-block mt-sys">二十到二十五度</div><div class="mt-label">系统结束</div></div>
+  </div>
+
+  <div class="note note-key" style="margin-top:12px;">
+    <strong>每 0.6 秒，LLM 都要做一次决策：</strong>用户还在说话？说完了？在思考？在打断我？然后输出对应的控制 token。
+    这就是"VAD-free"的实现机制——不是没有判断，而是把判断权从外部 VAD 模块交给了 LLM 本身。
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h3>用户微轮次</h3>
+    <ul>
+      <li>每 0.6s 从 ASR 收集文字</li>
+      <li>有文字 → 作为用户微轮次送入</li>
+      <li>无文字 → 插入 <code>&lt;no voice&gt;</code> 表示沉默</li>
+      <li>训练时随机采样 1-7 个 token 模拟 ASR 的不均匀输出</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>系统微轮次</h3>
+    <ul>
+      <li>LLM 先输出一个<strong>控制 token</strong>（决策）</li>
+      <li>如果决策是"回复" → 接着输出 10 个文字 token</li>
+      <li>如果决策是"等待/沉默" → 微轮次立刻结束</li>
+      <li>每个微轮次以 <code>&lt;EOS&gt;</code> 结尾</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CONTROL TOKENS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--ctrl-bg); color:var(--ctrl);">7 个控制 token：LLM 的"身体语言"</h2>
+
+<p style="margin:0 0 16px; font-size:15px;">
+  这是整个系统最核心的设计。传统 LLM 只输出文字，DuplexCascade 的 LLM 还输出<strong>行为指令</strong>——告诉系统该做什么。
+</p>
+
+<table class="token-table">
+  <thead>
+    <tr>
+      <th style="width:14%;">谁的</th>
+      <th style="width:30%;">Token</th>
+      <th style="width:56%;">含义 · 系统行为</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="background:#f1f5f9;">
+      <td><span class="tag" style="background:#dbeafe; color:var(--llm);">用户侧</span></td>
+      <td><span class="token-name">&lt;no voice&gt;</span></td>
+      <td>0.6s 内 ASR 没识别到任何文字。表示用户<strong>沉默</strong>（可能在听、在想、或说完了）。</td>
+    </tr>
+    <tr>
+      <td rowspan="6"><span class="tag tag-ctrl">系统侧</span></td>
+      <td><span class="token-name">&lt;user is speaking&gt;</span></td>
+      <td>用户还在说话，系统<strong>保持沉默</strong>，微轮次立刻结束。相当于"我在听，你继续说"。</td>
+    </tr>
+    <tr>
+      <td><span class="token-name">&lt;user finish speaking&gt;</span></td>
+      <td>用户说完了，系统<strong>开始回复</strong>。后面紧跟回复文本。<strong>训练时权重 ×10</strong>（最重要的时机判断）。</td>
+    </tr>
+    <tr>
+      <td><span class="token-name">&lt;user is interrupting&gt;</span></td>
+      <td>用户在系统说话时插嘴，系统<strong>立刻停止</strong>当前回复。<strong>训练时权重 ×5</strong>。</td>
+    </tr>
+    <tr>
+      <td><span class="token-name">&lt;user backchannel&gt;</span></td>
+      <td>用户在系统说话时发出附和（"嗯""对"），系统<strong>忽略它，继续说</strong>。不被当成打断。</td>
+    </tr>
+    <tr>
+      <td><span class="token-name">&lt;user is thinking&gt;</span></td>
+      <td>系统回复结束后用户沉默。系统判断用户<strong>在思考</strong>，不急着追问，安静等待。</td>
+    </tr>
+    <tr>
+      <td><span class="token-name">&lt;system backchannel&gt;</span></td>
+      <td>在用户说话过程中，系统发出一个简短的"嗯"表示在听。播放<strong>预合成的短音频</strong>，不打断用户。</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note note-key">
+  <strong>为什么区分"打断"和"附和"很重要？</strong>
+  传统 VAD 只能检测"有没有声音"，无法区分用户说的"嗯"（附和，系统应该继续说）和"等一下！"（打断，系统应该停下来）。
+  DuplexCascade 让 LLM 根据<strong>语义上下文</strong>来判断，准确率远高于 VAD。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SCENARIOS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--tts-bg); color:var(--tts);">四种典型场景的处理方式</h2>
+
+<div class="two-col">
+  <div class="scenario" style="background:var(--micro-bg); border:1px solid #6ee7b7;">
+    <div class="scenario-title" style="color:var(--micro);">场景 1：正常对话</div>
+    <div class="scenario-flow">
+      <div class="step">1. 用户开始说话 → ASR 出文字</div>
+      <div class="step">2. LLM 收到微轮次 → 输出 <code>&lt;user is speaking&gt;</code> × N 次</div>
+      <div class="step">3. 用户停顿 → ASR 输出 <code>&lt;no voice&gt;</code></div>
+      <div class="step">4. LLM 判断说完了 → 输出 <code>&lt;user finish speaking&gt;</code> + 回复文字</div>
+      <div class="step">5. 回复文字 → 流式 TTS → 用户听到回复</div>
+    </div>
+  </div>
+
+  <div class="scenario" style="background:var(--danger-bg); border:1px solid #fca5a5;">
+    <div class="scenario-title" style="color:var(--danger);">场景 2：用户打断</div>
+    <div class="scenario-flow">
+      <div class="step">1. 系统正在回复（TTS 在播放）</div>
+      <div class="step">2. 用户开口说话 → ASR 出文字</div>
+      <div class="step">3. LLM 收到用户微轮次 → 判断不是附和</div>
+      <div class="step">4. 输出 <code>&lt;user is interrupting&gt;</code></div>
+      <div class="step">5. 系统立刻<strong>停止 TTS 播放</strong>，切换到听</div>
+    </div>
+  </div>
+
+  <div class="scenario" style="background:var(--llm-bg); border:1px solid #93c5fd;">
+    <div class="scenario-title" style="color:var(--llm);">场景 3：用户附和（不是打断）</div>
+    <div class="scenario-flow">
+      <div class="step">1. 系统正在回复中</div>
+      <div class="step">2. 用户说了"嗯"/"对" → ASR 出短文字</div>
+      <div class="step">3. LLM 根据上下文判断这是附和</div>
+      <div class="step">4. 输出 <code>&lt;user backchannel&gt;</code></div>
+      <div class="step">5. 系统<strong>继续说</strong>，不停下来</div>
+    </div>
+  </div>
+
+  <div class="scenario" style="background:var(--ctrl-bg); border:1px solid #c4b5fd;">
+    <div class="scenario-title" style="color:var(--ctrl);">场景 4：系统附和</div>
+    <div class="scenario-flow">
+      <div class="step">1. 用户正在讲一个长故事</div>
+      <div class="step">2. 到了一个语义停顿点（句子边界）</div>
+      <div class="step">3. LLM 输出 <code>&lt;system backchannel&gt;</code></div>
+      <div class="step">4. 播放预录制的"嗯嗯"音频</div>
+      <div class="step">5. 用户<strong>感知到系统在听</strong>，继续说</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- TRAINING -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--llm-bg); color:var(--llm);">训练：文本-only 微调</h2>
+
+<div class="fig">
+  <img src="assets/duplex-cascade/fig2-training.png" alt="DuplexCascade 训练数据构建" />
+  <div class="fig-caption">论文 Figure 2：训练数据构建过程。把普通文本对话拆成微轮次序列，随机插入打断/附和/沉默/思考场景，训练 LLM 在每个微轮次输出正确的控制 token。</div>
+</div>
+
+<div class="two-col" style="margin-top:16px;">
+  <div class="card">
+    <h3>训练策略</h3>
+    <ul>
+      <li><strong>数据</strong>：50,000 条 UltraChat 文本对话</li>
+      <li><strong>拆分</strong>：长轮次 → 微轮次序列</li>
+      <li><strong>注入</strong>：随机插入打断（30%）、附和（1%）、沉默（10%）、思考（1-20 轮）</li>
+      <li><strong>标注</strong>：每个系统微轮次前标注正确的控制 token</li>
+      <li><strong>训练目标</strong>：只在系统微轮次上做 next-token prediction</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>模型配置</h3>
+    <ul>
+      <li><strong>基座</strong>：Qwen2-7B-Instruct</li>
+      <li><strong>方法</strong>：LoRA（rank=16, α=32）</li>
+      <li><strong>训练</strong>：5,000 步，batch=32</li>
+      <li><strong>硬件</strong>：8× H100，<strong>5 小时</strong></li>
+      <li><strong>关键</strong>：纯文本训练，不碰音频</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-insight" style="margin-top:12px;">
+  <strong>为什么只用文本训练？</strong>
+  端到端模型（如 Moshi）直接在音频 token 上训练，但跨模态对齐会严重损害 LLM 的推理能力。
+  DuplexCascade 只在文本上微调，<strong>保留了 Qwen2-7B 原有的智力水平</strong>——VoiceBench 得分 65.4，而端到端的 Moshi 只有 29.5。
+</div>
+
+<div class="note note-compare">
+  <strong>控制 token 的训练权重不均等：</strong>
+  <code>&lt;user finish speaking&gt;</code> 权重 ×10（最关键——判断用户说完是最重要的时机），
+  <code>&lt;user is interrupting&gt;</code> 权重 ×5（打断处理次重要），
+  <code>&lt;system backchannel&gt;</code> 权重 ×3。
+  这种不均等反映了各控制 token 的实际重要程度。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- LATENCY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--tts-bg); color:var(--tts);">Δt 选择：0.6 秒的权衡</h2>
+
+<div class="fig">
+  <img src="assets/duplex-cascade/fig3-latency.png" alt="微轮次时长对延迟和准确率的影响" />
+  <div class="fig-caption">论文 Figure 3：微轮次间隔 Δt 对轮次切换准确率和延迟的影响。Δt 越小 → 延迟越低但准确率下降（信息太碎片）；Δt 越大 → 准确率先升后降，延迟持续增大。</div>
+</div>
+
+<div class="three-col" style="margin-top:16px;">
+  <div class="card" style="text-align:center;">
+    <h3 style="color:var(--danger);">Δt = 0.3s</h3>
+    <p style="font-size:14px;">延迟极低<br />但 ASR 碎片太多<br />LLM 判断不准</p>
+  </div>
+  <div class="card" style="text-align:center; border-color:var(--micro); border-width:2px;">
+    <h3 style="color:var(--micro);">Δt = 0.6s ✓</h3>
+    <p style="font-size:14px;"><strong>实际选择</strong><br />延迟可接受<br />准确率足够高</p>
+  </div>
+  <div class="card" style="text-align:center;">
+    <h3 style="color:var(--tts);">Δt = 1.2s</h3>
+    <p style="font-size:14px;">准确率最高<br />但延迟翻倍<br />体验不自然</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- RESULTS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:var(--micro-bg); color:var(--micro);">效果：开源 SOTA</h2>
+
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--micro);">0.858</div>
+    <div class="metric-label">轮次切换准确率<br /><small>（开源第一）</small></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--llm);">65.4</div>
+    <div class="metric-label">VoiceBench 综合<br /><small>（对话智力）</small></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--tts);">5h</div>
+    <div class="metric-label">训练时间<br /><small>（8×H100）</small></div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--ctrl);">7</div>
+    <div class="metric-label">控制 token 数<br /><small>（覆盖全场景）</small></div>
+  </div>
+</div>
+
+<div style="overflow-x:auto; margin:16px 0;">
+  <table class="token-table">
+    <thead>
+      <tr>
+        <th style="width:28%;">系统</th>
+        <th style="width:15%;">类型</th>
+        <th style="width:20%;">轮次切换准确率</th>
+        <th style="width:17%;">VoiceBench</th>
+        <th style="width:20%;">特点</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="background:var(--micro-bg);">
+        <td><strong>DuplexCascade</strong></td>
+        <td>级联 · 无 VAD</td>
+        <td><strong>0.858</strong></td>
+        <td><strong>65.4</strong></td>
+        <td>全双工 + 高智力</td>
+      </tr>
+      <tr>
+        <td>PersonaPlex</td>
+        <td>端到端 · 无 VAD</td>
+        <td>0.759</td>
+        <td>30.6</td>
+        <td>全双工但智力低</td>
+      </tr>
+      <tr>
+        <td>Freeze-Omni</td>
+        <td>级联 · 有 VAD</td>
+        <td>0.489</td>
+        <td>55.2</td>
+        <td>半双工 · 抢话问题</td>
+      </tr>
+      <tr>
+        <td>Moshi</td>
+        <td>端到端 · 无 VAD</td>
+        <td>0.395</td>
+        <td>29.5</td>
+        <td>全双工 · 智力差</td>
+      </tr>
+      <tr>
+        <td style="color:var(--muted);">Qwen2-7B 裸管线</td>
+        <td style="color:var(--muted);">级联 · 有 VAD</td>
+        <td style="color:var(--muted);">—</td>
+        <td style="color:var(--muted);">69.7</td>
+        <td style="color:var(--muted);">智力上限参考</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="note note-compare">
+  <strong>核心权衡：</strong>端到端模型（Moshi、PersonaPlex）能做全双工但智力大幅下降；传统级联有智力但只能半双工且 VAD 不稳定。
+  DuplexCascade 通过"级联 + 控制 token"<strong>同时拿到两边的优势</strong>：全双工能力接近端到端，智力保持接近裸管线。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPARISON WITH OTHERS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:#fefce8; color:#92400e;">与其他调研项目的对比</h2>
+
+<div style="overflow-x:auto; margin:16px 0;">
+  <table class="token-table">
+    <thead>
+      <tr>
+        <th style="width:18%;">维度</th>
+        <th style="width:27%;">DuplexCascade</th>
+        <th style="width:27%;">VoiceAgentRAG</th>
+        <th style="width:28%;">Enterprise Voice Agent</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-weight:600;">双工模式</td>
+        <td><span class="tag" style="background:#d1fae5; color:#059669;">全双工</span> 双方可同时说</td>
+        <td><span class="tag" style="background:#fef3c7; color:#92400e;">半双工</span> 一问一答</td>
+        <td><span class="tag" style="background:#fef3c7; color:#92400e;">半双工</span> 一问一答</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;">VAD</td>
+        <td><strong>不需要</strong>——LLM 自己判断</td>
+        <td>依赖外部 VAD</td>
+        <td>依赖外部 VAD</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;">打断处理</td>
+        <td>控制 token 区分打断 vs 附和</td>
+        <td>无专门机制</td>
+        <td>Chapter 05 有基础打断</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;">并行思考</td>
+        <td>LLM 边听边想（每 0.6s）</td>
+        <td>Fast/Slow 并行 + 语义缓存</td>
+        <td>无（纯串行）</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;">延迟优化</td>
+        <td>微轮次 + 流式 ASR/TTS</td>
+        <td>缓存命中跳过检索</td>
+        <td>断句流水线重叠</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;">训练成本</td>
+        <td>LoRA 5h / 8×H100</td>
+        <td>无额外训练</td>
+        <td>无额外训练</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- MOODCOCO RELEVANCE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider" />
+
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的启发</h2>
+
+<div class="note note-insight" style="font-size:15px;">
+  <strong>最相关的点：</strong>moodcoco 是情绪陪伴场景，用户经常在倾诉中途停顿（思考、哽咽），
+  传统 VAD 会误判为"说完了"导致系统抢话——这在心理支持中是灾难性的体验。
+  DuplexCascade 的 <code>&lt;user is thinking&gt;</code> 正好解决这个问题。
+</div>
+
+<div class="two-col" style="margin-top:12px;">
+  <div class="card">
+    <h3>可以借鉴的</h3>
+    <ul>
+      <li><strong>控制 token 思路</strong>：给 Slow Agent 增加"用户在思考"/"用户在哭泣"等判断，避免在用户脆弱时刻抢话</li>
+      <li><strong><code>&lt;system backchannel&gt;</code></strong>：情绪陪伴中"嗯""我在听"的附和极其重要，让用户感觉被倾听</li>
+      <li><strong>区分打断 vs 附和</strong>：用户说"嗯"时不该停止回复，说"等一下"时应该停——这个区分在心理对话中同样关键</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>需要注意的代价</h3>
+    <ul>
+      <li><strong>需要 LoRA 微调</strong>：不能直接用 API 调用的商业模型，需要自己跑训练</li>
+      <li><strong>ASR/TTS 必须全流式</strong>：对基础设施要求更高</li>
+      <li><strong>系统复杂度</strong>：三个流式服务 + 微轮次调度，运维比简单管线复杂得多</li>
+      <li><strong>Δt 需要调优</strong>：情绪对话的停顿模式和普通对话不同，0.6s 不一定最优</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-danger" style="margin-top:12px;">
+  <strong>最大风险：</strong>DuplexCascade 目前的训练数据（UltraChat）全是普通对话。
+  情绪场景的轮次切换模式（长停顿、哽咽、自言自语）完全不同，直接用大概率表现差。
+  如果 moodcoco 要用这个思路，需要在情绪对话数据上重新做微轮次标注和 LoRA 训练。
+</div>
+
+<p style="margin-top:24px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于论文 arXiv:2603.09180 + 源码分析，2026-05-11 —
+</p>
+
+</body>
+</html>

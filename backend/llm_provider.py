@@ -81,8 +81,34 @@ def _create_openai_model(model_name: str, *, settings: dict | None = None):
     )
 
 
+def _is_doubao_fast() -> bool:
+    """True when DOUBAO_MODEL is the effective fast model (no explicit OPENAI_FAST_MODEL)."""
+    return (
+        not os.environ.get("OPENAI_FAST_MODEL")
+        and bool(os.environ.get("DOUBAO_MODEL"))
+        and bool(os.environ.get("DOUBAO_BASE_URL"))
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_doubao_provider():
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    return OpenAIProvider(
+        base_url=os.environ["DOUBAO_BASE_URL"],
+        api_key=os.environ.get("DOUBAO_API_KEY", ""),
+    )
+
+
 def create_fast_model():
     """创建 Fast Agent 使用的 OpenAI 兼容 model 实例。"""
+    if _is_doubao_fast():
+        from pydantic_ai.models.openai import OpenAIChatModel
+
+        return OpenAIChatModel(
+            model_name=get_fast_model_name(),
+            provider=_get_doubao_provider(),
+        )
     return _create_openai_model(get_fast_model_name(), settings=_fast_model_settings())
 
 

@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VoiceAgentRAG 架构解析 · Salesforce Research</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --fast: #2563eb;
+      --fast-bg: #eff6ff;
+      --slow: #7c3aed;
+      --slow-bg: #f5f3ff;
+      --cache: #059669;
+      --cache-bg: #ecfdf5;
+      --event: #d97706;
+      --event-bg: #fffbeb;
+      --store: #0891b2;
+      --store-bg: #ecfeff;
+      --user: #64748b;
+      --hit: #16a34a;
+      --miss: #dc2626;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+      position: relative;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .box {
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .box-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-fast { background: #dbeafe; color: var(--fast); }
+    .tag-slow { background: #ede9fe; color: var(--slow); }
+    .tag-cache { background: #d1fae5; color: var(--cache); }
+    .tag-event { background: #fef3c7; color: #92400e; }
+    .tag-hit { background: #dcfce7; color: var(--hit); }
+    .tag-miss { background: #fee2e2; color: var(--miss); }
+    .tag-bg { background: #ede9fe; color: var(--slow); }
+
+    /* Timeline */
+    .timeline { position: relative; margin: 20px 0 40px; }
+    .tl-row {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      min-height: 48px;
+      align-items: start;
+    }
+    .tl-time {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      padding-top: 10px;
+      text-align: right;
+      padding-right: 16px;
+    }
+    .tl-content {
+      position: relative;
+      padding: 8px 0 8px 24px;
+      border-left: 3px solid var(--border);
+    }
+    .tl-content::before {
+      content: '';
+      position: absolute;
+      left: -7px; top: 14px;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      border: 2px solid white;
+    }
+    .tl-fast::before { background: var(--fast); }
+    .tl-slow::before { background: var(--slow); }
+    .tl-cache::before { background: var(--cache); }
+    .tl-user::before { background: var(--user); }
+
+    .tl-card {
+      display: inline-block;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .tl-card-fast { background: var(--fast-bg); color: var(--fast); border-left: 3px solid var(--fast); }
+    .tl-card-slow { background: var(--slow-bg); color: var(--slow); border-left: 3px solid var(--slow); }
+    .tl-card-cache { background: var(--cache-bg); color: var(--cache); border-left: 3px solid var(--cache); }
+    .tl-card-user { background: #f1f5f9; color: var(--user); border-left: 3px solid var(--user); }
+
+    .parallel-zone {
+      border: 2px dashed #10b981;
+      border-radius: 10px;
+      padding: 4px 0;
+      margin: 4px 0;
+      position: relative;
+    }
+    .parallel-zone-label {
+      position: absolute;
+      top: -11px; left: 16px;
+      background: var(--bg);
+      padding: 0 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #065f46;
+    }
+    .parallel-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      padding: 12px 14px 8px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: #f5f3ff; border-left: 3px solid var(--slow); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .src { color: var(--muted); font-size: 14px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric-value { font-size: 24px; font-weight: 700; line-height: 1.2; }
+    .metric-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* Glossary */
+    .glossary {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 24px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    .glossary dt {
+      font-weight: 600;
+      color: var(--ink);
+      grid-column: 1;
+    }
+    .glossary dd {
+      color: var(--muted);
+      grid-column: 2;
+    }
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term {
+      flex-shrink: 0;
+      width: 200px;
+      font-weight: 600;
+    }
+    .gl-def { color: var(--muted); }
+
+    .term {
+      border-bottom: 1px dashed #94a3b8;
+      cursor: help;
+    }
+  </style>
+</head>
+<body>
+
+<h1>VoiceAgentRAG 架构解析 <small>— Salesforce Research, 2026.03</small></h1>
+<p class="subtitle">源码：github.com/SalesforceAIResearch/VoiceAgentRAG · 论文：arxiv.org/abs/2603.02206</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- GLOSSARY -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:#f1f5f9; color:var(--user);">术语速查</h2>
+
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">Embedding（向量化）</div>
+    <div class="gl-def">把一句话变成一串数字（向量），这样计算机可以用数学方法比较两句话的"意思有多接近"。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">语义缓存（SemanticCache）</div>
+    <div class="gl-def">一个"临时记忆区"，Slow 提前把可能用到的资料存在这里，Fast 需要的时候直接拿，不用重新去搜。用"意思相近"（而非完全匹配）来查找。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">向量数据库（VectorStore）</div>
+    <div class="gl-def">所有文档的"仓库"。搜索一次大约要 110ms。语义缓存就是为了避免每次都来这里搜。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">FAISS</div>
+    <div class="gl-def">Facebook 开源的向量搜索引擎。在这个项目里既用于向量数据库，也用于语义缓存内部的快速查找。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">缓存命中 / 未命中</div>
+    <div class="gl-def"><strong>命中</strong>：语义缓存里有需要的资料，直接拿（&lt;1ms）。<strong>未命中</strong>：没有，得去向量数据库搜（~110ms），慢 300 多倍。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTL（过期时间）</div>
+    <div class="gl-def">缓存条目的"保质期"，默认 300 秒。过期自动丢弃，防止旧资料干扰。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LRU（最久没用的先丢）</div>
+    <div class="gl-def">缓存满了时的淘汰策略：把最长时间没被读取过的条目删掉，给新内容腾位置。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">事件总线（ConversationStream）</div>
+    <div class="gl-def">一条"广播频道"。发布方丢消息进去，所有订阅者都能收到。Fast 和 Slow 通过它感知对话进展，但彼此不直接通信。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">STT / TTS</div>
+    <div class="gl-def">STT = 语音转文字（Speech-to-Text）。TTS = 文字转语音（Text-to-Speech）。</div>
+  </div>
+  <div class="gl-item" style="border-bottom:none;">
+    <div class="gl-term">RAG（检索增强生成）</div>
+    <div class="gl-def">先从资料库搜出相关内容，再连同用户问题一起喂给 LLM，让回答有据可依而非纯靠"脑补"。</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- KEY METRICS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--hit)">75%</div>
+    <div class="metric-label">缓存命中率</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--fast)">316x</div>
+    <div class="metric-label">检索加速 (110ms→0.35ms)</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--slow)">&lt;1ms</div>
+    <div class="metric-label">语义缓存查询</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--event)">86%</div>
+    <div class="metric-label">聊了几轮后的命中率</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- CORE IDEA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--slow-bg); color:var(--slow);">核心思想：趁用户还在说话，偷偷去备课</h2>
+
+<div class="note note-key">
+  <strong>一句话总结：</strong>Slow Thinker 是一个<strong>永远在后台跑的助手</strong>。它一边听对话，一边用 LLM 猜"用户接下来可能聊什么"，然后提前把相关资料找出来，放到语义缓存里。等用户真的开口时，Fast Talker 直接从缓存拿资料（不到 1 毫秒），不需要临时去搜索。<br><br>
+  <strong>类比：</strong>就像一个厉害的助教——老师在讲台上答学生问题（Fast），助教在后面悄悄翻书，把下一个可能被问到的内容提前夹好书签（Slow）。老师需要引用的时候直接翻到那一页，不用现翻。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPONENT OVERVIEW -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:var(--event-bg); color:#92400e;">组件总览</h2>
+
+<div class="overview">
+  <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+
+    <!-- Column 1: Input + Event Bus -->
+    <div>
+      <div class="box" style="background:#f1f5f9; border:2px solid #94a3b8; text-align:center; margin-bottom:14px;">
+        <div class="box-title">🎤 用户</div>
+        说话 → 语音转文字 → 得到文本
+      </div>
+      <div class="box" style="background:var(--event-bg); border:2px solid var(--event); text-align:center;">
+        <div class="box-title" style="color:var(--event);">📢 事件总线</div>
+        <span style="font-size:14px;">对话里发生的事都广播到这里</span><br><br>
+        <span class="tag tag-event">用户说了一句话</span><br>
+        <span class="tag tag-event">AI 回复了</span><br>
+        <span class="tag tag-event">用户沉默了</span><br>
+        <span class="tag tag-event">话题变了</span><br>
+        <span class="tag tag-event">缓存没命中，紧急补货</span>
+      </div>
+    </div>
+
+    <!-- Column 2: Two Agents -->
+    <div>
+      <div class="box" style="background:var(--fast-bg); border:2px solid var(--fast); margin-bottom:14px;">
+        <div class="box-title" style="color:var(--fast);">⚡ Fast Talker（快嘴）</div>
+        <span class="tag tag-fast">前台 · 用户问一句它答一句</span><br><br>
+        1. 把用户的话变成向量<br>
+        2. 去语义缓存里找相关资料（&lt;1ms）<br>
+        3. <span class="tag tag-hit">找到了</span> → 带着资料让 LLM 生成回复<br>
+        4. <span class="tag tag-miss">没找到</span> → 去向量数据库搜（慢，但保底）<br>
+        5. 把回复流式说给用户
+      </div>
+      <div class="box" style="background:var(--slow-bg); border:2px solid var(--slow);">
+        <div class="box-title" style="color:var(--slow);">🔮 Slow Thinker（备课员）</div>
+        <span class="tag tag-bg">后台 · 永远在跑的循环</span><br><br>
+        订阅事件总线，有动静就干活：<br><br>
+        1. 听到用户说话 → 搜当前话题的资料<br>
+        2. 让 LLM 猜用户接下来可能聊什么<br>
+        3. 同时搜索所有猜到的话题（<strong>并行</strong>）<br>
+        4. 搜到的资料全部存入语义缓存
+      </div>
+    </div>
+
+    <!-- Column 3: Storage -->
+    <div>
+      <div class="box" style="background:var(--cache-bg); border:2px solid var(--cache); margin-bottom:14px; text-align:center;">
+        <div class="box-title" style="color:var(--cache);">🧊 语义缓存</div>
+        临时记忆区（内存中）<br>
+        按"意思相近"查找，&lt;1ms<br>
+        有保质期，过期自动清<br><br>
+        <strong>Slow 往里存 → Fast 从里取</strong><br>
+        <span style="font-size:14px; color:var(--muted);">两个 Agent 之间<br>唯一的通信桥梁</span>
+      </div>
+      <div class="box" style="background:var(--store-bg); border:2px solid var(--store); text-align:center;">
+        <div class="box-title" style="color:var(--store);">📦 向量数据库</div>
+        所有文档的完整仓库<br>
+        搜索较慢（~110ms）<br><br>
+        Slow 从这里预取<br>
+        Fast 搜不到缓存时来这里保底
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- PARALLEL TIMELINE -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<h2 style="background:#d1fae5; color:#065f46;">并行时序：一轮对话里到底发生了什么</h2>
+
+<div class="note note-insight">
+  <strong>关键洞察：</strong>Slow 不是"被 Fast 调用"的——它是一个<strong>自己永远在跑的后台循环</strong>，通过事件总线感知对话进展。Fast 也不知道 Slow 的存在——它只关心语义缓存里有没有资料。两者通过缓存<strong>间接协作，彼此解耦</strong>。
+</div>
+
+<div class="overview">
+  <div class="overview-title">第 N 轮对话时序（用户问了一个问题）</div>
+
+  <div class="timeline">
+    <!-- T0: User speaks -->
+    <div class="tl-row">
+      <div class="tl-time">T₀</div>
+      <div class="tl-content tl-user">
+        <div class="tl-card tl-card-user">
+          <strong>🎤 用户说话</strong> → 语音转文字 → 事件总线广播「用户说了一句话」
+        </div>
+      </div>
+    </div>
+
+    <!-- T1: PARALLEL ZONE -->
+    <div class="tl-row">
+      <div class="tl-time">T₁</div>
+      <div class="tl-content tl-fast" style="border-left-color:#10b981; border-left-width:3px;">
+        <div class="parallel-zone">
+          <div class="parallel-zone-label">⚡ 同时启动，完全并行</div>
+          <div class="parallel-inner">
+            <!-- Left: Fast Talker -->
+            <div>
+              <div class="tl-card tl-card-fast" style="width:100%;">
+                <strong>⚡ Fast（快嘴）开始响应</strong><br><br>
+                ① 把用户的话变成向量（~20ms）<br>
+                ② 去语义缓存里找（&lt;1ms）<br><br>
+                <span class="tag tag-hit">找到了（75% 的情况）</span><br>
+                → 拿到 Slow 上轮预存的资料<br>
+                → 让 LLM 生成回复 → 说给用户<br><br>
+                <span class="tag tag-miss">没找到（25% 的情况）</span><br>
+                → 保底：去向量数据库搜（~110ms）<br>
+                → 生成回复 + 通知 Slow「紧急补货」
+              </div>
+            </div>
+            <!-- Right: Slow Thinker -->
+            <div>
+              <div class="tl-card tl-card-slow" style="width:100%;">
+                <strong>🔮 Slow（备课员）收到事件</strong><br><br>
+                ① 搜索当前话题的资料 → 存入缓存<br><br>
+                ② 让 LLM 猜后续话题（~500ms）：<br>
+                &nbsp;&nbsp;• "企业版定价方案"<br>
+                &nbsp;&nbsp;• "API 认证怎么配"<br>
+                &nbsp;&nbsp;• "Slack 集成步骤"<br><br>
+                ③ <strong>同时搜索</strong>所有猜到的话题：
+                <div style="margin:6px 0; padding:6px 10px; background:rgba(255,255,255,0.5); border-radius:4px; font-size:14px;">
+                  3 个预测 → 3 路并行检索<br>
+                  全部结果 → 存入语义缓存
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- T2: Fast returns -->
+    <div class="tl-row">
+      <div class="tl-time">T₂<br><span style="font-size:14px; color:var(--fast);">~200ms</span></div>
+      <div class="tl-content tl-fast">
+        <div class="tl-card tl-card-fast">
+          <strong>⚡ Fast 已经回复用户了</strong> → 用户听到了语音<br>
+          事件总线广播「AI 回复了」
+        </div>
+      </div>
+    </div>
+
+    <!-- T3: Slow still working -->
+    <div class="tl-row">
+      <div class="tl-time">T₃<br><span style="font-size:14px; color:var(--slow);">~1-2s</span></div>
+      <div class="tl-content tl-slow">
+        <div class="tl-card tl-card-slow">
+          <strong>🔮 Slow 在后台默默完成了备课</strong><br>
+          语义缓存里已经存好了 3~5 个预测话题的相关资料<br>
+          <span style="color:var(--cache);">→ 用户下一轮问到这些话题时，Fast 直接命中缓存，秒回</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- T4: Next turn -->
+    <div class="tl-row">
+      <div class="tl-time">下一轮</div>
+      <div class="tl-content tl-cache">
+        <div class="tl-card tl-card-cache">
+          <strong>用户果然问了 Slow 猜到的话题</strong><br>
+          Fast → 查缓存 → <span class="tag tag-hit">命中！</span> → <strong>0.35ms</strong> 拿到资料 → 极速回复<br>
+          <span style="color:var(--muted);">比正常检索快 316 倍</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLOW THINKER EVENT HANDLING -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+<h2 style="background:var(--slow-bg); color:var(--slow);">Slow（备课员）在什么时候干什么活</h2>
+
+<p style="font-size:15px; color:var(--muted); margin:8px 0 16px;">Slow 订阅事件总线，根据不同事件做不同的事：</p>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:0 0 16px;">
+  <div class="card">
+    <h3 style="color:var(--event);">📨 用户说了一句话</h3>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:8px;">每次用户开口就触发 — 最核心的事件</p>
+    <ul>
+      <li>搜索当前话题的资料 → 存入缓存</li>
+      <li>让 LLM 预测 3~5 个后续话题</li>
+      <li>并行搜索所有预测话题</li>
+      <li>搜到的资料全部存入语义缓存</li>
+    </ul>
+    <p class="src" style="margin-top:8px;">slow_thinker.py:128-146</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--event);">🔇 用户沉默了</h3>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:8px;">用户停了一会儿没说话时触发</p>
+    <ul>
+      <li>回顾最近 4 轮对话</li>
+      <li>让 LLM 提取关键主题词</li>
+      <li>围绕当前话题做更广泛的资料搜索</li>
+      <li>趁沉默的空档把缓存填得更满</li>
+    </ul>
+    <p class="src" style="margin-top:8px;">slow_thinker.py:148-157</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--event);">🔄 话题变了</h3>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:8px;">检测到用户换了个话题时触发</p>
+    <ul>
+      <li>清除旧话题的过期缓存</li>
+      <li>为新话题预先搜索资料</li>
+      <li>防止旧资料干扰新回复</li>
+    </ul>
+    <p class="src" style="margin-top:8px;">slow_thinker.py:159-165</p>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--miss);">🚨 缓存没命中，紧急补货</h3>
+    <p style="font-size:14px; color:var(--muted); margin-bottom:8px;">Fast 发现缓存里没有需要的资料时触发</p>
+    <ul>
+      <li>Fast 自己先去向量数据库保底搜索</li>
+      <li>同时通知 Slow「这个话题缺资料」</li>
+      <li>Slow 立即搜索 <strong>双倍</strong>数量的文档</li>
+      <li>补进缓存，防止下一轮再扑空</li>
+    </ul>
+    <p class="src" style="margin-top:8px;">slow_thinker.py:167-170</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SEMANTIC CACHE DETAIL -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+<h2 style="background:var(--cache-bg); color:var(--cache);">语义缓存：Fast 和 Slow 之间唯一的桥梁</h2>
+
+<div class="note note-key">
+  <strong>一个精妙的设计：</strong>资料存入缓存时，用的是<strong>资料本身的向量</strong>（而不是"是谁搜到它的"那个查询的向量）。<br><br>
+  <strong>为什么这样做？</strong>假设 Slow 猜"用户可能问定价"，搜出了一篇"企业版定价文档"。但用户实际问的是"大客户怎么买"。如果用"定价"这个查询的向量做 key，"大客户怎么买"可能搜不到它。但如果用文档本身的向量做 key，只要文档内容和用户问题意思相近（"企业版定价"和"大客户怎么买"语义接近），就能命中。
+</div>
+
+<div class="two-col">
+  <div class="card">
+    <h3 style="color:var(--slow);">🔮 写入方（Slow 备课员）</h3>
+    <ul>
+      <li>从向量数据库搜到文档</li>
+      <li>用<strong>文档自身的向量</strong>作为缓存 key 存入</li>
+      <li>保质期默认 5 分钟，过期自动清</li>
+      <li>内容太相似的自动合并（相似度 &gt; 95% 视为同一条）</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3 style="color:var(--fast);">⚡ 读取方（Fast 快嘴）</h3>
+    <ul>
+      <li>把用户的问题变成向量</li>
+      <li>在缓存里按"意思相近"搜索，取最相关的 5 条</li>
+      <li>搜索耗时不到 1 毫秒</li>
+      <li>相似度 &gt; 0.75 才算命中，低于此视为"没找到"</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- COMPARISON WITH MOODCOCO -->
+<!-- ═══════════════════════════════════════════════════════ -->
+
+<hr class="divider">
+<h2 style="background:#fefce8; color:#92400e;">与 moodcoco 快慢思考的对比</h2>
+
+<div class="overview" style="padding:20px;">
+<table style="width:100%; border-collapse:collapse; font-size:15px;">
+  <thead>
+    <tr style="border-bottom:2px solid var(--border);">
+      <th style="text-align:left; padding:10px; width:20%;">对比维度</th>
+      <th style="text-align:left; padding:10px; width:40%; color:var(--slow);">VoiceAgentRAG</th>
+      <th style="text-align:left; padding:10px; width:40%; color:var(--fast);">moodcoco</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:10px; font-weight:600;">Slow 在做什么</td>
+      <td style="padding:10px;">猜用户下一步问什么 → 提前把资料搜好</td>
+      <td style="padding:10px;">理解用户情绪 → 选合适的心理学 skill → 注入上下文</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:10px; font-weight:600;">Fast 和 Slow 怎么通信</td>
+      <td style="padding:10px;">通过语义缓存（间接，互不知道对方存在）</td>
+      <td style="padding:10px;">共享同一个 Python 对象（直接，Slow 改了 Fast 立刻能看到）</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:10px; font-weight:600;">Slow 活多久</td>
+      <td style="padding:10px;">整个会话期间永远在跑</td>
+      <td style="padding:10px;">用户每说一句话创建一次，说完就结束</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:10px; font-weight:600;">怎么实现并行</td>
+      <td style="padding:10px;">事件驱动：Slow 订阅事件总线，有事就干</td>
+      <td style="padding:10px;">同时创建两个异步任务</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f0f0f0;">
+      <td style="padding:10px; font-weight:600;">Slow 的结果什么时候生效</td>
+      <td style="padding:10px;">上一轮预存 → 这一轮缓存命中（75% 概率）</td>
+      <td style="padding:10px;">如果 Slow 比 Fast 快 → 本轮就能用上；否则下一轮</td>
+    </tr>
+    <tr>
+      <td style="padding:10px; font-weight:600;">Fast 是什么形态</td>
+      <td style="padding:10px;">查缓存 → 调一次 LLM → 完事</td>
+      <td style="padding:10px;">Agent 循环：LLM → 调工具 → LLM → 调工具 → … 直到它自己决定停</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<div class="note note-compare">
+  <strong>核心差异：</strong><br><br>
+  VoiceAgentRAG 的 Slow 是<strong>「预测未来」</strong>——猜用户接下来可能聊什么，提前备好资料。<br>
+  moodcoco 的 Slow 是<strong>「理解当下」</strong>——理解用户现在的情绪状态，选择合适的心理学策略。<br><br>
+  两种模式可以结合：Slow 既理解当下（选 skill 注入本轮），又预测未来（预加载下一轮可能需要的 skill）。
+</div>
+
+</body>
+</html>

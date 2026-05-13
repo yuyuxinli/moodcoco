@@ -1,0 +1,897 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CAMI 论文解读 — 基于状态推断与话题探索的 MI 咨询 Agent</title>
+  <style>
+    :root {
+      --paper: #fafaf9;
+      --ink: #1a1a1a;
+      --muted: #6b7280;
+      --line: #e5e5e4;
+      --panel: #ffffff;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --green: #059669;
+      --green-light: #ecfdf5;
+      --orange: #d97706;
+      --orange-light: #fffbeb;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --purple: #7c3aed;
+      --purple-light: #f5f3ff;
+      --blue: #2563eb;
+      --blue-light: #eff6ff;
+      --teal: #0d9488;
+      --teal-light: #f0fdfa;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 24px rgba(0,0,0,.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,.08), 0 20px 60px rgba(0,0,0,.06);
+      --radius: 10px;
+      --max: 1100px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--paper);
+      color: var(--ink);
+      font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .wrap { width: min(var(--max), calc(100% - 40px)); margin: 0 auto; }
+
+    /* --- Top Bar --- */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(250,250,249,.88);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+    .topbar-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      min-height: 54px; gap: 16px;
+    }
+    .topbar-brand {
+      font-weight: 700; font-size: 14px; letter-spacing: -.01em;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .topbar-dot {
+      width: 22px; height: 22px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+    }
+    .topbar-nav { display: flex; gap: 6px; flex-wrap: wrap; }
+    .topbar-nav a {
+      font-size: 12px; color: var(--muted); text-decoration: none;
+      padding: 4px 10px; border-radius: 6px; transition: .15s;
+    }
+    .topbar-nav a:hover { background: var(--accent-light); color: var(--accent); }
+
+    /* --- Hero --- */
+    .hero {
+      padding: 64px 0 48px;
+      border-bottom: 1px solid var(--line);
+    }
+    .hero-badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      color: var(--accent); background: var(--accent-light);
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 16px;
+      letter-spacing: .04em;
+    }
+    .hero h1 {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 800;
+      line-height: 1.25; letter-spacing: -.02em; margin-bottom: 12px;
+    }
+    .hero-sub {
+      font-size: 16px; color: var(--muted); max-width: 700px; line-height: 1.6;
+    }
+    .hero-meta {
+      margin-top: 20px; display: flex; flex-wrap: wrap; gap: 16px;
+      font-size: 12px; color: var(--muted);
+    }
+    .hero-meta span { display: flex; align-items: center; gap: 4px; }
+
+    /* --- Section --- */
+    section { padding: 48px 0; border-bottom: 1px solid var(--line); }
+    section:last-of-type { border-bottom: none; }
+    .section-tag {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      letter-spacing: .06em; text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    section h2 {
+      font-size: 22px; font-weight: 700; margin-bottom: 16px;
+      letter-spacing: -.01em;
+    }
+    section p { margin-bottom: 12px; color: #374151; }
+    section ul, section ol { margin: 8px 0 16px 20px; color: #374151; }
+    section li { margin-bottom: 6px; }
+
+    /* --- Cards --- */
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 16px; }
+    .card h3 {
+      font-size: 16px; font-weight: 700; margin-bottom: 8px;
+    }
+    .card p { font-size: 14px; }
+
+    /* --- TLDR Box --- */
+    .tldr {
+      background: var(--accent-light); border: 1px solid #c7d2fe;
+      border-radius: var(--radius); padding: 24px 28px;
+    }
+    .tldr h2 { color: var(--accent); font-size: 16px; margin-bottom: 10px; }
+    .tldr p { font-size: 14px; color: #3730a3; line-height: 1.7; }
+    .tldr strong { color: #312e81; }
+
+    /* --- Architecture Diagram --- */
+    .arch-diagram {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 32px 24px;
+      box-shadow: var(--shadow-lg); overflow-x: auto;
+    }
+    .arch-flow {
+      display: flex; align-items: stretch; gap: 12px;
+      min-width: 900px; padding: 8px 0;
+    }
+    .arch-node {
+      flex: 1; border-radius: var(--radius); padding: 16px 14px;
+      text-align: center; position: relative;
+      display: flex; flex-direction: column; justify-content: center;
+      min-height: 120px;
+    }
+    .arch-node .letter {
+      font-size: 28px; font-weight: 900; opacity: .18;
+      position: absolute; top: 8px; right: 12px;
+    }
+    .arch-node h4 {
+      font-size: 13px; font-weight: 700; margin-bottom: 6px;
+    }
+    .arch-node p {
+      font-size: 11px; line-height: 1.5; margin: 0;
+    }
+    .arch-arrow {
+      display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 20px; flex-shrink: 0; width: 28px;
+    }
+    .node-s { background: #ede9fe; border: 1px solid #c4b5fd; color: #5b21b6; }
+    .node-t { background: #dbeafe; border: 1px solid #93c5fd; color: #1e40af; }
+    .node-a { background: #fef3c7; border: 1px solid #fcd34d; color: #92400e; }
+    .node-r { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; }
+    .node-input { background: #f3f4f6; border: 1px solid #d1d5db; color: #374151; }
+    .node-output { background: #fce7f3; border: 1px solid #f9a8d4; color: #9d174d; }
+
+    /* --- TTM Timeline --- */
+    .ttm-timeline {
+      display: flex; gap: 0; margin: 24px 0; overflow-x: auto;
+    }
+    .ttm-stage {
+      flex: 1; min-width: 180px; padding: 20px 16px;
+      position: relative; text-align: center;
+    }
+    .ttm-stage::after {
+      content: ''; position: absolute; top: 50%;
+      right: 0; width: 0; height: 0;
+      border-left: 10px solid; border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      transform: translateY(-50%);
+      z-index: 2;
+    }
+    .ttm-stage:last-child::after { display: none; }
+    .ttm-stage h4 { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+    .ttm-stage p { font-size: 11px; line-height: 1.5; margin: 0; }
+    .ttm-stage .num {
+      font-size: 24px; font-weight: 900; opacity: .15; margin-bottom: 4px;
+    }
+    .ttm-1 { background: #fef2f2; color: #991b1b; border-radius: 10px 0 0 10px; }
+    .ttm-1::after { border-left-color: #fef2f2; }
+    .ttm-2 { background: #fffbeb; color: #92400e; }
+    .ttm-2::after { border-left-color: #fffbeb; }
+    .ttm-3 { background: #ecfdf5; color: #065f46; }
+    .ttm-3::after { border-left-color: #ecfdf5; }
+    .ttm-4 { background: #eff6ff; color: #1e40af; }
+    .ttm-4::after { border-left-color: #eff6ff; }
+    .ttm-5 { background: #f5f3ff; color: #5b21b6; border-radius: 0 10px 10px 0; }
+
+    /* --- Metrics Table --- */
+    .metrics-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      background: var(--panel); border-radius: var(--radius);
+      overflow: hidden; border: 1px solid var(--line);
+    }
+    .metrics-table th {
+      background: #f9fafb; font-weight: 700; text-align: left;
+      padding: 10px 14px; border-bottom: 2px solid var(--line);
+      font-size: 12px; color: var(--muted);
+    }
+    .metrics-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--line);
+    }
+    .metrics-table tr:last-child td { border-bottom: none; }
+    .metrics-table .best { font-weight: 700; color: var(--green); }
+    .metrics-table .highlight-row { background: #f0fdf4; }
+
+    /* --- Grid --- */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .arch-flow { flex-direction: column; min-width: unset; }
+      .arch-arrow { transform: rotate(90deg); width: auto; height: 28px; }
+      .ttm-timeline { flex-direction: column; }
+      .ttm-stage { border-radius: var(--radius) !important; }
+      .ttm-stage::after { display: none; }
+    }
+
+    /* --- Tag Pills --- */
+    .pill {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 12px; margin-right: 4px;
+    }
+    .pill-green { background: #d1fae5; color: #065f46; }
+    .pill-blue { background: #dbeafe; color: #1e40af; }
+    .pill-purple { background: #ede9fe; color: #5b21b6; }
+    .pill-orange { background: #fef3c7; color: #92400e; }
+    .pill-red { background: #fee2e2; color: #991b1b; }
+
+    /* --- Topic Tree Diagram --- */
+    .topic-tree {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow);
+    }
+    .tree-level {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .tree-level:last-child { margin-bottom: 0; }
+    .tree-label {
+      font-size: 11px; font-weight: 700; color: var(--muted);
+      width: 80px; flex-shrink: 0; text-align: right;
+    }
+    .tree-nodes { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tree-node {
+      font-size: 11px; padding: 4px 10px; border-radius: 6px;
+      border: 1px solid;
+    }
+    .tree-connector {
+      width: 80px; text-align: right; color: var(--muted);
+      font-size: 18px; flex-shrink: 0;
+    }
+
+    /* --- Pipeline vertical --- */
+    .pipeline {
+      position: relative; padding-left: 32px;
+    }
+    .pipeline::before {
+      content: ''; position: absolute; left: 11px; top: 0; bottom: 0;
+      width: 2px; background: var(--line);
+    }
+    .pipe-step {
+      position: relative; margin-bottom: 20px;
+    }
+    .pipe-step:last-child { margin-bottom: 0; }
+    .pipe-dot {
+      position: absolute; left: -32px; top: 2px;
+      width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: #fff;
+    }
+    .pipe-step h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .pipe-step p { font-size: 13px; color: var(--muted); margin: 0; }
+
+    /* --- Value Card --- */
+    .value-card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px;
+      box-shadow: var(--shadow); border-left: 4px solid;
+    }
+    .value-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+    .value-card p { font-size: 13px; color: #4b5563; margin: 0; }
+
+    /* --- Limitation --- */
+    .limitation {
+      background: #fff7ed; border: 1px solid #fed7aa;
+      border-radius: var(--radius); padding: 16px 20px; margin-bottom: 12px;
+    }
+    .limitation h4 { font-size: 13px; font-weight: 700; color: #9a3412; margin-bottom: 4px; }
+    .limitation p { font-size: 13px; color: #78350f; margin: 0; }
+
+    /* --- Footer --- */
+    footer {
+      padding: 32px 0; text-align: center; color: var(--muted);
+      font-size: 12px; border-top: 1px solid var(--line);
+    }
+
+    /* --- Comparison Table --- */
+    .compare-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .compare-table th {
+      background: #f5f3ff; font-weight: 700; text-align: left;
+      padding: 10px 14px; border-bottom: 2px solid #ddd6fe;
+      font-size: 12px; color: var(--purple);
+    }
+    .compare-table td {
+      padding: 10px 14px; border-bottom: 1px solid var(--line);
+    }
+    .compare-table tr:last-child td { border-bottom: none; }
+  </style>
+</head>
+<body>
+
+<!-- ========== Top Bar ========== -->
+<div class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="topbar-brand">
+      <div class="topbar-dot"></div>
+      CAMI 论文解读
+    </div>
+    <nav class="topbar-nav">
+      <a href="#tldr">30 秒版</a>
+      <a href="#arch">STAR 架构</a>
+      <a href="#ttm">TTM 阶段</a>
+      <a href="#state">状态推断</a>
+      <a href="#topic">话题探索</a>
+      <a href="#results">实验结果</a>
+      <a href="#value">对 moodcoco</a>
+      <a href="#limits">局限</a>
+    </nav>
+  </div>
+</div>
+
+<!-- ========== Hero ========== -->
+<header class="hero">
+  <div class="wrap">
+    <div class="hero-badge">ACL 2025 &middot; arXiv 2502.02807</div>
+    <h1>CAMI: 用状态推断 + 话题探索<br>驱动动机访谈的咨询 Agent</h1>
+    <p class="hero-sub">
+      CAMI 提出 STAR 框架：先推断用户处于 TTM 哪个改变阶段，再在分层话题树中选择探索方向，最后根据阶段 + 话题选择 MI 策略生成回复。在模拟来访者上达到 53.1% 成功率，显著优于基线。
+    </p>
+    <div class="hero-meta">
+      <span>Yizhe Yang, Palakorn Achananuparp, Heyan Huang, Jing Jiang 等</span>
+      <span>|</span>
+      <span>GPT-4o / Llama-3.1-70B</span>
+      <span>|</span>
+      <span>190 sessions, 38 profiles</span>
+    </div>
+  </div>
+</header>
+
+<!-- ========== 30s TLDR ========== -->
+<section id="tldr">
+  <div class="wrap">
+    <div class="tldr">
+      <h2>30 秒版本</h2>
+      <p>
+        <strong>问题</strong>：现有 LLM 咨询 agent 不知道用户"准备好了没有"，容易在用户还没想改变时就开始给建议。<br><br>
+        <strong>方案</strong>：STAR 框架 = <strong>S</strong>tate 推断（用 TTM 判用户在哪个阶段）+ <strong>T</strong>opic 探索（59 个话题的分层树，动态导航）+ <strong>A</strong>ction 选择（根据阶段选 MI 策略）+ <strong>R</strong>esponse 生成与排序（生成 3 个候选，LLM 排序选最佳）。<br><br>
+        <strong>结果</strong>：53.1% 的模拟用户被成功唤起改变谈话（change talk），比最强基线 CoS 高 15 个百分点。状态推断准确率 93%。<br><br>
+        <strong>对 moodcoco 的意义</strong>：TTM 阶段推断可类比到 Hill 探索-领悟-行动阶段，用于动态切换 skill；话题树导航思路可用于情绪原因的结构化探索。
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== STAR Architecture ========== -->
+<section id="arch">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--accent)">CORE ARCHITECTURE</div>
+    <h2>STAR 框架：从状态到回复的四步流水线</h2>
+    <p>每轮对话，CAMI 依次执行 4 个模块。前一模块的输出喂给下一模块，形成 State &rarr; Topic &rarr; Action &rarr; Response 的级联。</p>
+
+    <div class="arch-diagram" style="margin-top:24px">
+      <div class="arch-flow">
+        <div class="arch-node node-input">
+          <div class="letter">IN</div>
+          <h4>用户消息 + 上下文</h4>
+          <p>当前轮 client 消息<br>+ 完整会话历史</p>
+        </div>
+
+        <div class="arch-arrow">&rarr;</div>
+
+        <div class="arch-node node-s">
+          <div class="letter">S</div>
+          <h4>State Inference</h4>
+          <p>Zero-shot LLM<br>推断 TTM 阶段<br>(Pre-C / C / P)</p>
+        </div>
+
+        <div class="arch-arrow">&rarr;</div>
+
+        <div class="arch-node node-t">
+          <div class="letter">T</div>
+          <h4>Topic Exploration</h4>
+          <p>导航 3 层话题树<br>Step Into / Switch / Out<br>选择当前话题</p>
+        </div>
+
+        <div class="arch-arrow">&rarr;</div>
+
+        <div class="arch-node node-a">
+          <div class="letter">A</div>
+          <h4>Action Selection</h4>
+          <p>基于阶段 + 话题<br>选 &le;2 个 MI 策略<br>(MISC 框架)</p>
+        </div>
+
+        <div class="arch-arrow">&rarr;</div>
+
+        <div class="arch-node node-r">
+          <div class="letter">R</div>
+          <h4>Response Gen + Rank</h4>
+          <p>生成 3 个候选回复<br>LLM 排序选最佳<br>&le;150 字</p>
+        </div>
+
+        <div class="arch-arrow">&rarr;</div>
+
+        <div class="arch-node node-output">
+          <div class="letter">OUT</div>
+          <h4>咨询师回复</h4>
+          <p>发送给 client<br>Moderator 判断<br>是否继续/结束</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:24px">
+      <div class="card">
+        <h3>Moderator（会话管理）</h3>
+        <p>独立模块，每轮判断是否结束会话。终止条件：(1) 咨询师或来访者明确结束；(2) 来访者已被唤起改变动机；(3) 达到 50 轮上限。</p>
+      </div>
+      <div class="card">
+        <h3>Client Simulator（来访者模拟）</h3>
+        <p>多模块设计：状态转换模块 + 动态参与度追踪 + 响应生成。比简单 prompt 更真实，能保持跨轮状态一致性。38 个手动标注 profile，每个跑 5 次。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== TTM Stages ========== -->
+<section id="ttm">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--purple)">THEORETICAL FOUNDATION</div>
+    <h2>TTM 五阶段 &times; 咨询策略映射</h2>
+    <p>
+      TTM（Transtheoretical Model of Change）将行为改变分为五个阶段。CAMI 聚焦前三个阶段（Pre-contemplation / Contemplation / Preparation），因为这是 MI 最核心的战场——用户还没行动，需要被唤起改变动机。
+    </p>
+
+    <div class="ttm-timeline" style="margin-top:24px">
+      <div class="ttm-stage ttm-1">
+        <div class="num">1</div>
+        <h4>Pre-contemplation<br>前意向期</h4>
+        <p>不认为自己有问题，没打算改变</p>
+        <p style="margin-top:8px;font-weight:700;font-size:11px">策略：建立信任、确立改变目标、不对抗</p>
+      </div>
+      <div class="ttm-stage ttm-2">
+        <div class="num">2</div>
+        <h4>Contemplation<br>意向期</h4>
+        <p>意识到问题，但在权衡利弊，矛盾中</p>
+        <p style="margin-top:8px;font-weight:700;font-size:11px">策略：倾听、处理矛盾信念、探索两面</p>
+      </div>
+      <div class="ttm-stage ttm-3">
+        <div class="num">3</div>
+        <h4>Preparation<br>准备期</h4>
+        <p>决定要改变，开始考虑怎么做</p>
+        <p style="margin-top:8px;font-weight:700;font-size:11px">策略：提供信息和工具、制定计划</p>
+      </div>
+      <div class="ttm-stage ttm-4">
+        <div class="num">4</div>
+        <h4>Action<br>行动期</h4>
+        <p>正在执行改变行为</p>
+        <p style="margin-top:8px;font-weight:700;font-size:11px;opacity:.5">CAMI 未覆盖</p>
+      </div>
+      <div class="ttm-stage ttm-5">
+        <div class="num">5</div>
+        <h4>Maintenance<br>维持期</h4>
+        <p>持续新行为，防止复发</p>
+        <p style="margin-top:8px;font-weight:700;font-size:11px;opacity:.5">CAMI 未覆盖</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:24px; border-left: 4px solid var(--purple);">
+      <h3>为什么只用前三阶段？</h3>
+      <p>MI（动机访谈）的核心目标是<strong>唤起改变谈话（change talk）</strong>，让用户从"不想改"移动到"准备改"。Action 和 Maintenance 阶段已经超出 MI 的典型工作范围，属于 CBT/行为激活等其他技术的领地。CAMI 精准聚焦 MI 的核心战场。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== State Inference ========== -->
+<section id="state">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--green)">MODULE 1</div>
+    <h2>State Inference：用户现在在哪个阶段？</h2>
+
+    <div class="grid-2" style="margin-top:16px">
+      <div>
+        <p>状态推断是 STAR 的第一步，也是最关键的一步。它决定了后续所有模块的行为方向。</p>
+        <p><strong>方法</strong>：Zero-shot LLM prompting。将完整会话上下文 + 三个阶段的文字描述喂给 LLM，让它分类。</p>
+        <p><strong>输入</strong>：当前会话的全部历史消息</p>
+        <p><strong>输出</strong>：Pre-contemplation / Contemplation / Preparation 三选一</p>
+        <p><strong>准确率</strong>：</p>
+        <ul>
+          <li>GPT-4o：<strong>93.32%</strong></li>
+          <li>Llama-3.1-70B：<strong>88.56%</strong></li>
+        </ul>
+      </div>
+      <div class="card" style="border-left: 4px solid var(--green);">
+        <h3>推断 &rarr; 策略的连接</h3>
+        <p style="font-size:13px">
+          状态推断的结果以自然语言注入后续 prompt：<br><br>
+          <code style="background:#ecfdf5;padding:2px 6px;border-radius:4px;font-size:12px">"The current client's state is [Contemplation]"</code><br><br>
+          不同阶段触发不同的策略偏好：
+        </p>
+        <ul style="font-size:13px;margin-top:8px">
+          <li><strong>Pre-C</strong> &rarr; 偏向 Affirm、Open Question（建立关系）</li>
+          <li><strong>C</strong> &rarr; 偏向 Complex Reflection（处理矛盾）</li>
+          <li><strong>P</strong> &rarr; 偏向 Advise with Permission（提供方向）</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>为什么 Zero-shot 就够用？</h3>
+      <p>TTM 三阶段的区分度高、描述清晰。Pre-C 的用户会说"我没觉得有问题"，C 的用户会说"我也想改但又怕"，P 的用户会说"我打算试试"。LLM 的语义理解能力足以在上下文中捕捉这些信号，不需要 few-shot 样例。93% 的准确率验证了这一点。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Topic Exploration ========== -->
+<section id="topic">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--blue)">MODULE 2</div>
+    <h2>Topic Exploration：在话题树中导航</h2>
+    <p>CAMI 不是随意聊天，而是在一棵预构建的分层话题树中有方向地探索，寻找最能唤起改变谈话的话题切入点。</p>
+
+    <!-- Topic Tree Visualization -->
+    <div class="topic-tree" style="margin-top:20px">
+      <h3 style="font-size:14px;margin-bottom:16px;color:var(--muted)">三层话题树结构</h3>
+      <div class="tree-level">
+        <div class="tree-label">Super Class<br>(5 个)</div>
+        <div class="tree-nodes">
+          <div class="tree-node" style="background:#eff6ff;border-color:#93c5fd;color:#1e40af">Health</div>
+          <div class="tree-node" style="background:#fef3c7;border-color:#fcd34d;color:#92400e">Relationships</div>
+          <div class="tree-node" style="background:#ecfdf5;border-color:#6ee7b7;color:#065f46">Career</div>
+          <div class="tree-node" style="background:#fce7f3;border-color:#f9a8d4;color:#9d174d">Finance</div>
+          <div class="tree-node" style="background:#f5f3ff;border-color:#c4b5fd;color:#5b21b6">Self-Growth</div>
+        </div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-connector">&darr;</div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-label">Coarse<br>(14 个)</div>
+        <div class="tree-nodes">
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Physical Health</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Mental Health</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Family</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Romance</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Education</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">Law</div>
+          <div class="tree-node" style="background:#f3f4f6;border-color:#d1d5db">...</div>
+        </div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-connector">&darr;</div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-label">Fine-grained<br>(59 个)</div>
+        <div class="tree-nodes">
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Substance Abuse</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Anxiety</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Parenting</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Breakup</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Job Loss</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Debt</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">Self-Esteem</div>
+          <div class="tree-node" style="background:#f9fafb;border-color:#e5e7eb;font-size:10px">...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px">
+      <div class="card">
+        <h3>话题树构建（离线）</h3>
+        <ol style="font-size:13px">
+          <li>从 AnnoMI 咨询数据集提取 28 个细粒度话题</li>
+          <li>用 Wikipedia 分类关系组织为三层层级结构</li>
+          <li>用 GPT-4o few-shot 扩展到 59 个细粒度话题</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>导航操作（在线）</h3>
+        <ul style="font-size:13px">
+          <li><span class="pill pill-blue">Step Into</span> 深入当前话题的子话题</li>
+          <li><span class="pill pill-orange">Switch</span> 切换到同层的兄弟话题</li>
+          <li><span class="pill pill-purple">Step Out</span> 退回到父话题重新选择</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>两阶段探索策略</h3>
+      <div class="grid-2" style="margin-top:8px">
+        <div>
+          <p style="font-size:13px"><span class="pill pill-green">前 6 轮：广度优先</span></p>
+          <p style="font-size:13px">在 Super Class 层广泛探索，LLM 估算每个话题唤起 change talk 的概率。概率 &gt;40% 的话题成为焦点。</p>
+        </div>
+        <div>
+          <p style="font-size:13px"><span class="pill pill-purple">第 7 轮起：深度优先</span></p>
+          <p style="font-size:13px">锁定高概率话题后，用 Step Into / Switch / Step Out 精细导航，寻找最有效的切入角度。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Response Generation ========== -->
+<section id="response">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--orange)">MODULE 3 & 4</div>
+    <h2>Action Selection + Response Generation</h2>
+
+    <div class="pipeline" style="margin-top:24px">
+      <div class="pipe-step">
+        <div class="pipe-dot" style="background:var(--purple)">A</div>
+        <h4>策略选择（Action Selection）</h4>
+        <p>基于 MISC（Motivational Interviewing Skill Code）框架，LLM 从策略列表中选择 &le;2 个最适合当前 <strong>阶段 + 话题 + 上下文</strong> 的策略。常用策略包括：Affirm、Open Question、Complex Reflection、Advise with Permission、Simple Reflection 等。</p>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-dot" style="background:var(--blue)">G</div>
+        <h4>候选生成</h4>
+        <p>生成 3 个候选回复：策略 A 单独生成 1 个，策略 B 单独生成 1 个，A+B 融合生成 1 个。每个回复限制 &le;150 字符，避免"咨询师话太多"的问题。</p>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-dot" style="background:var(--green)">R</div>
+        <h4>排序选优（Response Ranking）</h4>
+        <p>LLM 充当评委，对 3 个候选按 <strong>上下文连贯性</strong> 和 <strong>MI 原则一致性</strong> 打分排序，选出最佳回复发送给用户。</p>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px; border-left: 4px solid var(--orange);">
+      <h3>为什么要 3 选 1 而不是直接生成？</h3>
+      <p>单策略回复可能过于单一，双策略融合回复可能不够自然。生成多个候选再排序，是 Best-of-N 的思路——利用 LLM 的判别能力（通常强于生成能力）来兜底生成质量。这在对话系统中是成熟做法。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Results ========== -->
+<section id="results">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--red)">EXPERIMENTS</div>
+    <h2>实验结果</h2>
+
+    <div class="card" style="margin-bottom:20px">
+      <h3>实验设置</h3>
+      <div class="grid-2" style="margin-top:8px">
+        <div>
+          <p style="font-size:13px"><strong>数据</strong>：AnnoMI 高质量子集，38 个手动标注 client profile</p>
+          <p style="font-size:13px"><strong>评估</strong>：每 profile 跑 5 次 = 190 sessions</p>
+          <p style="font-size:13px"><strong>LLM</strong>：GPT-4o-2024-08-06（咨询师/来访者/主持人）</p>
+        </div>
+        <div>
+          <p style="font-size:13px"><strong>基线</strong>：</p>
+          <ul style="font-size:13px">
+            <li><strong>Base</strong>：仅 system prompt</li>
+            <li><strong>DIIR</strong>：归纳推理检索策略</li>
+            <li><strong>CoS</strong>：Chain-of-Strategy，有策略规划但无状态/话题模块</li>
+            <li><strong>CAMI-TE</strong>：消融版，去掉 Topic Exploration</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="font-size:16px;margin-bottom:12px">核心指标对比</h3>
+    <div style="overflow-x:auto">
+      <table class="metrics-table">
+        <thead>
+          <tr>
+            <th>方法</th>
+            <th>成功率 &uarr;</th>
+            <th>Cultivating Change Talk &uarr;</th>
+            <th>Softening Sustain Talk &uarr;</th>
+            <th>Partnership &uarr;</th>
+            <th>Empathy &uarr;</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Base</td>
+            <td>31.5%</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>DIIR</td>
+            <td>34.7%</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>CoS</td>
+            <td>37.9%</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>CAMI-TE (消融)</td>
+            <td>38.4%</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr class="highlight-row">
+            <td><strong>CAMI (GPT-4o)</strong></td>
+            <td class="best">53.1%</td>
+            <td class="best">Best</td>
+            <td class="best">Best</td>
+            <td class="best">Best</td>
+            <td class="best">Best</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px">
+      <div class="card">
+        <h3>MITI 行为计数指标</h3>
+        <p style="font-size:13px">CAMI 在 MITI（Motivational Interviewing Treatment Integrity）标准下的行为分布更接近真实咨询师：</p>
+        <ul style="font-size:13px">
+          <li><strong>R/Q ratio</strong>：反映/提问比，越高越好（咨询师应多反映少提问）</li>
+          <li><strong>%OQ</strong>：开放问题占比</li>
+          <li><strong>%CR</strong>：复杂反映占比</li>
+          <li><strong>%MIC</strong>：MI 一致行为占比</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>消融实验关键发现</h3>
+        <p style="font-size:13px">去掉 Topic Exploration 后（CAMI-TE）：</p>
+        <ul style="font-size:13px">
+          <li>成功率从 53.1% 降至 38.4%（<strong>-14.7pp</strong>）</li>
+          <li>无法探索低频但有效的话题（如 Law、Education）</li>
+          <li>说明话题多样性对唤起 change talk 至关重要</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Value for moodcoco ========== -->
+<section id="value">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--teal)">IMPLICATIONS</div>
+    <h2>对 moodcoco 的价值</h2>
+    <p>CAMI 的核心洞察——"先判断用户所处阶段，再选择策略"——与 moodcoco 的"看见"理念高度契合。</p>
+
+    <div style="margin-top:20px">
+      <div class="value-card" style="border-left-color:var(--purple);margin-bottom:16px">
+        <h4>1. TTM &rarr; Hill 阶段模型的类比</h4>
+        <p>
+          CAMI 用 TTM（Pre-C / C / P）推断改变阶段。moodcoco 可类比到 Hill 的三阶段模型：<br>
+          <strong>探索期</strong>（"好烦但说不清"）&rarr; <strong>领悟期</strong>（"原来我是害怕被抛弃"）&rarr; <strong>行动期</strong>（"下次我试试直接说"）<br>
+          不同阶段激活不同 skill：探索期用情绪命名，领悟期用模式指出，行动期才给方法。
+        </p>
+      </div>
+
+      <div class="value-card" style="border-left-color:var(--blue);margin-bottom:16px">
+        <h4>2. 阶段推断模块可直接复用</h4>
+        <p>
+          CAMI 证明 zero-shot LLM prompting 就能以 93% 准确率推断用户阶段，不需要训练分类器。moodcoco 可以在每轮对话前加一个轻量阶段推断 prompt，根据结果动态选择 skill 组合。这比现在固定的 skill 触发规则更灵活。
+        </p>
+      </div>
+
+      <div class="value-card" style="border-left-color:var(--green);margin-bottom:16px">
+        <h4>3. 话题树 &rarr; 情绪原因的结构化探索</h4>
+        <p>
+          CAMI 的三层话题树（5 &rarr; 14 &rarr; 59）提供了一个结构化探索框架。moodcoco 可以构建"情绪原因树"：<br>
+          关系 &rarr; 亲密关系 &rarr; 已读不回 / 冷暴力 / 分手焦虑<br>
+          自我 &rarr; 价值感 &rarr; 被否定 / 比较 / 冒充者综合征<br>
+          这样"看见原因"就不是漫无目的地追问，而是有结构地导航。
+        </p>
+      </div>
+
+      <div class="value-card" style="border-left-color:var(--orange)">
+        <h4>4. Best-of-N 回复排序</h4>
+        <p>
+          生成多个候选再排序选优的思路，适合 moodcoco 在关键节点（比如"看见模式"的瞬间）使用。生成 2-3 种不同力度的回复（轻推 vs 直接指出 vs 问句引导），排序选最合适的。牺牲一点延迟换取关键时刻的回复质量。
+        </p>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;overflow-x:auto">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>维度</th>
+            <th>CAMI (MI/TTM)</th>
+            <th>moodcoco (情绪陪伴/Hill)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>阶段模型</strong></td>
+            <td>TTM: Pre-C &rarr; C &rarr; P</td>
+            <td>Hill: 探索 &rarr; 领悟 &rarr; 行动</td>
+          </tr>
+          <tr>
+            <td><strong>目标</strong></td>
+            <td>唤起 change talk</td>
+            <td>帮用户"看见自己"</td>
+          </tr>
+          <tr>
+            <td><strong>话题结构</strong></td>
+            <td>3 层话题树 (59 topics)</td>
+            <td>可建情绪原因树（按用户群定制）</td>
+          </tr>
+          <tr>
+            <td><strong>策略选择</strong></td>
+            <td>MISC 策略 (Affirm, Reflect...)</td>
+            <td>Skill 组合 (IFS, EFT, 模式指出...)</td>
+          </tr>
+          <tr>
+            <td><strong>核心差异</strong></td>
+            <td>聚焦"改变动机"</td>
+            <td>聚焦"情绪觉察"，不推改变</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Limitations ========== -->
+<section id="limits">
+  <div class="wrap">
+    <div class="section-tag" style="color:var(--orange)">LIMITATIONS</div>
+    <h2>局限性</h2>
+
+    <div class="limitation">
+      <h4>1. 级联 Prompt 误差累积</h4>
+      <p>STAR 四步都依赖 LLM prompting，每一步的错误会传递给下一步。状态推断错了，策略选择就跟着错；话题选偏了，回复就偏离方向。论文承认这是"sensitivity to the multiple steps of prompting due to the accumulation of generation errors"。</p>
+    </div>
+
+    <div class="limitation">
+      <h4>2. 回复仍然太长、问题太多</h4>
+      <p>即使限制了 150 字符，CAMI 的回复仍然倾向于"过度提问"。真实咨询师在很多时候只是安静地反映，而 LLM 总想"推进对话"。这是 LLM 做咨询的通病。</p>
+    </div>
+
+    <div class="limitation">
+      <h4>3. 只验证了 MI，未验证其他流派</h4>
+      <p>STAR 框架是否能迁移到 CBT、IFS、EFT 等其他治疗流派？论文没有探索。对 moodcoco 来说，Hill 模型和 IFS/EFT 的阶段定义与 TTM 不同，需要重新设计状态推断的 prompt。</p>
+    </div>
+
+    <div class="limitation">
+      <h4>4. 模拟来访者 =/= 真人</h4>
+      <p>所有实验基于 GPT-4o 模拟的来访者，真人的反应模式、矛盾程度、情绪波动远比模拟复杂。53.1% 的成功率在真人场景中大概率会下降。</p>
+    </div>
+
+    <div class="limitation">
+      <h4>5. 话题树是静态的</h4>
+      <p>59 个话题从 AnnoMI 数据集提取 + GPT-4o 扩展，没有根据用户反馈动态更新的机制。对于特定人群（如 moodcoco 的 18-24 岁女性），需要定制化的话题体系。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========== Footer ========== -->
+<footer>
+  <div class="wrap">
+    <p>
+      CAMI: A Counselor Agent Supporting MI through State Inference and Topic Exploration<br>
+      arXiv 2502.02807 &middot; ACL 2025 &middot; 解读 by moodcoco team
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
