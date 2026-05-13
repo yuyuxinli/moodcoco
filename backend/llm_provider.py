@@ -105,8 +105,8 @@ def create_voice_streaming_client():
 
 def get_voice_streaming_model_name() -> str:
     return (
-        os.environ.get("DOUBAO_MODEL")
-        or os.environ.get("OPENAI_FAST_MODEL")
+        os.environ.get("OPENAI_FAST_MODEL")
+        or os.environ.get("DOUBAO_MODEL")
         or os.environ.get("OPENAI_MODEL")
         or "doubao-seed-2-0-lite-260215"
     )

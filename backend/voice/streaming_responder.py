@@ -5,10 +5,13 @@ streaming while the text UI keeps the existing tool model.
 """
 from __future__ import annotations
 
+import logging
 from collections.abc import AsyncGenerator
 from typing import Any
 
 from backend.voice.streaming_text import SentenceChunker
+
+logger = logging.getLogger("voice.streaming_responder")
 
 
 def build_voice_system_prompt() -> str:
@@ -36,6 +39,8 @@ class VoiceStreamingResponder:
         dynamic_inject: list[str],
         skill_bundle: list[str],
         retrieval_block: str,
+        session_id: str = "unknown",
+        turn_id: str = "unknown",
     ) -> AsyncGenerator[str, None]:
         messages = [
             {"role": "system", "content": self._system_prompt},
@@ -51,6 +56,12 @@ class VoiceStreamingResponder:
             },
             {"role": "user", "content": user_text},
         ]
+        log_extra = {
+            "session_id": session_id,
+            "turn_id": turn_id,
+            "model": self._model,
+        }
+        logger.info("voice_llm_request_started", extra=log_extra)
         stream = await self._client.chat.completions.create(
             model=self._model,
             messages=messages,
@@ -58,15 +69,26 @@ class VoiceStreamingResponder:
             temperature=0.7,
         )
         chunker = SentenceChunker(max_chars=36)
+        first_token_seen = False
+        first_sentence_seen = False
         async for event in stream:
             if not getattr(event, "choices", None):
                 continue
             token = getattr(event.choices[0].delta, "content", None)
             if not token:
                 continue
+            if not first_token_seen:
+                logger.info("voice_llm_first_token", extra=log_extra)
+                first_token_seen = True
             for sentence in chunker.push(token):
+                if not first_sentence_seen:
+                    logger.info("voice_llm_first_sentence", extra=log_extra)
+                    first_sentence_seen = True
                 yield sentence
         for sentence in chunker.flush():
+            if not first_sentence_seen:
+                logger.info("voice_llm_first_sentence", extra=log_extra)
+                first_sentence_seen = True
             yield sentence
 
     @staticmethod

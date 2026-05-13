@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Moodcoco Voice Chain Report</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f8f5;
+      --panel: #ffffff;
+      --ink: #18201e;
+      --muted: #64706c;
+      --line: #dce2df;
+      --accent: #1f7a68;
+      --accent-2: #245f9d;
+      --warn: #c47a19;
+      --danger: #b9403a;
+      --ok: #257a42;
+      --soft: #eef4f1;
+      --shadow: 0 12px 32px rgba(30, 45, 40, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family:
+        Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.55;
+    }
+
+    a { color: var(--accent-2); }
+
+    .shell {
+      width: min(1180px, calc(100vw - 40px));
+      margin: 0 auto;
+    }
+
+    header {
+      padding: 38px 0 24px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fbfcfa 0%, var(--bg) 100%);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 860px;
+      font-size: clamp(30px, 5vw, 54px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      max-width: 820px;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    main { padding: 28px 0 56px; }
+
+    section {
+      margin-top: 26px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    .grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .panel,
+    .metric,
+    .stage-detail,
+    details {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .metric {
+      min-height: 142px;
+      padding: 16px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .metric .value {
+      margin-top: 8px;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .metric .range {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric.ok .value { color: var(--ok); }
+    .metric.warn .value { color: var(--warn); }
+    .metric.danger .value { color: var(--danger); }
+
+    .summary-list {
+      display: grid;
+      gap: 10px;
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .summary-list li {
+      display: grid;
+      grid-template-columns: 118px 1fr;
+      gap: 12px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfb;
+    }
+
+    .summary-list strong {
+      color: var(--ink);
+    }
+
+    .summary-list span {
+      color: var(--muted);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(118px, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 116px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      cursor: pointer;
+      text-align: left;
+      box-shadow: 0 6px 18px rgba(25, 35, 31, 0.05);
+    }
+
+    .stage::after {
+      content: "→";
+      position: absolute;
+      right: -12px;
+      top: 42px;
+      color: #94a09c;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    .stage:last-child::after { display: none; }
+
+    .stage.active {
+      border-color: var(--accent);
+      outline: 3px solid rgba(31, 122, 104, 0.13);
+    }
+
+    .stage .name {
+      display: block;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .stage .time {
+      display: block;
+      margin-top: 8px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .stage .note {
+      display: block;
+      margin-top: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .stage.ok .time { color: var(--ok); }
+    .stage.warn .time { color: var(--warn); }
+    .stage.danger .time { color: var(--danger); }
+
+    .stage-detail {
+      margin-top: 12px;
+      padding: 18px;
+    }
+
+    .detail-kv {
+      display: grid;
+      grid-template-columns: 110px 1fr;
+      gap: 8px 16px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .detail-kv b { color: var(--ink); }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    button,
+    .toggle {
+      min-height: 36px;
+      padding: 7px 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.active,
+    .toggle.active {
+      border-color: var(--accent);
+      background: var(--soft);
+      color: #135e50;
+      font-weight: 750;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      background: #fbfcfb;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .bar-cell {
+      min-width: 170px;
+    }
+
+    .bar {
+      width: 100%;
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e7ece9;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    .bar.warn span { background: var(--warn); }
+    .bar.danger span { background: var(--danger); }
+
+    details {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    summary {
+      padding: 15px 16px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    details .content {
+      padding: 0 16px 16px;
+      color: var(--muted);
+    }
+
+    .quote {
+      padding: 12px;
+      border-left: 4px solid var(--line);
+      background: #fbfcfb;
+      color: var(--ink);
+      font-size: 14px;
+    }
+
+    pre {
+      max-height: 360px;
+      overflow: auto;
+      margin: 0;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #101816;
+      color: #e8f1ee;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .source-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .source-list li { margin: 6px 0; }
+
+    @media (max-width: 960px) {
+      .grid.cols-4,
+      .grid.cols-3 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .stage::after { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        width: min(100vw - 24px, 1180px);
+      }
+
+      header {
+        padding-top: 26px;
+      }
+
+      .grid.cols-4,
+      .grid.cols-3,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-list li,
+      .detail-kv {
+        grid-template-columns: 1fr;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell">
+      <p class="eyebrow">Moodcoco Voice Chain Report</p>
+      <h1>当前语音链路报告</h1>
+      <p class="subtitle">
+        这份报告整理当前 Web Voice demo 的真实链路、最近一次评测耗时、主要瓶颈和下一步优化方向。数据来自本地 e2e 评测、链路文档和当前计划文档。
+      </p>
+      <div class="meta">
+        <span class="pill">生成日期：2026-05-09</span>
+        <span class="pill">Room：moodcoco-voice-1778313433</span>
+        <span class="pill">Streaming：true</span>
+        <span class="pill">TTS：minimax_ws / pcm_audio_source</span>
+        <span class="pill">latency_pass：false</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="grid cols-4" aria-label="核心指标">
+      <article class="metric ok">
+        <div class="label">真正 STT final</div>
+        <div class="value">154ms</div>
+        <div class="range">endpoint → user_final p50，范围 130-173ms</div>
+      </article>
+      <article class="metric danger">
+        <div class="label">LLM 首句</div>
+        <div class="value">6.04s</div>
+        <div class="range">user_final → first_coco_sentence p50，范围 5.43-7.98s</div>
+      </article>
+      <article class="metric warn">
+        <div class="label">TTS 首音频</div>
+        <div class="value">0.34s</div>
+        <div class="range">first_sentence → first_audio p50，max 3.38s</div>
+      </article>
+      <article class="metric danger">
+        <div class="label">端到端回复</div>
+        <div class="value">8.28s</div>
+        <div class="range">user_final → first_audio p50，范围 6.37-8.82s</div>
+      </article>
+    </section>
+
+    <section class="grid cols-3">
+      <article class="panel">
+        <h2>当前结论</h2>
+        <ul class="summary-list">
+          <li><strong>STT</strong><span>服务端 final 很快，约 0.15s，不是主要瓶颈。</span></li>
+          <li><strong>LLM</strong><span>首句生成慢，p50 约 6.04s，是当前体感等待的核心来源。</span></li>
+          <li><strong>TTS</strong><span>多数轮次约 0.3s，但第一轮出现 3.38s，需要继续观察连接或首包波动。</span></li>
+        </ul>
+      </article>
+      <article class="panel">
+        <h2>当前链路</h2>
+        <p>
+          Web mic 进入 LiveKit，worker 使用 Xfyun streaming STT 产出 partial/final，
+          `VoiceStreamingResponder` 调 OpenAI-compatible LLM 按句切分，MiniMax WebSocket TTS 输出 PCM，
+          再通过 LiveKit `AudioSource` 推回浏览器。
+        </p>
+      </article>
+      <article class="panel">
+        <h2>质量观察</h2>
+        <p>
+          最新评测中 Coco 回复存在重复字和异常片段，例如“很很难很定”“现现”。这不只影响听感，也会让用户觉得回复不聪明。
+        </p>
+      </article>
+    </section>
+
+    <section>
+      <h2>交互式链路图</h2>
+      <div class="flow" id="flow"></div>
+      <div class="stage-detail" id="stageDetail"></div>
+    </section>
+
+    <section>
+      <h2>逐轮耗时</h2>
+      <div class="toolbar" role="toolbar" aria-label="表格筛选">
+        <button class="active" type="button" data-filter="all">全部</button>
+        <button type="button" data-filter="slow-llm">只看 LLM 慢</button>
+        <button type="button" data-filter="slow-tts">只看 TTS 异常</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Turn</th>
+              <th>STT 首字</th>
+              <th>说话+尾静音</th>
+              <th>真正 STT final</th>
+              <th>LLM 首句</th>
+              <th>TTS 首音频</th>
+              <th>final → 首音频</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody id="turnRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="grid cols-3">
+      <details open>
+        <summary>主要瓶颈</summary>
+        <div class="content">
+          <p>
+            最大耗时来自 `user_final -> first_coco_sentence`。这段包含 LLM 请求、模型首 token、句子切分到首句可播出的过程。
+            当前还没有把上下文和 carryover 优化落到最新验收，因此“聪明程度”和“上下文能力”也会受限。
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>为什么 STT 看起来也慢</summary>
+        <div class="content">
+          <p>
+            “有效语音 -> user_final”包含用户实际说话时长和尾静音 endpoint，所以会有 5-6s。
+            真正的 STT 服务 final 延迟应看 `endpoint -> user_final`，当前 p50 只有 154ms。
+          </p>
+        </div>
+      </details>
+      <details>
+        <summary>下一步建议</summary>
+        <div class="content">
+          <p>
+            先做 voice context 和 carryover，让回复更像连续对话；同时加 LLM 首 token/首句指标。
+            在能区分 LLM 首 token慢还是切句慢之后，再优化首句延迟。重复字问题需要单独定位来源。
+          </p>
+        </div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Coco 回复样本</h2>
+      <div class="grid cols-3" id="replyCards"></div>
+    </section>
+
+    <section>
+      <h2>证据与来源</h2>
+      <div class="grid cols-3">
+        <article class="panel">
+          <h3>评测输出</h3>
+          <ul class="source-list">
+            <li><code>.evolve/voice_eval.py --json</code></li>
+            <li><code>counts.voice_streaming_tts_first_audio = 6</code></li>
+            <li><code>error_count = 0</code></li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>链路文档</h3>
+          <ul class="source-list">
+            <li><code>docs/time.md</code></li>
+            <li><code>docs/voice-true-streaming-handoff.md</code></li>
+            <li><code>docs/superpowers/plans/2026-05-09-voice-context-intelligence-optimization.md</code></li>
+          </ul>
+        </article>
+        <article class="panel">
+          <h3>关键代码面</h3>
+          <ul class="source-list">
+            <li><code>backend/voice/streaming_bridge_agent.py</code></li>
+            <li><code>backend/voice/streaming_responder.py</code></li>
+            <li><code>backend/voice/plugins/xfyun_streaming_stt.py</code></li>
+            <li><code>backend/voice/plugins/minimax_streaming_tts.py</code></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <details>
+        <summary>查看原始评测摘要 JSON</summary>
+        <div class="content">
+          <pre id="rawJson"></pre>
+        </div>
+      </details>
+    </section>
+  </main>
+
+  <script>
+    const report = {
+      room: "moodcoco-voice-1778313433",
+      latencyPass: false,
+      streaming: {
+        streamingModeEnabled: true,
+        ttsMode: "minimax_ws",
+        voiceTtsSink: "pcm_audio_source",
+        bargeInSuccess: false
+      },
+      metrics: {
+        sttEndpointToFinal: { min: 130, p50: 154, max: 173, unit: "ms" },
+        llmFirstSentence: { min: 5431, p50: 6039, max: 7983, unit: "ms" },
+        ttsFirstAudio: { min: 300, p50: 340, max: 3380, unit: "ms" },
+        finalToFirstAudio: { min: 6374, p50: 8279, max: 8815, unit: "ms" }
+      },
+      stages: [
+        {
+          id: "web",
+          name: "Web Mic",
+          time: "实时",
+          status: "ok",
+          note: "浏览器采集麦克风",
+          detail: "用户点击语音通话后，Web 端通过 LiveKit JS 加入房间并发布本地麦克风轨道。",
+          files: ["web/lib/use-livekit-voice.ts", "web/lib/livekit.ts"],
+          risk: "需要确保只播放 agent 音频，避免听到自己的麦克风回声。"
+        },
+        {
+          id: "livekit-in",
+          name: "LiveKit In",
+          time: "连接态",
+          status: "ok",
+          note: "房间和 agent 分发",
+          detail: "后端 token API 创建新 room 并 dispatch `moodcoco-coco` agent。当前计划已要求处理 dispatch 成功但 agent 未加入的超时。",
+          files: ["backend/api.py", "backend/voice/entrypoint.py"],
+          risk: "如果复用固定 room，可能出现多个 agent 或跨房间音频干扰。"
+        },
+        {
+          id: "stt",
+          name: "Xfyun STT",
+          time: "154ms",
+          status: "ok",
+          note: "endpoint → final p50",
+          detail: "STT 服务端 final 很快。用户体感上的 5-6s STT 段主要包含说话时长和尾静音 endpoint。",
+          files: ["backend/voice/plugins/xfyun_streaming_stt.py"],
+          risk: "后续应继续用 endpoint 到 final 判断 STT 自身延迟，不要把用户说话时长算成 STT 服务耗时。"
+        },
+        {
+          id: "llm",
+          name: "LLM 首句",
+          time: "6.04s",
+          status: "danger",
+          note: "当前最大瓶颈",
+          detail: "从 user_final 到 first_coco_sentence 的 p50 是 6.04s，max 是 7.98s。当前用户觉得慢，主要就是卡在这里。",
+          files: ["backend/voice/streaming_responder.py", "backend/voice/streaming_text.py"],
+          risk: "需要新增 first_token 和 first_sentence 分段指标，区分模型慢、prompt 慢和切句慢。"
+        },
+        {
+          id: "tts",
+          name: "MiniMax TTS",
+          time: "0.34s",
+          status: "warn",
+          note: "p50 快，max 异常",
+          detail: "MiniMax WebSocket PCM TTS 通常首音频约 0.3s，但第一轮出现 3.38s，需要观察是否是连接预热或首包波动。",
+          files: ["backend/voice/plugins/minimax_streaming_tts.py"],
+          risk: "如果每轮新建连接，握手和首包可能吞掉流式收益。"
+        },
+        {
+          id: "livekit-out",
+          name: "LiveKit Audio",
+          time: "8.28s",
+          status: "danger",
+          note: "final → 首音频 p50",
+          detail: "PCM 音频通过 LiveKit `rtc.AudioSource` 推回浏览器。端到端 p50 仍为 8.28s，因为前面的 LLM 首句太慢。",
+          files: ["backend/voice/streaming_bridge_agent.py", "backend/voice/livekit_data.py"],
+          risk: "需要继续人工验证连续多轮都能听到，并且不会把 Coco 的 TTS 回灌进 STT。"
+        }
+      ],
+      turns: [
+        {
+          turn: 1,
+          sttPartial: 1.04,
+          speechEndpoint: 6.65,
+          sttFinal: 0.13,
+          llm: 5.43,
+          tts: 3.38,
+          total: 8.82,
+          note: "TTS 首包异常慢"
+        },
+        {
+          turn: 2,
+          sttPartial: 0.69,
+          speechEndpoint: 5.60,
+          sttFinal: 0.154,
+          llm: 7.98,
+          tts: 0.30,
+          total: 8.28,
+          note: "LLM 首句最慢"
+        },
+        {
+          turn: 3,
+          sttPartial: 1.04,
+          speechEndpoint: 4.90,
+          sttFinal: 0.173,
+          llm: 6.04,
+          tts: 0.34,
+          total: 6.37,
+          note: "整体最好但 LLM 仍慢"
+        }
+      ],
+      replies: [
+        "和妈妈吵架后，委屈很很难很定很难受吧现现，现在心里还堵得慌吗？",
+        "翻记录还倒打一耙，你一定特别委屈吧现现在现在手现？现在手是凉的还是热的？",
+        "手这么凉，气堵着肯定难受吧现现在现？现在想不想喝杯温水暖暖手？"
+      ]
+    };
+
+    const fmt = (value) => `${value.toFixed(value < 1 ? 3 : 2)}s`;
+    const flowEl = document.querySelector("#flow");
+    const detailEl = document.querySelector("#stageDetail");
+
+    function renderFlow() {
+      flowEl.innerHTML = report.stages.map((stage, index) => `
+        <button class="stage ${stage.status} ${index === 0 ? "active" : ""}" type="button" data-stage="${stage.id}">
+          <span class="name">${stage.name}</span>
+          <span class="time">${stage.time}</span>
+          <span class="note">${stage.note}</span>
+        </button>
+      `).join("");
+
+      flowEl.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-stage]");
+        if (!button) return;
+        document.querySelectorAll(".stage").forEach((item) => item.classList.remove("active"));
+        button.classList.add("active");
+        const stage = report.stages.find((item) => item.id === button.dataset.stage);
+        renderStageDetail(stage);
+      });
+
+      renderStageDetail(report.stages[0]);
+    }
+
+    function renderStageDetail(stage) {
+      detailEl.innerHTML = `
+        <h3>${stage.name}</h3>
+        <p>${stage.detail}</p>
+        <div class="detail-kv">
+          <b>当前耗时</b><span>${stage.time} · ${stage.note}</span>
+          <b>相关文件</b><span>${stage.files.map((item) => `<code>${item}</code>`).join("，")}</span>
+          <b>风险</b><span>${stage.risk}</span>
+        </div>
+      `;
+    }
+
+    function turnRow(turn) {
+      const slowLlm = turn.llm >= 6;
+      const slowTts = turn.tts >= 1;
+      const flags = [slowLlm ? "slow-llm" : "", slowTts ? "slow-tts" : ""].filter(Boolean).join(" ");
+      const llmWidth = Math.min(100, (turn.llm / 8.5) * 100).toFixed(0);
+      const totalWidth = Math.min(100, (turn.total / 9) * 100).toFixed(0);
+      return `
+        <tr data-flags="${flags}">
+          <td><strong>${turn.turn}</strong></td>
+          <td>${fmt(turn.sttPartial)}</td>
+          <td>${fmt(turn.speechEndpoint)}</td>
+          <td>${Math.round(turn.sttFinal * 1000)}ms</td>
+          <td class="bar-cell">
+            <strong>${fmt(turn.llm)}</strong>
+            <div class="bar ${slowLlm ? "danger" : "warn"}" aria-hidden="true"><span style="--w:${llmWidth}%"></span></div>
+          </td>
+          <td>${fmt(turn.tts)}</td>
+          <td class="bar-cell">
+            <strong>${fmt(turn.total)}</strong>
+            <div class="bar danger" aria-hidden="true"><span style="--w:${totalWidth}%"></span></div>
+          </td>
+          <td>${turn.note}</td>
+        </tr>
+      `;
+    }
+
+    function renderTurns(filter = "all") {
+      const rows = report.turns.filter((turn) => {
+        if (filter === "all") return true;
+        if (filter === "slow-llm") return turn.llm >= 6;
+        if (filter === "slow-tts") return turn.tts >= 1;
+        return true;
+      });
+      document.querySelector("#turnRows").innerHTML = rows.map(turnRow).join("");
+    }
+
+    document.querySelector(".toolbar").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-filter]");
+      if (!button) return;
+      document.querySelectorAll("[data-filter]").forEach((item) => item.classList.remove("active"));
+      button.classList.add("active");
+      renderTurns(button.dataset.filter);
+    });
+
+    function renderReplies() {
+      document.querySelector("#replyCards").innerHTML = report.replies.map((reply, index) => `
+        <article class="panel">
+          <h3>样本 ${index + 1}</h3>
+          <div class="quote">${reply}</div>
+        </article>
+      `).join("");
+    }
+
+    renderFlow();
+    renderTurns();
+    renderReplies();
+    document.querySelector("#rawJson").textContent = JSON.stringify(report, null, 2);
+  </script>
+</body>
+</html>
