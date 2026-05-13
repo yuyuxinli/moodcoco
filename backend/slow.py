@@ -12,11 +12,11 @@ from __future__ import annotations
 import logging
 import os
 import time
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 
 from backend.llm_provider import PROJECT_ROOT, create_slow_model, load_prompt
@@ -41,37 +41,41 @@ SKILLS_DIR = _resolve_skills_dir()
 MEMORY_FILE = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
 
 
-@dataclass
-class SlowThinkDeps:
-    """慢思考 Agent 的运行时依赖。"""
+class SlowThinkDeps(BaseModel):
+    """Thinker 的运行时依赖（原 Slow Agent）。
+
+    所有输出都是 cross-turn：写入 carryover_* 字段 → 下一轮 Speaker 读取。
+    不持有 fast_deps 引用，不做 same-turn mutation。
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     session_id: str
     user_message: str
-    fast_reply_text: str = ""  # 同轮 fast-think 回复，用于避免复读
-    tool_call_history: list[str] = field(default_factory=list)
-    fast_deps: Any | None = None
-    reasoning_trail: list[str] = field(default_factory=list)
-    search_cache: dict[str, str] = field(default_factory=dict)
-    pending_actions: list[dict] = field(default_factory=list)
-    carryover_inject: list[str] = field(default_factory=list)
-    carryover_skills: list[str] = field(default_factory=list)
+    fast_reply_text: str = ""
+    tool_call_history: list[str] = Field(default_factory=list)
+    reasoning_trail: list[str] = Field(default_factory=list)
+    search_cache: dict[str, str] = Field(default_factory=dict)
+    pending_actions: list[dict] = Field(default_factory=list)
+    carryover_inject: list[str] = Field(default_factory=list)
+    carryover_skills: list[str] = Field(default_factory=list)
     carryover_retrieval: str = ""
     mutation_count_this_iter: int = 0
 
 
 VOICE_MUTATION_TOOL_GUIDE = """
-## Voice 模式工具选用指南
+## Voice 模式工具选用指南（cross-turn: 本轮写入 → 下一轮 Speaker 读取）
 
-When in voice mode (fast_deps available):
 - Use slow_attach_skill_to_fast(name) when the conversation needs a SJTU skill
   (listen / validation / face-decision / relationship-guide / etc).
 - Use slow_set_fast_retrieval(text) when you've gathered context that should
   replace the retrieval block (compact, <=200 chars).
 - Use slow_inject_to_fast(text) for short notes that augment but don't replace.
-- Across iters in one turn, prefer using >=2 distinct tools to enrich Fast.
+- Across iters in one turn, prefer using >=2 distinct tools to enrich Speaker.
 - For non-trivial emotional or relationship turns, the strongest default is:
   attach the most relevant skill, set a compact retrieval block, then inject one
   short next-step note. Do not route every turn through only slow_inject_to_fast.
+- All mutations are cross-turn: they take effect on the NEXT Speaker turn.
 """
 
 
@@ -210,16 +214,13 @@ def _compact_voice_retrieval(user_message: str) -> str:
 
 
 async def _auto_complete_voice_mutations(ctx: RunContext[SlowThinkDeps]) -> None:
-    if ctx.deps.fast_deps is None:
-        return
-
     skill_name = _select_voice_skill(ctx.deps.user_message)
     if skill_name is None:
         return
-    if skill_name and not ctx.deps.fast_deps.skill_bundle:
+    if skill_name and not ctx.deps.carryover_skills:
         await slow_attach_skill_to_fast(ctx, skill_name)
 
-    if not ctx.deps.fast_deps.retrieval_block.strip():
+    if not ctx.deps.carryover_retrieval.strip():
         await slow_set_fast_retrieval(ctx, _compact_voice_retrieval(ctx.deps.user_message))
 
 
@@ -281,19 +282,9 @@ async def write_memory(
 
 @slow_agent.tool
 async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) -> str:
-    """Inject short same-turn system guidance into the voice Fast agent."""
+    """Inject short guidance for Speaker's next turn (cross-turn)."""
     started_at = time.monotonic()
     ctx.deps.tool_call_history.append("slow_inject_to_fast")
-    if ctx.deps.fast_deps is None:
-        ctx.deps.mutation_count_this_iter += 1
-        _log_slow_tool_call(
-            ctx,
-            tool="slow_inject_to_fast",
-            started_at=started_at,
-            text_len=len(system_text),
-        )
-        return "skipped: fast_deps unavailable"
-    ctx.deps.fast_deps.dynamic_inject.append(system_text)
     _append_lru(ctx.deps.carryover_inject, system_text, limit=3)
     ctx.deps.reasoning_trail.append(f"inject:{system_text[:80]}")
     ctx.deps.mutation_count_this_iter += 1
@@ -304,27 +295,17 @@ async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) 
         text_len=len(system_text),
     )
     await _auto_complete_voice_mutations(ctx)
-    return "injected to fast"
+    return "injected (cross-turn, effective next turn)"
 
 
 @slow_agent.tool
 async def slow_set_fast_retrieval(ctx: RunContext[SlowThinkDeps], block: str) -> str:
-    """Replace the voice Fast agent's same-turn retrieval block."""
+    """Set retrieval block for Speaker's next turn (cross-turn, <=200 chars)."""
     started_at = time.monotonic()
     ctx.deps.tool_call_history.append("slow_set_fast_retrieval")
     compact_block = block.strip()
     if len(compact_block) > 200:
         compact_block = compact_block[:197].rstrip() + "..."
-    if ctx.deps.fast_deps is None:
-        ctx.deps.mutation_count_this_iter += 1
-        _log_slow_tool_call(
-            ctx,
-            tool="slow_set_fast_retrieval",
-            started_at=started_at,
-            text_len=len(compact_block),
-        )
-        return "skipped: fast_deps unavailable"
-    ctx.deps.fast_deps.retrieval_block = compact_block
     ctx.deps.carryover_retrieval = compact_block
     ctx.deps.search_cache[ctx.deps.user_message] = compact_block
     ctx.deps.mutation_count_this_iter += 1
@@ -334,12 +315,12 @@ async def slow_set_fast_retrieval(ctx: RunContext[SlowThinkDeps], block: str) ->
         started_at=started_at,
         text_len=len(compact_block),
     )
-    return "retrieval block set"
+    return "retrieval set (cross-turn, effective next turn)"
 
 
 @slow_agent.tool
 async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: str) -> str:
-    """Read one Skill and attach its content to the voice Fast agent."""
+    """Attach a Skill to Speaker's next turn (cross-turn)."""
     started_at = time.monotonic()
     ctx.deps.tool_call_history.append(f"slow_attach_skill_to_fast({skill_name})")
     skill_text = await read_skill(ctx, skill_name)
@@ -352,16 +333,6 @@ async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: 
             text_len=len(skill_text),
         )
         return skill_text
-    if ctx.deps.fast_deps is None:
-        ctx.deps.mutation_count_this_iter += 1
-        _log_slow_tool_call(
-            ctx,
-            tool="slow_attach_skill_to_fast",
-            started_at=started_at,
-            text_len=len(skill_text),
-        )
-        return "skipped: fast_deps unavailable"
-    ctx.deps.fast_deps.skill_bundle.append(skill_text)
     if skill_text not in ctx.deps.carryover_skills:
         ctx.deps.carryover_skills.append(skill_text)
     ctx.deps.reasoning_trail.append(f"skill:{skill_name}")
@@ -372,7 +343,7 @@ async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: 
         started_at=started_at,
         text_len=len(skill_text),
     )
-    return f"attached skill to fast: {skill_name}"
+    return f"skill attached (cross-turn, effective next turn): {skill_name}"
 
 
 def _append_to_memory_section(section: str, content: str, session_id: str) -> None:

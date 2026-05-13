@@ -163,12 +163,11 @@ class VoiceBridgeAgent(Agent):
             session_id=session_id,
             user_message=user_text,
             fast_reply_text="",
-            fast_deps=fast_deps,
             reasoning_trail=self._slow_state["reasoning_trail"],
             search_cache=self._slow_state["search_cache"],
             pending_actions=self._slow_state["pending_actions"],
-            carryover_inject=self._slow_state["carryover_inject"],
-            carryover_skills=self._slow_state["carryover_skills"],
+            carryover_inject=list(self._slow_state["carryover_inject"]),
+            carryover_skills=list(self._slow_state["carryover_skills"]),
             carryover_retrieval=str(self._slow_state["carryover_retrieval"]),
         )
 
@@ -188,15 +187,10 @@ class VoiceBridgeAgent(Agent):
             if result is not None:
                 self._slow_history = result.all_messages()
             slow_called_tool = bool(slow_deps.tool_call_history)
-            if (
-                slow_deps.mutation_count_this_iter == 0
-                and not slow_called_tool
-                and slow_deps.fast_deps is not None
-            ):
-                fallback_hint = "Slow 本轮未发现需要额外展开的策略；Fast 继续轻量承接用户情绪。"
-                slow_deps.fast_deps.dynamic_inject.append(fallback_hint)
-                slow_deps.carryover_inject.append(fallback_hint)
-                del slow_deps.carryover_inject[:-3]
+            if slow_deps.mutation_count_this_iter == 0 and not slow_called_tool:
+                from backend.slow import _append_lru
+                fallback_hint = "Thinker 本轮未发现需要额外展开的策略；Speaker 继续轻量承接用户情绪。"
+                _append_lru(slow_deps.carryover_inject, fallback_hint, limit=3)
                 slow_deps.reasoning_trail.append("bridge_default_inject")
                 slow_deps.mutation_count_this_iter += 1
                 logger.info(
@@ -215,14 +209,6 @@ class VoiceBridgeAgent(Agent):
             self._slow_state["reasoning_trail"] = slow_deps.reasoning_trail
             self._slow_state["search_cache"] = slow_deps.search_cache
             self._slow_state["pending_actions"] = slow_deps.pending_actions
-            if slow_deps.fast_deps is not None:
-                for injected in slow_deps.fast_deps.dynamic_inject:
-                    if injected not in slow_deps.carryover_inject:
-                        slow_deps.carryover_inject.append(injected)
-                for skill_text in slow_deps.fast_deps.skill_bundle:
-                    if skill_text not in slow_deps.carryover_skills:
-                        slow_deps.carryover_skills.append(skill_text)
-                slow_deps.carryover_retrieval = slow_deps.fast_deps.retrieval_block
             self._slow_state["carryover_inject"] = slow_deps.carryover_inject[-3:]
             self._slow_state["carryover_skills"] = slow_deps.carryover_skills[-2:]
             self._slow_state["carryover_retrieval"] = slow_deps.carryover_retrieval

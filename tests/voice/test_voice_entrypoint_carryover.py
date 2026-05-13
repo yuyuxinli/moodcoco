@@ -37,9 +37,9 @@ async def test_bridge_reseeds_fast_deps_with_slow_carryover(
     async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append({"user_msg": user_msg, "deps": deps})
         if user_msg == "第一轮":
-            deps.fast_deps.dynamic_inject.extend(["a", "b", "c", "d"])
-            deps.fast_deps.skill_bundle.append("listen skill text")
-            deps.fast_deps.retrieval_block = "上一轮他说被翻聊天记录，很生气。"
+            deps.carryover_inject.extend(["a", "b", "c", "d"])
+            deps.carryover_skills.append("listen skill text")
+            deps.carryover_retrieval = "上一轮他说被翻聊天记录，很生气。"
             deps.mutation_count_this_iter += 3
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
@@ -90,7 +90,7 @@ async def test_bridge_caps_carryover_skills_to_recent_two(
     async def _fake_slow_run(user_msg, *, deps, message_history=None, usage_limits=None):
         calls["slow"].append({"user_msg": user_msg, "deps": deps})
         if user_msg == "第一轮":
-            deps.fast_deps.skill_bundle.extend(["skill-a", "skill-b", "skill-c"])
+            deps.carryover_skills.extend(["skill-a", "skill-b", "skill-c"])
             deps.mutation_count_this_iter += 3
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
@@ -162,18 +162,11 @@ async def test_bridge_skips_fallback_when_slow_called_any_tool(
 
 @pytest.mark.asyncio
 async def test_slow_inject_auto_completes_voice_context_for_emotional_turn() -> None:
-    from backend.fast import FastThinkDeps
     from backend.slow import SlowThinkDeps, slow_inject_to_fast
 
-    fast_deps = FastThinkDeps(
-        session_id="test-session",
-        memory_text="",
-        voice_session=object(),
-    )
     slow_deps = SlowThinkDeps(
         session_id="test-session",
         user_message="我和我妈昨天大吵了一架，我感觉特别委屈。",
-        fast_deps=fast_deps,
     )
     ctx = SimpleNamespace(deps=slow_deps)
 
@@ -185,7 +178,7 @@ async def test_slow_inject_auto_completes_voice_context_for_emotional_turn() -> 
         item.startswith("slow_attach_skill_to_fast(")
         for item in slow_deps.tool_call_history
     )
-    assert fast_deps.dynamic_inject == ["下一轮先承接委屈，不急着给建议。"]
-    assert fast_deps.skill_bundle
-    assert fast_deps.retrieval_block.startswith("本轮用户线索：")
+    assert "下一轮先承接委屈，不急着给建议。" in slow_deps.carryover_inject
+    assert slow_deps.carryover_skills
+    assert slow_deps.carryover_retrieval.startswith("本轮用户线索：")
     assert slow_deps.mutation_count_this_iter == 3

@@ -108,7 +108,8 @@ def _patch_bridge_agents(
                 "message_history": list(message_history or []),
             }
         )
-        deps.fast_deps.dynamic_inject.append(slow_mutation)
+        deps.carryover_inject.append(slow_mutation)
+        del deps.carryover_inject[:-3]
         deps.mutation_count_this_iter += 1
         return _BridgeRunResult([*(message_history or []), {"role": "assistant"}])
 
@@ -173,7 +174,7 @@ async def test_bridge_logs_fast_and_slow_completion(monkeypatch, caplog):
 
 
 @pytest.mark.asyncio
-async def test_bridge_slow_mutates_fast_deps(monkeypatch: pytest.MonkeyPatch):
+async def test_bridge_slow_writes_carryover(monkeypatch: pytest.MonkeyPatch):
     calls = _patch_bridge_agents(monkeypatch, slow_mutation="read relationship-guide")
     agent = _make_agent()
 
@@ -184,10 +185,10 @@ async def test_bridge_slow_mutates_fast_deps(monkeypatch: pytest.MonkeyPatch):
         )
     await asyncio.sleep(0)
 
-    fast_deps = calls["fast"][0]["deps"]
     slow_deps = calls["slow"][0]["deps"]
-    assert fast_deps.dynamic_inject == ["read relationship-guide"]
+    assert "read relationship-guide" in slow_deps.carryover_inject
     assert slow_deps.mutation_count_this_iter == 1
+    assert agent._slow_state["carryover_inject"] == ["read relationship-guide"]
 
 
 @pytest.mark.asyncio

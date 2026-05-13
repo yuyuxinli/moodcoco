@@ -29,7 +29,7 @@ def load_prompt(relative_path: str) -> str:
 
 
 def get_model_name() -> str:
-    return os.environ.get("OPENAI_MODEL", "minimax/minimax-m2.5")
+    return os.environ.get("OPENAI_MODEL", "minimax/minimax-m2.7")
 
 
 def get_slow_model_name() -> str:

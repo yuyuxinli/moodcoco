@@ -126,7 +126,8 @@ def _patch_bridge_agents(
                 "usage_limits": usage_limits,
             }
         )
-        deps.fast_deps.dynamic_inject.append(slow_inject)
+        deps.carryover_inject.append(slow_inject)
+        del deps.carryover_inject[:-3]
         deps.reasoning_trail.append("inject")
         deps.search_cache[user_msg] = "cached"
         deps.pending_actions.append({"kind": "followup"})
@@ -241,7 +242,7 @@ async def test_bridge_collects_slow_state(monkeypatch: pytest.MonkeyPatch):
     assert agent._slow_state["reasoning_trail"] == ["inject"]
     assert agent._slow_state["search_cache"][user_msg.text_content] == "cached"
     assert agent._slow_state["pending_actions"] == [{"kind": "followup"}]
-    assert calls["slow"][0]["deps"].fast_deps.dynamic_inject
+    assert agent._slow_state["carryover_inject"]
 
 
 # ── Test 5: session_id and turn_id propagated via contextvars ─────────────────

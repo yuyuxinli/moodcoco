@@ -9,9 +9,9 @@ from __future__ import annotations
 import logging
 import inspect
 import time
-from dataclasses import dataclass, field
 from typing import Any, TypeAlias
 
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 
 from backend.llm_provider import create_fast_model, load_prompt
@@ -24,21 +24,26 @@ class VoiceAiMessageDelivered(Exception):
     """Raised to stop the Fast agent loop after voice ai_message speaks."""
 
 
-@dataclass
-class FastThinkDeps:
-    """快思考 Agent 的运行时依赖。"""
+class FastThinkDeps(BaseModel):
+    """Speaker 的运行时依赖（原 Fast Agent）。
+
+    所有 Thinker 注入（skill_bundle / retrieval_block / dynamic_inject）
+    都是 cross-turn：上一轮 Thinker 写入，本轮 Speaker 读取。
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     session_id: str
-    memory_text: str  # MEMORY.md 当前内容（动态注入 instructions）
-    slow_guidance: str = ""  # 上一轮慢思考产出的指导，Fast 可参考可忽略
-    collected_tool_calls: list[dict[str, Any]] = field(default_factory=list)
+    memory_text: str
+    slow_guidance: str = ""
+    collected_tool_calls: list[dict[str, Any]] = Field(default_factory=list)
     voice_session: Any | None = None
-    skill_bundle: list[str] = field(default_factory=list)
+    skill_bundle: list[str] = Field(default_factory=list)
     retrieval_block: str = ""
-    dynamic_inject: list[str] = field(default_factory=list)
+    dynamic_inject: list[str] = Field(default_factory=list)
 
     def voice_system_extras(self) -> str:
-        """Compile same-turn voice context injected by Slow into Fast instructions."""
+        """Compile cross-turn voice context injected by Thinker into Speaker instructions."""
         if self.voice_session is None:
             return ""
 
@@ -108,7 +113,7 @@ async def inject_slow_guidance(ctx: RunContext[FastThinkDeps]) -> str:
 
 @fast_agent.instructions
 async def inject_voice_extras(ctx: RunContext[FastThinkDeps]) -> str:
-    """注入 voice 模式下 Slow 同轮写入的 Fast system extras。"""
+    """注入 voice 模式下 Thinker cross-turn 写入的 Speaker system extras。"""
     return ctx.deps.voice_system_extras()
 
 
