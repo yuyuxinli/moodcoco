@@ -144,6 +144,19 @@ class StreamingVoiceBridgeAgent(Agent):
                     meta=self._tts_meta(),
                 )
             )
+            from backend.safety import keyword_filter
+            filter_result = keyword_filter(sentence)
+            if filter_result.blocked:
+                logger.warning(
+                    "keyword_filter_blocked",
+                    extra={
+                        "session_id": session_id,
+                        "turn_id": turn_id,
+                        "reason": filter_result.reason,
+                        "original_len": len(sentence),
+                    },
+                )
+                sentence = filter_result.safe_replacement
             if self._streaming_tts_client is None:
                 activity = self._get_activity_or_raise()
                 await activity.session.say(sentence, add_to_chat_ctx=True)

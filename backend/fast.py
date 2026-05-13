@@ -290,12 +290,30 @@ async def ai_safety_brake(
     """检测到自伤/自杀风险立即触发。risk_level: low/medium/high。"""
     started_at = time.monotonic()
     _record(ctx, "ai_safety_brake", {"risk_level": risk_level, "response": response})
+    if ctx.deps.voice_session is not None and response:
+        from backend.safety import keyword_filter
+        filter_result = keyword_filter(response)
+        safe_text = filter_result.safe_replacement if filter_result.blocked else response
+        handle = ctx.deps.voice_session.say(safe_text, add_to_chat_ctx=True)
+        if inspect.isawaitable(handle):
+            await handle
+        logger.info(
+            "safety_brake_voice_delivered",
+            extra={
+                "session_id": ctx.deps.session_id,
+                "turn_id": _turn_id(),
+                "risk_level": risk_level,
+                "text_len": len(safe_text),
+            },
+        )
     _log_fast_tool_call(
         ctx,
         tool="ai_safety_brake",
         started_at=started_at,
         text_len=len(response),
     )
+    if ctx.deps.voice_session is not None and response:
+        raise VoiceAiMessageDelivered("voice safety_brake delivered")
     return "安全响应已触发"
 
 

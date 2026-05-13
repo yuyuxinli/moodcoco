@@ -66,6 +66,34 @@ class TestVoiceLifecycleEnum:
         with pytest.raises(ValueError, match="Invalid transition"):
             tracker.transition(VoiceLifecycle.PROCESSING)
 
+    def test_lifecycle_tracker_try_transition_returns_bool(self):
+        """try_transition should return True on success, False on invalid."""
+        from backend.voice.lifecycle import LifecycleTracker, VoiceLifecycle
+
+        tracker = LifecycleTracker()
+        assert tracker.try_transition(VoiceLifecycle.USER_SPEAKING) is True
+        assert tracker.state == VoiceLifecycle.USER_SPEAKING
+        assert tracker.try_transition(VoiceLifecycle.IDLE) is True
+        assert tracker.try_transition(VoiceLifecycle.AI_RESPONDING) is False
+
+    def test_lifecycle_tracker_can_transition(self):
+        """can_transition should check without changing state."""
+        from backend.voice.lifecycle import LifecycleTracker, VoiceLifecycle
+
+        tracker = LifecycleTracker()
+        assert tracker.can_transition(VoiceLifecycle.USER_SPEAKING) is True
+        assert tracker.can_transition(VoiceLifecycle.PROCESSING) is False
+        assert tracker.state == VoiceLifecycle.IDLE
+
+    @pytest.mark.asyncio
+    async def test_lifecycle_tracker_async_transition(self):
+        """async_transition should be safe under asyncio.Lock."""
+        from backend.voice.lifecycle import LifecycleTracker, VoiceLifecycle
+
+        tracker = LifecycleTracker()
+        await tracker.async_transition(VoiceLifecycle.USER_SPEAKING)
+        assert tracker.state == VoiceLifecycle.USER_SPEAKING
+
 
 class TestNamingAliases:
     """Speaker/Thinker aliases for public API."""
