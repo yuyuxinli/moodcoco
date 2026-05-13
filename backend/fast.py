@@ -67,8 +67,7 @@ class FastThinkDeps(BaseModel):
         if self.dynamic_inject:
             parts.append("## Slow 动态注入\n\n" + "\n\n".join(self.dynamic_inject))
         for ctx_key, ctx_content in self.prewarmed_contexts.items():
-            if ctx_key in self.skill_names:
-                parts.append(f"## 预热 Context ({ctx_key})\n\n{ctx_content}")
+            parts.append(f"## 预热 Context ({ctx_key})\n\n{ctx_content}")
         return "\n\n".join(parts)
 
 
@@ -174,6 +173,19 @@ async def ai_message(
     )
     text = "\n".join(str(message).strip() for message in messages if str(message).strip())
     if ctx.deps.voice_session is not None and text:
+        from backend.safety import keyword_filter
+        filter_result = keyword_filter(text)
+        if filter_result.blocked:
+            logger.warning(
+                "keyword_filter_blocked",
+                extra={
+                    "session_id": ctx.deps.session_id,
+                    "turn_id": _turn_id(),
+                    "reason": filter_result.reason,
+                    "original_len": len(text),
+                },
+            )
+            text = filter_result.safe_replacement
         handle = ctx.deps.voice_session.say(text, add_to_chat_ctx=True)
         if inspect.isawaitable(handle):
             await handle
@@ -285,3 +297,7 @@ async def ai_safety_brake(
         text_len=len(response),
     )
     return "安全响应已触发"
+
+
+SpeakerDeps = FastThinkDeps
+speaker_agent = fast_agent

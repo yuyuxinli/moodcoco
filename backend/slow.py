@@ -448,3 +448,7 @@ def reset_memory_file_for_demo() -> None:
         "## 核心信念变化轨迹\n"
     )
     MEMORY_FILE.write_text(skeleton, encoding="utf-8")
+
+
+ThinkerDeps = SlowThinkDeps
+thinker_agent = slow_agent

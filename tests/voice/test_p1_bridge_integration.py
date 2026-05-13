@@ -44,17 +44,13 @@ class TestSlowStateInit:
 
     def test_slow_state_has_next_likely_contexts(self):
         """_slow_state must have next_likely_contexts key to avoid KeyError."""
-        from backend.voice.bridge_agent import VoiceBridgeAgent
-
-        agent = VoiceBridgeAgent(instructions="test")
+        agent = _make_bridge()
         assert "next_likely_contexts" in agent._slow_state
         assert agent._slow_state["next_likely_contexts"] == []
 
     def test_slow_state_has_carryover_skill_names(self):
         """_slow_state must track skill names alongside skill text."""
-        from backend.voice.bridge_agent import VoiceBridgeAgent
-
-        agent = VoiceBridgeAgent(instructions="test")
+        agent = _make_bridge()
         assert "carryover_skill_names" in agent._slow_state
         assert agent._slow_state["carryover_skill_names"] == []
 
@@ -109,15 +105,22 @@ class TestNextLikelyContextsWiring:
 
         assert agent._slow_state["next_likely_contexts"] == ["untangle", "calm-body"]
 
-    def test_prewarmed_contexts_built_from_next_likely(self):
+    def test_prewarmed_contexts_built_from_next_likely(self, tmp_path):
         """FastThinkDeps.prewarmed_contexts should be populated from stored next_likely_contexts."""
         from backend.voice.bridge_agent import _build_prewarmed_contexts
 
-        next_likely = ["untangle", "calm-body"]
-        result = _build_prewarmed_contexts(next_likely)
+        skills_dir = tmp_path / "skills"
+        (skills_dir / "untangle").mkdir(parents=True)
+        (skills_dir / "untangle" / "SKILL.md").write_text("untangle content")
+        (skills_dir / "calm-body").mkdir(parents=True)
+        (skills_dir / "calm-body" / "SKILL.md").write_text("calm-body content")
+
+        with patch("backend.slow.SKILLS_DIR", skills_dir):
+            result = _build_prewarmed_contexts(["untangle", "calm-body"])
+
         assert isinstance(result, dict)
-        for key in next_likely:
-            assert key in result
+        assert "untangle" in result
+        assert "calm-body" in result
 
 
 class TestKeywordFilterWiring:
@@ -142,6 +145,35 @@ class TestKeywordFilterWiring:
         text = _extract_speaker_text(calls)
         result = keyword_filter(text)
         assert result.blocked is True
+
+    @pytest.mark.asyncio
+    async def test_ai_message_applies_keyword_filter_before_tts(self):
+        """ai_message tool should apply keyword_filter before calling session.say."""
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from backend.fast import FastThinkDeps, ai_message
+
+        said_texts = []
+
+        class FakeSession:
+            async def say(self, text, **kw):
+                said_texts.append(text)
+
+        deps = FastThinkDeps(
+            session_id="s1",
+            memory_text="",
+            voice_session=FakeSession(),
+        )
+        ctx = SimpleNamespace(deps=deps)
+
+        try:
+            await ai_message(ctx, messages=["你应该去死"], needs_deep_analysis=False)
+        except Exception:
+            pass
+
+        assert said_texts
+        assert "去死" not in said_texts[0]
+        assert "陪着你" in said_texts[0]
 
 
 class TestSkillNamesTracking:

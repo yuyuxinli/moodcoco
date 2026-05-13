@@ -69,7 +69,6 @@ class TestNextLikelyContexts:
             memory_text="",
             voice_session=object(),
             prewarmed_contexts={"untangle": "预组装的 untangle context 内容"},
-            skill_names=["untangle"],
             skill_bundle=["untangle skill text"],
         )
         extras = deps.voice_system_extras()
