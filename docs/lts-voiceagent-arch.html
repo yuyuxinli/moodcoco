@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LTS-VoiceAgent 架构解析 · Listen-Think-Speak</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --listen: #0891b2;
+      --listen-bg: #ecfeff;
+      --think: #7c3aed;
+      --think-bg: #f5f3ff;
+      --speak: #d97706;
+      --speak-bg: #fffbeb;
+      --trigger: #dc2626;
+      --trigger-bg: #fef2f2;
+      --idle: #64748b;
+      --win: #16a34a;
+      --win-bg: #f0fdf4;
+      --stt: #0891b2;
+      --stt-bg: #ecfeff;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-listen { background: var(--listen-bg); color: var(--listen); }
+    .tag-think { background: var(--think-bg); color: var(--think); }
+    .tag-speak { background: var(--speak-bg); color: var(--speak); }
+    .tag-trigger { background: var(--trigger-bg); color: var(--trigger); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .pipeline {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+    }
+    .pipe-node {
+      flex: 1;
+      min-width: 100px;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .pipe-node .pipe-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .pipe-node .pipe-desc { font-size: 13px; line-height: 1.4; }
+    .pipe-arrow { display: flex; align-items: center; font-size: 22px; color: var(--muted); padding: 0 3px; flex-shrink: 0; }
+
+    .node-listen { background: var(--listen-bg); border: 2px solid var(--listen); color: var(--listen); }
+    .node-think { background: var(--think-bg); border: 2px solid var(--think); color: var(--think); }
+    .node-speak { background: var(--speak-bg); border: 2px solid var(--speak); color: var(--speak); }
+    .node-trigger { background: var(--trigger-bg); border: 2px solid var(--trigger); color: var(--trigger); }
+    .node-idle { background: #f1f5f9; border: 2px solid var(--idle); color: var(--idle); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) {
+      .two-col, .three-col { grid-template-columns: 1fr; }
+    }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: var(--think-bg); border-left: 3px solid var(--think); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: var(--trigger-bg); border-left: 3px solid var(--trigger); }
+    .note-win { background: var(--win-bg); border-left: 3px solid var(--win); }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term { flex-shrink: 0; width: 220px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin: 16px 0;
+    }
+    @media (max-width: 800px) { .metric-row { grid-template-columns: 1fr 1fr; } }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric-value { font-size: 22px; font-weight: 700; line-height: 1.2; }
+    .metric-label { font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+    /* Trigger timeline */
+    .trig-timeline { margin: 20px 0; }
+    .trig-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+      min-height: 44px;
+    }
+    .trig-partial {
+      width: 280px;
+      flex-shrink: 0;
+      font-size: 15px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: var(--listen-bg);
+      border: 1px solid #cce8ec;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+    .trig-arrow { padding: 0 10px; color: var(--muted); font-size: 18px; }
+    .trig-score {
+      width: 80px;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .trig-score.low { background: #f1f5f9; color: var(--idle); }
+    .trig-score.high { background: var(--trigger-bg); color: var(--trigger); }
+    .trig-result {
+      margin-left: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+    .trig-result.no { background: #f1f5f9; color: var(--idle); }
+    .trig-result.yes { background: var(--trigger-bg); color: var(--trigger); animation: pulse 0.8s ease-in-out; }
+    @keyframes pulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.08); } }
+
+    /* State machine */
+    .state-machine {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr;
+      gap: 0;
+      margin: 20px 0;
+    }
+    .state-col { display: flex; flex-direction: column; gap: 8px; }
+    .state-box {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 600;
+    }
+    .state-box.active { box-shadow: 0 0 0 2px rgba(0,0,0,.15); }
+    .state-arrow-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .handoff-arrow {
+      font-size: 20px;
+      color: var(--win);
+      font-weight: 700;
+    }
+
+    /* Gantt */
+    .gantt { margin: 20px 0; font-size: 14px; }
+    .gantt-title { font-weight: 700; font-size: 15px; margin-bottom: 12px; color: var(--ink); }
+    .gantt-row { display: flex; align-items: center; margin-bottom: 6px; height: 36px; }
+    .gantt-label { width: 100px; flex-shrink: 0; font-weight: 600; font-size: 13px; text-align: right; padding-right: 12px; }
+    .gantt-track { flex: 1; position: relative; height: 100%; background: #f9fafb; border-radius: 4px; overflow: hidden; }
+    .gantt-bar { position: absolute; top: 3px; height: calc(100% - 6px); border-radius: 3px; display: flex; align-items: center; padding: 0 8px; font-size: 12px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; }
+
+    /* Comparison table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; font-weight: 700; }
+    td:first-child { font-weight: 600; width: 160px; }
+
+    @media (max-width: 800px) {
+      .trig-row { flex-wrap: wrap; }
+      .trig-partial { width: 100%; margin-bottom: 4px; }
+      .state-machine { grid-template-columns: 1fr; }
+      .state-arrow-col { flex-direction: row; padding: 8px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>LTS-VoiceAgent <small>— Listen-Think-Speak, arXiv 2601.19952, 2026.01</small></h1>
+<p class="subtitle">
+  边听边想边说 · DistilBERT 语义触发器 · Thinker/Speaker 双角色 · 延迟降低 150-350×<br/>
+  作者：Zou, Miao, Ma, Xu 等（美团 + 中科院）&nbsp;
+  <span class="tag tag-trigger">⭐ 重点复现</span>
+</p>
+
+<!-- ===== 术语速查 ===== -->
+<h2 style="background:var(--listen-bg); color:var(--listen);">术语速查</h2>
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">ASR Partial（部分识别）</div>
+    <div class="gl-def">流式语音识别的中间结果。用户还没说完，ASR 每 200ms 吐出一段已识别文本。LTS 的核心输入。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Dynamic Semantic Trigger</div>
+    <div class="gl-def">基于 DistilBERT 的二分类器，对每个 ASR partial 判断"语义是否已完整到可以开始推理"。推理仅需 ~5ms。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">置信度阈值 τ</div>
+    <div class="gl-def">触发器的门控阈值，论文取 τ = 0.65。低于此值不触发 Thinker，避免在语义不完整时浪费推理。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Thinker（后台思考者）</div>
+    <div class="gl-def">后台模块。被触发后执行：输入纠错 → 语义分析 → 生成状态快照（JSON：corrected_text + key_variables + plan）。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Speaker（前台说话者）</div>
+    <div class="gl-def">前台模块。按"复述验证 → 查阅计划 → 求解回答"流程生成最终回复。参考 Thinker 注入的状态。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">State Injection（状态注入）</div>
+    <div class="gl-def">Thinker 的输出（plan + key_variables）被注入 Speaker 的上下文，作为先验知识指导回复生成。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Thought Rollback（思维回滚）</div>
+    <div class="gl-def">用户继续说话导致语义偏移时，终止当前 Speaker，但保留 Thinker 已积累的有效状态，合并到下轮上下文。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">TTFS（首句时间）</div>
+    <div class="gl-def">Time To First Sentence，从用户说完到系统说出第一句话的端到端延迟。LTS 核心优化指标。</div>
+  </div>
+</div>
+
+<!-- ===== 关键指标 ===== -->
+<h2 style="background:var(--win-bg); color:var(--win);">关键指标</h2>
+<div class="metric-row">
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--win);">150-350×</div>
+    <div class="metric-label">延迟降低倍数<br/>(vs Think-mode 串行)</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--trigger);">&lt;10%</div>
+    <div class="metric-label">打断率<br/>(PredGen 为 95-99%)</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--think);">~5ms</div>
+    <div class="metric-label">触发器推理耗时<br/>(DistilBERT)</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value" style="color:var(--listen);">200-330ms</div>
+    <div class="metric-label">TTFS<br/>(BigBench/MQA)</div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 核心思想 ===== -->
+<h2 style="background:var(--think-bg); color:var(--think);">核心思想</h2>
+<div class="note note-key" style="font-size:16px;">
+  <strong>不是每个 ASR 片段都值得送给 LLM 推理。</strong><br/>
+  Dynamic Semantic Trigger 在 ASR partials 上计算语义完整度，只在置信度超过 τ=0.65 时才触发 Thinker——减少无用推理、降低延迟。
+  Thinker 在后台生成推理计划（JSON 状态快照），Speaker 在前台根据计划快速生成回复。二者异步并行，Listen/Think/Speak 三阶段时间重叠。
+</div>
+<div class="note note-compare" style="margin-top:8px;">
+  <strong>类比：</strong>同声传译员不是每听到一个词就翻译，而是等到听到一个完整的意思单元后才开口。
+  LTS 的触发器就是这个"意思单元够了"的判断器。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 传统 vs LTS pipeline ===== -->
+<h2 style="background:var(--trigger-bg); color:var(--trigger);">传统串行 vs LTS：时间线对比</h2>
+<p style="color:var(--muted); margin-bottom:16px;">同一段用户输入，两种管线的时间分配对比。</p>
+
+<div class="overview">
+  <div class="gantt">
+    <div class="gantt-title" style="color:var(--idle);">方案 A：传统串行 —— 等说完 → 等想完 → 才开口</div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--listen);">ASR</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:0%;width:35%;background:var(--listen);">❶ 用户说话 → 转写</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--idle);">等待</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:0%;width:35%;background:#cbd5e1;">🔇 系统空闲</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--think);">LLM</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:35%;width:45%;background:var(--think);">❷ Think + 生成回复</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--speak);">TTS</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:80%;width:20%;background:var(--speak);">❸ TTS</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--trigger);">用户等待</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:35%;width:65%;background:#fca5a5;">❹ 等待中…</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-top:6px;padding-left:112px;">
+      ❶ ASR 转写 ~10s &nbsp;→&nbsp; ❷ LLM 推理 ~51s &nbsp;→&nbsp; ❸ TTS 合成 &nbsp;→&nbsp;
+      <span style="color:var(--trigger);font-weight:600;">❹ 用户从说完到听到回复，等了 ~61s</span>
+    </div>
+  </div>
+
+  <div style="height:24px;"></div>
+
+  <div class="gantt">
+    <div class="gantt-title" style="color:var(--win);">方案 B：LTS —— 边听边触发，边想边说</div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--listen);">ASR</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:0%;width:35%;background:var(--listen);">❶ 用户说话 → 流式 partial</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--trigger);">触发器</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:8%;width:3%;background:#e2e8f0;">·</div>
+        <div class="gantt-bar" style="left:16%;width:3%;background:#e2e8f0;">·</div>
+        <div class="gantt-bar" style="left:22%;width:4%;background:var(--trigger);">❷ ⚡</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--think);">Thinker</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:22%;width:20%;background:var(--think);">❸ 后台推理 → JSON 快照</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--speak);">Speaker</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:36%;width:18%;background:var(--speak);">❹ 查阅计划 → 生成回复</div>
+      </div>
+    </div>
+    <div class="gantt-row">
+      <div class="gantt-label" style="color:var(--win);">用户等待</div>
+      <div class="gantt-track">
+        <div class="gantt-bar" style="left:35%;width:3%;background:#86efac;min-width:28px;justify-content:center;">❺</div>
+      </div>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-top:6px;padding-left:112px;">
+      ❶ ASR 边说边吐 partial &nbsp;→&nbsp; ❷ 语义触发器 FIRE（用户还在说） &nbsp;→&nbsp; ❸ Thinker 后台推理（与 ASR 并行） &nbsp;→&nbsp; ❹ Speaker 开口<br/>
+      <span style="color:var(--win);font-weight:600;">❺ 用户从说完到听到回复，仅等 ~330ms（TTFS）—— 比方案 A 快 150-350 倍</span>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== Dynamic Semantic Trigger 详解 ===== -->
+<h2 style="background:var(--trigger-bg); color:var(--trigger);">Dynamic Semantic Trigger 详解</h2>
+<p style="color:var(--muted); margin-bottom:16px;">
+  基于 DistilBERT 的二分类器。每个 ASR partial 送入，输出置信度得分。双重过滤：① 得分 &gt; τ=0.65 才触发 ② 文本与上次触发相同则抑制（防 ASR 抖动重复触发）。
+</p>
+
+<div class="overview">
+  <div class="overview-title">语义触发时间线 —— 一段用户输入的触发过程</div>
+
+  <div class="trig-timeline">
+    <div class="trig-row">
+      <div class="trig-partial">"我今天"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score low">0.21</div>
+      <div class="trig-result no">— 不触发</div>
+    </div>
+    <div class="trig-row">
+      <div class="trig-partial">"我今天心情"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score low">0.38</div>
+      <div class="trig-result no">— 不触发</div>
+    </div>
+    <div class="trig-row">
+      <div class="trig-partial">"我今天心情特别"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score low">0.52</div>
+      <div class="trig-result no">— 不触发</div>
+    </div>
+    <div class="trig-row">
+      <div class="trig-partial">"我今天心情特别差"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score high">0.89</div>
+      <div class="trig-result yes">⚡ FIRE → Thinker 启动</div>
+    </div>
+    <div class="trig-row">
+      <div class="trig-partial">"我今天心情特别差因为"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score low">0.41</div>
+      <div class="trig-result no">— 不触发（用户继续说）</div>
+    </div>
+    <div class="trig-row">
+      <div class="trig-partial">"我今天心情特别差因为被老板骂了"</div>
+      <div class="trig-arrow">→</div>
+      <div class="trig-score high">0.92</div>
+      <div class="trig-result yes">⚡ FIRE → Thinker 更新</div>
+    </div>
+  </div>
+</div>
+
+<div class="two-col" style="margin-top:16px;">
+  <div class="card">
+    <h3>触发器训练</h3>
+    <ul>
+      <li>基座：DistilBERT（轻量，~5ms 推理）</li>
+      <li>数据：GPT-4o 在 GSM8K+MMLU-Pro 文本中标注语义边界 <code>[T]</code> token</li>
+      <li>模拟 ASR 流式切片，生成 ~10 万条累积前缀样本</li>
+      <li>学习率 5e-5，二分类交叉熵</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>双重过滤机制</h3>
+    <ul>
+      <li><strong>阈值门控</strong>：confidence &gt; τ=0.65 才触发</li>
+      <li><strong>去重抑制</strong>：当前文本 = 上次触发文本 → 跳过（防抖动）</li>
+      <li>太低 → 碎片触发过多，浪费推理</li>
+      <li>太高 → 触发过晚，延迟增加</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== Thinker / Speaker 双角色 ===== -->
+<h2 style="background:var(--think-bg); color:var(--think);">Thinker / Speaker 双角色协作</h2>
+<p style="color:var(--muted); margin-bottom:16px;">
+  传统 pipeline 的 LLM 既理解又生成，是同一过程。LTS 拆成两个异步角色：
+  Thinker 用重模型做深度推理，Speaker 快速将计划转化为自然语言回复。
+</p>
+
+<div class="overview">
+  <div class="overview-title">Dual-Role Stream Orchestrator</div>
+  <div class="state-machine">
+    <!-- Thinker column -->
+    <div class="state-col">
+      <div style="text-align:center;font-weight:700;color:var(--think);margin-bottom:8px;">🧠 Thinker（后台）</div>
+      <div class="state-box" style="background:var(--think-bg);border:2px solid var(--think);color:var(--think);">
+        ① 输入纠错<br/><span style="font-size:12px;font-weight:400;">ASR 错误修正（sign→sine）</span>
+      </div>
+      <div style="text-align:center;color:var(--think);font-size:18px;">↓</div>
+      <div class="state-box" style="background:var(--think-bg);border:2px solid var(--think);color:var(--think);">
+        ② 语义分析<br/><span style="font-size:12px;font-weight:400;">评估完整性，提取关键变量</span>
+      </div>
+      <div style="text-align:center;color:var(--think);font-size:18px;">↓</div>
+      <div class="state-box active" style="background:var(--think-bg);border:2px solid var(--think);color:var(--think);">
+        ③ 状态快照<br/><span style="font-size:12px;font-weight:400;">输出 JSON：corrected_text<br/>+ key_variables + plan</span>
+      </div>
+    </div>
+
+    <!-- Arrow column -->
+    <div class="state-arrow-col">
+      <div style="height:40px;"></div>
+      <div style="height:60px;"></div>
+      <div style="writing-mode:vertical-lr;font-size:11px;color:var(--win);">State Injection</div>
+      <div class="handoff-arrow">⟹</div>
+      <div style="font-size:11px;">plan +<br/>variables</div>
+    </div>
+
+    <!-- Speaker column -->
+    <div class="state-col">
+      <div style="text-align:center;font-weight:700;color:var(--speak);margin-bottom:8px;">🗣️ Speaker（前台）</div>
+      <div class="state-box" style="background:var(--speak-bg);border:2px solid var(--speak);color:var(--speak);">
+        ① 复述验证<br/><span style="font-size:12px;font-weight:400;">简短复述核心问题，自检</span>
+      </div>
+      <div style="text-align:center;color:var(--speak);font-size:18px;">↓</div>
+      <div class="state-box" style="background:var(--speak-bg);border:2px solid var(--speak);color:var(--speak);">
+        ② 查阅计划<br/><span style="font-size:12px;font-weight:400;">引用 Thinker 注入的 plan；<br/>若无，从原始上下文构建逻辑</span>
+      </div>
+      <div style="text-align:center;color:var(--speak);font-size:18px;">↓</div>
+      <div class="state-box active" style="background:var(--speak-bg);border:2px solid var(--speak);color:var(--speak);">
+        ③ 求解回答<br/><span style="font-size:12px;font-weight:400;">贪心解码 T=0，max 4096 tokens<br/>→ 送 TTS 合成语音</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note note-key">
+  <strong>关键洞察：</strong>Speaker 不需要等 Thinker 完成才开始。
+  如果 Thinker 的 plan 已就绪，Speaker 直接引用；如果还在推理中，Speaker 先用原始上下文生成，等 Thinker 结果到了再在后续轮次补充。
+  这就是"Answer-First"策略——先开口，后完善。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 打断与回滚 ===== -->
+<h2 style="background:var(--trigger-bg); color:var(--trigger);">打断处理：Thought Rollback</h2>
+
+<div class="overview">
+  <div class="overview-title">用户说到一半改口时的处理流程</div>
+  <div class="pipeline">
+    <div class="pipe-node node-listen" style="flex:1.5;">
+      <div class="pipe-title">① 检测语义偏移</div>
+      <div class="pipe-desc">ASR partials 出现与已触发内容不一致的方向</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-trigger" style="flex:1.5;">
+      <div class="pipe-title">② 终止 Speaker</div>
+      <div class="pipe-desc">立即停止当前回复生成</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-think" style="flex:2;">
+      <div class="pipe-title">③ 保留 Thinker 状态</div>
+      <div class="pipe-desc">已积累的有效推理不丢弃，合并到下轮上下文</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node node-speak" style="flex:1.5;">
+      <div class="pipe-title">④ 新轮触发</div>
+      <div class="pipe-desc">基于更新后的语义重新启动 Thinker + Speaker</div>
+    </div>
+  </div>
+</div>
+
+<div class="note note-danger">
+  <strong>与 PredGen 的关键区别：</strong>PredGen（投机生成）在用户改口时需要丢弃全部预测并重新生成，打断率高达 95-99%。
+  LTS 的 Thought Rollback 保留有效推理状态，打断率仅 5-10%。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 实验结果 ===== -->
+<h2 style="background:var(--win-bg); color:var(--win);">实验结果</h2>
+<p style="color:var(--muted); margin-bottom:16px;">
+  主力骨干 Qwen3-8B，评估 4 个 benchmark：VERA（数学/科学推理）、Spoken-MQA（多步数学问答）、BigBenchAudio（开放域）、Pause-and-Repair（自纠正/改口）。
+</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>方法</th>
+      <th>BigBench Acc%</th>
+      <th>BigBench TTFS</th>
+      <th>MQA Acc%</th>
+      <th>MQA TTFS</th>
+      <th>打断率</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="color:var(--idle);">
+      <td>Serial (Think)</td>
+      <td>73.8%</td>
+      <td>~84,000ms</td>
+      <td>84.0%</td>
+      <td>~43,000ms</td>
+      <td>—</td>
+    </tr>
+    <tr style="color:var(--idle);">
+      <td>PredGen (Think)</td>
+      <td>71.6%</td>
+      <td>~46,000ms</td>
+      <td>83.5%</td>
+      <td>~25,000ms</td>
+      <td>95-99%</td>
+    </tr>
+    <tr style="color:var(--idle);">
+      <td>LTS-VAD (Think)</td>
+      <td>71.5%</td>
+      <td>~45,000ms</td>
+      <td>83.5%</td>
+      <td>~26,000ms</td>
+      <td>70-90%</td>
+    </tr>
+    <tr style="font-weight:700;">
+      <td style="color:var(--win);">LTS-VoiceAgent</td>
+      <td style="color:var(--win);">71.9%</td>
+      <td style="color:var(--win);">338ms</td>
+      <td style="color:var(--win);">78.5%</td>
+      <td style="color:var(--win);">332ms</td>
+      <td style="color:var(--win);">5-10%</td>
+    </tr>
+    <tr style="color:var(--idle);">
+      <td>Qwen2.5-Omni (E2E)</td>
+      <td>43.1%</td>
+      <td>333ms</td>
+      <td>59.9%</td>
+      <td>635ms</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note note-win">
+  <strong>核心结论：</strong>LTS-VoiceAgent 在 BigBench 上达到 71.9% 准确率（接近 Serial Think 的 73.8%），但 TTFS 从 84 秒降到 338ms——延迟降低约 250 倍，同时打断率仅 5-10%。
+  端到端模型（Qwen2.5-Omni）延迟虽低但准确率仅 43.1%。
+</div>
+
+<div class="note note-compare" style="margin-top:8px;">
+  <strong>消融实验：</strong>
+  去掉 Semantic Trigger → 准确率降 3%，无效推理次数增 3.4×，打断率增 7.3×。
+  去掉 Orchestrator → 准确率降 6%，打断率增 1.8×。两个组件缺一不可。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 与其他方案对比 ===== -->
+<h2 style="background:#fefce8; color:#92400e;">与其他调研方案的对比</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th style="color:var(--think);">LTS-VoiceAgent</th>
+      <th style="color:#2563eb;">DuplexCascade</th>
+      <th style="color:#059669;">SLM+LLM 并行</th>
+      <th style="color:#d97706;">moodcoco</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>触发机制</td>
+      <td>DistilBERT 语义触发 (τ=0.65)</td>
+      <td>固定 0.6s 微轮次切片</td>
+      <td>VAD 判断用户说完</td>
+      <td>VAD 判断用户说完</td>
+    </tr>
+    <tr>
+      <td>并行粒度</td>
+      <td>ASR partial 级别（语义边界触发）</td>
+      <td>0.6s chunk 级别</td>
+      <td>轮次级别（两个模型同时启动）</td>
+      <td>轮次级别（Fast 先应答，Slow 后注入）</td>
+    </tr>
+    <tr>
+      <td>Slow/Thinker 职责</td>
+      <td>生成推理计划 (JSON 快照)</td>
+      <td>生成回复 + 控制 token</td>
+      <td>生成高质量完整回复</td>
+      <td>评估/Skills/检索/工具调用</td>
+    </tr>
+    <tr>
+      <td>Fast/Speaker 职责</td>
+      <td>根据计划生成自然语言回复</td>
+      <td>由同一模型的 streaming 输出</td>
+      <td>生成快速过渡性回复</td>
+      <td>实时对话回复</td>
+    </tr>
+    <tr>
+      <td>需要额外训练</td>
+      <td>DistilBERT 触发器需训练（~10 万样本）</td>
+      <td>LLM LoRA 适配（控制 token）</td>
+      <td>不需要</td>
+      <td>不需要</td>
+    </tr>
+    <tr>
+      <td>全双工</td>
+      <td>部分（边听边触发，但非同时说听）</td>
+      <td>是（微轮次 + 控制 token）</td>
+      <td>否</td>
+      <td>否</td>
+    </tr>
+    <tr>
+      <td>打断处理</td>
+      <td>Thought Rollback（保留有效推理）</td>
+      <td>控制 token（user is interrupting）</td>
+      <td>SLM 回复被丢弃</td>
+      <td>Slow 结果 carryover 到下轮</td>
+    </tr>
+    <tr>
+      <td>核心延迟优化</td>
+      <td>语义触发 + 异步双角色</td>
+      <td>微轮次流式 + 无 VAD</td>
+      <td>小模型先顶上（329ms TTFT）</td>
+      <td>Fast 先说 + Slow 后注入</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider" />
+
+<!-- ===== 对 moodcoco 的启发 ===== -->
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的启发</h2>
+
+<div class="two-col">
+  <div class="card" style="border-left:3px solid var(--win);">
+    <h3 style="color:var(--win);">✓ 可以借鉴的</h3>
+    <ul>
+      <li><strong>Semantic Trigger 替代"每条消息都触发 Slow"</strong>——在 ASR partials 上计算语义完整度，只在用户意图清晰时才启动 Slow Agent，节省计算</li>
+      <li><strong>Thinker/Speaker 分离验证了 Fast/Slow 拆分</strong>——LTS 的实验证明：Thinker 做重推理、Speaker 做轻生成，这种分离比"一个 LLM 同时思考和回答"更高效</li>
+      <li><strong>Thought Rollback 机制</strong>——moodcoco 的 Slow 结果 carryover 已经是类似思路，但 LTS 更精细：保留有效状态、只回滚无效部分</li>
+      <li><strong>State Injection = slow_inject_to_fast</strong>——LTS 的 JSON 状态注入映射到 moodcoco 的 <code>slow_inject_to_fast</code> / <code>slow_set_fast_retrieval</code></li>
+    </ul>
+  </div>
+  <div class="card" style="border-left:3px solid var(--trigger);">
+    <h3 style="color:var(--trigger);">⚠ 需要注意的</h3>
+    <ul>
+      <li><strong>触发器需要按领域训练</strong>——LTS 的训练数据来自数学/科学，情绪对话的语义完整性信号完全不同（犹豫、重复、欲言又止 ≠ 语义不完整）</li>
+      <li><strong>论文没有多轮对话评估</strong>——所有 benchmark 都是单轮问答，情绪陪伴是多轮连续对话，触发器行为可能不同</li>
+      <li><strong>Thinker 输出是结构化 JSON</strong>——moodcoco 的 Slow 输出目前是非结构化的策略/Skill 选择，迁移需要设计 JSON schema</li>
+      <li><strong>单 A100 推理</strong>——Qwen3-8B 的推理成本在生产部署中需要考量</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-insight" style="margin-top:16px;">
+  <strong>最值得复现的工程思路：</strong><br/>
+  STT partial stream → <strong>语义触发器</strong>（判断是否值得启动后台推理） → <strong>后台 Thinker</strong> 生成 state/plan/facts →
+  <strong>前台 Speaker</strong> 在 EOT 或足够确定时开始说 → <strong>TTS</strong> 只接 Speaker 的可说文本。<br/><br/>
+  这比"等 STT final 后再问一个大 LLM"更像真正的语音 Agent。
+  对 moodcoco 而言，第一步可以先实现一个简化版 trigger：用 LLM 自身判断 ASR partial 是否"意图明确"，不需要训练 DistilBERT——先验证"选择性触发 Slow"这个策略是否对情绪场景有效。
+</div>
+
+<p style="margin-top:32px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于 arXiv 2601.19952 (LTS-VoiceAgent) 分析，2026-05-11 —
+</p>
+
+</body>
+</html>

@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stimm 架构解析 · 双 Agent 语音框架</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --front: #2563eb;
+      --front-bg: #eff6ff;
+      --super: #7c3aed;
+      --super-bg: #f5f3ff;
+      --steer: #059669;
+      --steer-bg: #ecfdf5;
+      --stt: #0891b2;
+      --stt-bg: #ecfeff;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+      --vad: #64748b;
+      --danger: #dc2626;
+      --win: #16a34a;
+      --win-bg: #f0fdf4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 14px;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .tag-front { background: var(--front-bg); color: var(--front); }
+    .tag-super { background: var(--super-bg); color: var(--super); }
+    .tag-steer { background: var(--steer-bg); color: var(--steer); }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+
+    .overview {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin: 20px 0 36px;
+    }
+    .overview-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .three-col { display: grid; grid-template-columns: 1fr 80px 1fr; gap: 0; align-items: start; }
+    @media (max-width: 800px) {
+      .two-col { grid-template-columns: 1fr; }
+      .three-col { grid-template-columns: 1fr; }
+      .arch-channel { flex-direction: row !important; border-left: none !important; border-right: none !important; border-top: 2px dashed var(--steer) !important; border-bottom: 2px dashed var(--steer) !important; padding: 12px 0 !important; }
+    }
+
+    .note {
+      margin: 12px 0;
+      padding: 12px 16px;
+      border-radius: 6px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+    .note-key { background: var(--super-bg); border-left: 3px solid var(--super); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: #fef2f2; border-left: 3px solid var(--danger); }
+    .note-win { background: var(--win-bg); border-left: 3px solid var(--win); }
+
+    code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      background: #f3f4f6;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+
+    .gl-item {
+      display: flex;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f3f4f6;
+      font-size: 15px;
+    }
+    .gl-term { flex-shrink: 0; width: 220px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    /* Architecture diagram */
+    .arch-col {
+      border: 2px solid;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .arch-node {
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .arch-node .arch-title { font-weight: 700; margin-bottom: 2px; }
+    .arch-node .arch-desc { font-size: 12px; opacity: 0.8; }
+    .arch-arrow { text-align: center; font-size: 18px; margin: 4px 0; }
+    .arch-channel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-left: 2px dashed var(--steer);
+      border-right: 2px dashed var(--steer);
+      padding: 0 8px;
+      font-size: 12px;
+      color: var(--steer);
+    }
+
+    /* Message table */
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; font-weight: 700; }
+    td:first-child { font-weight: 600; width: 180px; }
+
+    /* Timeline */
+    .tl-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .tl-time {
+      width: 60px;
+      flex-shrink: 0;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--muted);
+      padding-top: 8px;
+    }
+    .tl-card {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .tl-card strong { display: block; margin-bottom: 2px; }
+
+    /* Mode cards */
+    .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
+    @media (max-width: 800px) { .mode-grid { grid-template-columns: 1fr; } }
+    .mode-card {
+      border: 2px solid;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+    }
+    .mode-card .mode-name { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+    .mode-card .mode-desc { font-size: 13px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<h1>Stimm <small>— 开源双 Agent 语音框架, GitHub, 2025.12</small></h1>
+<p class="subtitle">
+  快嘴说 · 慧脑想 · Supervisor 远程操控 · LiveKit 实时通信 · "Optimistic VUI"<br/>
+  作者：Etienne (stimm-ai) &nbsp;
+  <span class="tag tag-front">Python</span>
+  <span class="tag tag-steer">LiveKit Agents</span>
+  <span class="tag tag-super">AGPL-3.0</span>
+</p>
+
+<!-- ===== 术语速查 ===== -->
+<h2 style="background:var(--front-bg); color:var(--front);">术语速查</h2>
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">VoiceAgent（前台 Agent）</div>
+    <div class="gl-def">快速路径。拥有实时音频管线 VAD→STT→fast LLM→TTS，负责即时对话。延迟优先，用小/快模型（如 gpt-4o-mini）。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Supervisor（后台监督者）</div>
+    <div class="gl-def">深度路径。以 data-only 参与者加入 LiveKit room（无音频），接收实时转写，执行深度推理/工具调用/规划，通过 data channel 发送指令。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Steering Instruction</div>
+    <div class="gl-def">Supervisor 发给 VoiceAgent 的操控指令。包含上下文注入、语音中断、模式切换、回复覆盖等 5 种消息类型。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Optimistic VUI</div>
+    <div class="gl-def">核心理念：先开口再纠正。VoiceAgent 先用快模型说一句过渡性回答，Supervisor 的深度结果到达后再注入补充或纠正。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">StimmProtocol</div>
+    <div class="gl-def">VoiceAgent 和 Supervisor 之间的通信协议。基于 LiveKit reliable data channel，JSON 序列化，topic 为 "stimm"。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Operating Mode</div>
+    <div class="gl-def">VoiceAgent 的三种工作模式：autonomous（自主）、relay（中继，只说 Supervisor 给的内容）、hybrid（默认，先自主再纳入 Supervisor）。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">LiveKit Room</div>
+    <div class="gl-def">WebRTC 实时通信房间。VoiceAgent 和 Supervisor 都加入同一个 room，但 Supervisor 只走 data channel，不占音频轨道。</div>
+  </div>
+</div>
+
+<!-- ===== 核心思想 ===== -->
+<h2 style="background:var(--steer-bg); color:var(--steer);">核心思想</h2>
+<div class="note note-key" style="font-size:16px;">
+  <strong>前台 Agent 负责说话节奏，后台 Supervisor 负责质量、工具和纠错。</strong><br/>
+  VoiceAgent 用快模型即时回复用户（保证低延迟），Supervisor 在后台做深度推理和工具调用，
+  然后通过 data channel 发送 steering instructions 来<strong>远程操控</strong> VoiceAgent 的行为——注入上下文、替换回复、切换模式、甚至中断当前语音。
+</div>
+<div class="note note-compare" style="margin-top:8px;">
+  <strong>类比：</strong>电视直播主播（VoiceAgent）戴着耳机，导演（Supervisor）在幕后通过耳机告诉主播：
+  "观众问的这个问题，答案是…"、"切换到下一个话题"、"现在停下来，说这句话"。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 三列架构图 ===== -->
+<h2 style="background:var(--front-bg); color:var(--front);">架构总览</h2>
+
+<div class="overview">
+  <div class="overview-title">User ←→ VoiceAgent ←→ Supervisor · 三层架构</div>
+
+  <div class="three-col">
+    <!-- User column -->
+    <div class="arch-col" style="border-color:var(--vad);background:#f8fafc;">
+      <div style="text-align:center;font-weight:700;color:var(--vad);margin-bottom:12px;">🎤 用户</div>
+      <div class="arch-node" style="background:#f1f5f9;border:1px solid #cbd5e1;">
+        <div class="arch-title">麦克风输入</div>
+        <div class="arch-desc">语音 → WebRTC</div>
+      </div>
+      <div class="arch-arrow" style="color:var(--vad);">↕</div>
+      <div class="arch-node" style="background:#f1f5f9;border:1px solid #cbd5e1;">
+        <div class="arch-title">扬声器输出</div>
+        <div class="arch-desc">TTS 音频 → 用户</div>
+      </div>
+    </div>
+
+    <!-- Steering channel -->
+    <div class="arch-channel">
+      <div>📡</div>
+      <div style="writing-mode:vertical-lr;font-weight:600;">LiveKit Room</div>
+      <div>audio<br/>tracks</div>
+      <div>↔</div>
+      <div>data<br/>channel</div>
+    </div>
+
+    <!-- Two-panel right side -->
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <!-- VoiceAgent -->
+      <div class="arch-col" style="border-color:var(--front);background:var(--front-bg);">
+        <div style="text-align:center;font-weight:700;color:var(--front);margin-bottom:10px;">⚡ VoiceAgent（快速路径）</div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+          <div class="arch-node" style="background:white;border:1px solid var(--vad);flex:1;min-width:60px;">
+            <div class="arch-title" style="font-size:12px;">Silero VAD</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--muted);">→</div>
+          <div class="arch-node" style="background:white;border:1px solid var(--stt);flex:1;min-width:60px;">
+            <div class="arch-title" style="font-size:12px;color:var(--stt);">STT</div>
+            <div class="arch-desc">Deepgram</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--muted);">→</div>
+          <div class="arch-node" style="background:white;border:1px solid var(--front);flex:1;min-width:70px;">
+            <div class="arch-title" style="font-size:12px;color:var(--front);">Fast LLM</div>
+            <div class="arch-desc">gpt-4o-mini</div>
+          </div>
+          <div style="display:flex;align-items:center;color:var(--muted);">→</div>
+          <div class="arch-node" style="background:white;border:1px solid var(--tts);flex:1;min-width:60px;">
+            <div class="arch-title" style="font-size:12px;color:var(--tts);">TTS</div>
+            <div class="arch-desc">OpenAI</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Steering Channel detail -->
+      <div style="text-align:center;font-size:20px;color:var(--steer);">
+        ⇅ <span style="font-size:13px;font-weight:600;">StimmProtocol (data channel)</span> ⇅
+      </div>
+
+      <!-- Supervisor -->
+      <div class="arch-col" style="border-color:var(--super);background:var(--super-bg);">
+        <div style="text-align:center;font-weight:700;color:var(--super);margin-bottom:10px;">🧠 Supervisor（深度路径）</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
+          <div class="arch-node" style="background:white;border:1px solid var(--super);flex:1;min-width:80px;">
+            <div class="arch-title" style="font-size:12px;color:var(--super);">推理 LLM</div>
+            <div class="arch-desc">大模型 / API</div>
+          </div>
+          <div class="arch-node" style="background:white;border:1px solid var(--super);flex:1;min-width:80px;">
+            <div class="arch-title" style="font-size:12px;color:var(--super);">工具调用</div>
+            <div class="arch-desc">DB / API / Rules</div>
+          </div>
+          <div class="arch-node" style="background:white;border:1px solid var(--super);flex:1;min-width:80px;">
+            <div class="arch-title" style="font-size:12px;color:var(--super);">规划</div>
+            <div class="arch-desc">对话策略</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== StimmProtocol 消息 ===== -->
+<h2 style="background:var(--steer-bg); color:var(--steer);">StimmProtocol 消息详解</h2>
+<p style="color:var(--muted); margin-bottom:16px;">
+  VoiceAgent 和 Supervisor 通过 LiveKit data channel 交换 JSON 消息。协议定义了 4 种上行 + 5 种下行消息类型。
+</p>
+
+<div class="two-col">
+  <div>
+    <h3 style="color:var(--front);margin-bottom:10px;">VoiceAgent → Supervisor（4 类）</h3>
+    <table style="font-size:13px;">
+      <tr><th>消息</th><th>内容</th></tr>
+      <tr>
+        <td style="color:var(--front);">TranscriptMessage</td>
+        <td>实时 STT 输出（partial + final），含 confidence</td>
+      </tr>
+      <tr>
+        <td style="color:var(--front);">StateMessage</td>
+        <td>Agent 状态变化：listening / thinking / speaking</td>
+      </tr>
+      <tr>
+        <td style="color:var(--front);">BeforeSpeakMessage</td>
+        <td>TTS 前触发，含 turn_id，给 Supervisor 审核窗口</td>
+      </tr>
+      <tr>
+        <td style="color:var(--front);">MetricsMessage</td>
+        <td>每轮延迟指标：VAD/STT/LLM TTFT/TTS TTFB/total</td>
+      </tr>
+    </table>
+  </div>
+  <div>
+    <h3 style="color:var(--super);margin-bottom:10px;">Supervisor → VoiceAgent（5 类）</h3>
+    <table style="font-size:13px;">
+      <tr><th>消息</th><th>内容</th></tr>
+      <tr>
+        <td style="color:var(--super);">InstructionMessage</td>
+        <td>说话指令，priority=interrupt 可中断当前语音</td>
+      </tr>
+      <tr>
+        <td style="color:var(--super);">ContextMessage</td>
+        <td>注入上下文到 Agent 工作记忆（append / replace）</td>
+      </tr>
+      <tr>
+        <td style="color:var(--super);">ActionResultMessage</td>
+        <td>工具/动作执行结果通知（如 calendar_check → done）</td>
+      </tr>
+      <tr>
+        <td style="color:var(--super);">ModeMessage</td>
+        <td>动态切换模式：autonomous / relay / hybrid</td>
+      </tr>
+      <tr>
+        <td style="color:var(--super);">OverrideMessage</td>
+        <td>按 turn_id 取消待发语音并替换内容</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 三种模式 ===== -->
+<h2 style="background:var(--front-bg); color:var(--front);">三种工作模式</h2>
+
+<div class="mode-grid">
+  <div class="mode-card" style="border-color:var(--front);background:var(--front-bg);">
+    <div class="mode-name" style="color:var(--front);">Autonomous</div>
+    <div class="mode-desc">VoiceAgent 完全自主回复。<br/>Supervisor 指令可选保存但不强制执行。<br/><strong>适合：</strong>简单闲聊、不需要深度推理的场景。</div>
+  </div>
+  <div class="mode-card" style="border-color:var(--steer);background:var(--steer-bg);">
+    <div class="mode-name" style="color:var(--steer);">Hybrid（默认）</div>
+    <div class="mode-desc">先自主生成快速回复，<br/>Supervisor 结果到达后纳入后续回复。<br/><strong>适合：</strong>大多数对话——低延迟 + 高质量两手抓。</div>
+  </div>
+  <div class="mode-card" style="border-color:var(--super);background:var(--super-bg);">
+    <div class="mode-name" style="color:var(--super);">Relay</div>
+    <div class="mode-desc">VoiceAgent 只说 Supervisor 给的内容。<br/>完全受控模式。<br/><strong>适合：</strong>需要严格控制输出的场景（医疗、法律）。</div>
+  </div>
+</div>
+
+<div class="note note-key">
+  <strong>模式可以动态切换：</strong>Supervisor 通过 <code>ModeMessage</code> 实时改变 VoiceAgent 的模式。
+  例如：日常对话用 hybrid，检测到用户提到敏感话题时切换到 relay，确保每句话都经过 Supervisor 审核。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== Steering 时间线 ===== -->
+<h2 style="background:var(--super-bg); color:var(--super);">Steering 事件时间线</h2>
+<p style="color:var(--muted); margin-bottom:16px;">
+  Hybrid 模式下，一次典型的 "先快后深" 交互流程：
+</p>
+
+<div class="overview">
+  <div class="overview-title">用户问了一个需要查数据库的问题</div>
+  <div class="tl-row">
+    <div class="tl-time">T0</div>
+    <div class="tl-card" style="background:var(--stt-bg);border:1px solid var(--stt);">
+      <strong style="color:var(--stt);">🎤 用户说话</strong>
+      "帮我看下明天下午有没有空？"
+    </div>
+  </div>
+  <div class="tl-row">
+    <div class="tl-time">T1</div>
+    <div class="tl-card" style="background:var(--front-bg);border:1px solid var(--front);">
+      <strong style="color:var(--front);">⚡ VoiceAgent 即时回复</strong>
+      Fast LLM 生成过渡回答："好的，我帮你查一下明天的日程。"<br/>
+      <span style="font-size:13px;color:var(--muted);">（同时通过 data channel 把 transcript 发给 Supervisor）</span>
+    </div>
+  </div>
+  <div class="tl-row">
+    <div class="tl-time">T2</div>
+    <div class="tl-card" style="background:var(--super-bg);border:1px solid var(--super);">
+      <strong style="color:var(--super);">🧠 Supervisor 后台处理</strong>
+      调用日历 API 查询明天下午的空闲时间 → 得到结果：14:00-16:00 空闲<br/>
+      <span style="font-size:13px;color:var(--muted);">（返回 TRIGGER 决策 + ActionResultMessage）</span>
+    </div>
+  </div>
+  <div class="tl-row">
+    <div class="tl-time">T3</div>
+    <div class="tl-card" style="background:var(--steer-bg);border:1px solid var(--steer);">
+      <strong style="color:var(--steer);">📡 Steering: ContextMessage</strong>
+      Supervisor 注入上下文：<code>"用户明天 14:00-16:00 空闲，其余时间有会议"</code><br/>
+      VoiceAgent 的 Fast LLM prompt 被更新
+    </div>
+  </div>
+  <div class="tl-row">
+    <div class="tl-time">T4</div>
+    <div class="tl-card" style="background:var(--front-bg);border:1px solid var(--front);">
+      <strong style="color:var(--front);">⚡ VoiceAgent 后续回复</strong>
+      基于注入的上下文生成："查到了，你明天下午两点到四点是空的，其他时间都有会议。要帮你约吗？"
+    </div>
+  </div>
+</div>
+
+<div class="note note-compare">
+  <strong>关键设计：</strong>VoiceAgent 的 Fast LLM prompt 被要求"将 Supervisor 最新消息视为唯一权威事实来源"。
+  如果 Supervisor 还没给结果，Fast LLM 会说"我需要查一下"——不会编造事实。
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 技术细节 ===== -->
+<h2 style="background:#f1f5f9; color:var(--ink);">技术实现细节</h2>
+
+<div class="two-col">
+  <div class="card">
+    <h3>运行时架构</h3>
+    <ul>
+      <li>基于 <code>livekit-agents</code> ≥ 1.1 构建</li>
+      <li>Python 3.10+，Pydantic v2 序列化</li>
+      <li>Supervisor 有两种基类：<code>Supervisor</code>（裸事件处理）和 <code>ConversationSupervisor</code>（内置滚动历史 + 静默检测 + JSON 决策契约）</li>
+      <li>支持 23 种 STT / 28 种 TTS / 21 种 LLM 后端</li>
+      <li>Docker Compose 一键部署</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>防重复与延迟触发</h3>
+    <ul>
+      <li><strong>静默等待</strong>：Supervisor 等用户沉默 2.5s 后才处理（避免碎片化调用）</li>
+      <li><strong>去重冷却</strong>：同一指纹的 context 在 8s 内不重复触发</li>
+      <li><strong>延迟注入</strong>：如果 Agent 正在说话，context 注入延迟到空闲时（每 0.5s 重试）</li>
+      <li><strong>滑动窗口</strong>：VoiceAgent 只保留最近 5 条 Supervisor 指令</li>
+      <li><strong>Pre-TTS 缓冲</strong>：token 先缓冲再送 TTS，平衡延迟和自然度</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 与其他方案对比 ===== -->
+<h2 style="background:#fefce8; color:#92400e;">与其他调研方案的对比</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th style="color:var(--super);">Stimm</th>
+      <th style="color:#2563eb;">VoiceAgentRAG</th>
+      <th style="color:#059669;">SLM+LLM 并行</th>
+      <th style="color:#d97706;">moodcoco</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Slow 的角色</td>
+      <td>Supervisor：推理+工具+规划+纠错</td>
+      <td>Background Agent：检索+分析+Skill</td>
+      <td>LLM：生成高质量完整回复</td>
+      <td>Slow Agent：评估+Skills+检索</td>
+    </tr>
+    <tr>
+      <td>Fast-Slow 通信</td>
+      <td>LiveKit data channel（网络协议，解耦）</td>
+      <td>Event bus（进程内事件）</td>
+      <td>asyncio task（进程内）</td>
+      <td>共享 Python 对象（紧耦合）</td>
+    </tr>
+    <tr>
+      <td>Steering 粒度</td>
+      <td>5 种消息类型，含中断/覆盖/模式切换</td>
+      <td>上下文注入</td>
+      <td>无（SLM 回复直接丢弃）</td>
+      <td>inject/attach_skill/set_retrieval</td>
+    </tr>
+    <tr>
+      <td>工具调用位置</td>
+      <td>Supervisor 侧</td>
+      <td>Background Agent 侧</td>
+      <td>LLM 侧</td>
+      <td>Slow Agent 侧</td>
+    </tr>
+    <tr>
+      <td>模式切换</td>
+      <td>✓ 3 种模式动态切换</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✗（固定 hybrid）</td>
+    </tr>
+    <tr>
+      <td>部署架构</td>
+      <td>可分布式（Supervisor 可独立部署）</td>
+      <td>单进程</td>
+      <td>单进程</td>
+      <td>单进程</td>
+    </tr>
+    <tr>
+      <td>成熟度</td>
+      <td>早期开源（576 commits, 43 stars）</td>
+      <td>研究 demo</td>
+      <td>博客 demo</td>
+      <td>内部使用中</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider" />
+
+<!-- ===== 对 moodcoco 的启发 ===== -->
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的启发</h2>
+
+<div class="two-col">
+  <div class="card" style="border-left:3px solid var(--win);">
+    <h3 style="color:var(--win);">✓ 可以借鉴的</h3>
+    <ul>
+      <li><strong>消息化 Steering 替代共享对象</strong>——Stimm 的 StimmProtocol 是 moodcoco <code>slow_inject_to_fast</code> / <code>slow_set_fast_retrieval</code> 的解耦版本。消息化设计使 Supervisor 可以独立部署甚至用不同语言实现</li>
+      <li><strong>BeforeSpeak 审核窗口</strong>——TTS 前让 Supervisor 审核/覆盖，对情绪安全边界很有价值：Slow 检测到风险内容时可以在出声前拦截</li>
+      <li><strong>三种模式动态切换</strong>——日常用 hybrid，敏感话题切 relay（Slow 全权控制），简单闲聊切 autonomous（节省 Slow 算力）</li>
+      <li><strong>结构化决策契约</strong>——Supervisor 返回 <code>NO_ACTION / TRIGGER</code> JSON，比 moodcoco 当前的非结构化注入更清晰</li>
+    </ul>
+  </div>
+  <div class="card" style="border-left:3px solid var(--danger);">
+    <h3 style="color:var(--danger);">⚠ 需要注意的</h3>
+    <ul>
+      <li><strong>项目较早期</strong>——43 stars，单人开发，2026 年 3 月后活跃度下降。不适合直接依赖，但架构设计值得参考</li>
+      <li><strong>Supervisor 等 2.5s 才处理</strong>——对情绪陪伴场景太慢，用户说完后期望立即得到共情回应而非等 2.5s 静默</li>
+      <li><strong>没有发布性能基准</strong>——只有 MetricsMessage 基础设施，无公开延迟数据，实际性能未知</li>
+      <li><strong>网络通信开销</strong>——data channel 在同机部署时开销可忽略，但分布式部署增加 10-50ms 延迟</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-insight" style="margin-top:16px;">
+  <strong>最值得借鉴的设计模式：</strong><br/>
+  Stimm 的 "Optimistic VUI" + 消息化 Steering 是 moodcoco Fast/Slow 架构的工程化方向。
+  当前 moodcoco 的 Slow 通过 Python 对象突变注入 Fast（<code>slow_inject_to_fast</code>），如果要支持 Slow 独立部署（如 GPU 服务器上运行大模型）、
+  或支持多种 Supervisor 策略热切换，就需要 Stimm 这种协议化设计。<br/><br/>
+  <strong>第一步建议：</strong>不需要引入 LiveKit data channel 全套协议。先在现有 Fast/Slow 之间定义 JSON 消息契约（TRIGGER / NO_ACTION / INJECT），
+  替代直接 Python 对象操作。这是最小成本的解耦改造。
+</div>
+
+<p style="margin-top:32px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于 Stimm 开源仓库 (github.com/stimm-ai/stimm) 分析，2026-05-11 —
+</p>
+
+</body>
+</html>

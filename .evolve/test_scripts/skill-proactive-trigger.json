@@ -1,8 +1,0 @@
-{
-  "name": "skill-proactive-trigger",
-  "skill": "proactive-trigger",
-  "persona": "小桔",
-  "theme": "可可主动问起：'上次你说要跟男友谈谈那件事，后来怎么样了？'你想聊聊进展。",
-  "mood": "开放、信任、平缓",
-  "rounds": 3
-}

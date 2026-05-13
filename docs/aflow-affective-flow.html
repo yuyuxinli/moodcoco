@@ -1,0 +1,1136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AFlow &middot; Affective Flow Language Model 解读</title>
+  <style>
+    :root {
+      --ink: #1c1c1e;
+      --muted: #6b7280;
+      --bg: #fafaf9;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #0071e3;
+      --accent-light: #e8f4fd;
+      --green: #34c759;
+      --green-bg: #f0fdf4;
+      --orange: #f59e0b;
+      --orange-bg: #fffbeb;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --teal: #14b8a6;
+      --teal-bg: #f0fdfa;
+      --blue: #3b82f6;
+      --blue-bg: #eff6ff;
+      --warm: #78716c;
+      --warm-bg: #f5f5f4;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px 24px 64px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header { margin-bottom: 40px; }
+    .page-header h1 { font-size: 1.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .page-header .source-link {
+      display: inline-block; margin-top: 8px; font-size: 13px;
+      color: var(--accent); text-decoration: none;
+      border-bottom: 1px solid var(--accent-light);
+    }
+    .page-header .source-link:hover { border-bottom-color: var(--accent); }
+
+    /* TLDR */
+    .tldr {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--accent);
+      margin-bottom: 40px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .tldr-label {
+      font-weight: 700; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 1.15em; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-weight: 600; font-size: 14px; margin-bottom: 12px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .stat-chip {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 18px; box-shadow: var(--shadow);
+      text-align: center; flex: 1; min-width: 120px;
+    }
+    .stat-chip .stat-num {
+      font-size: 1.6em; font-weight: 700; color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .stat-chip .stat-label {
+      font-size: 12px; color: var(--muted); margin-top: 2px;
+    }
+
+    /* Flow diagram */
+    .flow-container {
+      display: flex; align-items: stretch; gap: 0;
+      overflow-x: auto; padding: 8px 0;
+    }
+    .flow-step {
+      flex: 1; min-width: 180px; text-align: center; position: relative;
+    }
+    .flow-box {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      min-height: 110px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+    .flow-box .icon { font-size: 28px; margin-bottom: 8px; }
+    .flow-box .label { font-weight: 600; font-size: 14px; }
+    .flow-box .desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center;
+      min-width: 40px; color: var(--muted); font-size: 20px; flex-shrink: 0;
+    }
+
+    /* Comparison grid */
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+    .compare-card {
+      border-radius: 10px; padding: 20px; box-shadow: var(--shadow);
+    }
+    .compare-card.good {
+      background: var(--green-bg); border: 1px solid #bbf7d0;
+    }
+    .compare-card.bad {
+      background: var(--red-bg); border: 1px solid #fecaca;
+    }
+    .compare-card h4 {
+      font-size: 14px; margin-bottom: 10px; font-weight: 700;
+    }
+    .compare-card.good h4 { color: #15803d; }
+    .compare-card.bad h4 { color: #b91c1c; }
+    .compare-card ul { list-style: none; padding: 0; }
+    .compare-card li {
+      font-size: 14px; padding: 3px 0; padding-left: 16px; position: relative;
+    }
+    .compare-card.good li::before {
+      content: '+'; position: absolute; left: 0; font-weight: 700; color: #16a34a;
+    }
+    .compare-card.bad li::before {
+      content: '-'; position: absolute; left: 0; font-weight: 700; color: #dc2626;
+    }
+
+    /* Equation block */
+    .eq-block {
+      background: #f8f8f7;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 16px 0;
+      font-family: 'SF Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 14px;
+      line-height: 2;
+      overflow-x: auto;
+    }
+    .eq-block .eq-label {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px; color: var(--muted); font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 8px; display: block;
+    }
+    .eq-block .eq-note {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 13px; color: var(--muted); margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px 24px;
+      box-shadow: var(--shadow);
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+    .arch-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; margin: 12px 0; flex-wrap: nowrap;
+    }
+    .arch-node {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 110px;
+      border: 2px solid;
+      position: relative;
+    }
+    .arch-node.mcts { background: var(--blue-bg); border-color: var(--blue); color: var(--blue); }
+    .arch-node.afpo { background: var(--purple-bg); border-color: var(--purple); color: var(--purple); }
+    .arch-node.infer { background: var(--green-bg); border-color: var(--green); color: #15803d; }
+    .arch-node.data { background: var(--orange-bg); border-color: var(--orange); color: #b45309; }
+    .arch-node.model { background: var(--teal-bg); border-color: var(--teal); color: #0f766e; }
+    .arch-node-desc {
+      font-size: 11px; font-weight: 400; color: var(--muted);
+      margin-top: 4px; line-height: 1.3;
+    }
+    .arch-arrow {
+      font-size: 20px; color: var(--muted); margin: 0 8px; flex-shrink: 0;
+    }
+    .arch-arrow-down {
+      text-align: center; font-size: 20px; color: var(--muted);
+      margin: 4px 0;
+    }
+    .arch-label {
+      text-align: center; font-size: 11px; color: var(--muted);
+      font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.06em; margin: 16px 0 4px;
+    }
+
+    /* Affective flow visualization */
+    .flow-vis {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+      margin: 20px 0;
+      position: relative;
+      overflow: hidden;
+    }
+    .flow-vis-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--muted); margin-bottom: 20px;
+    }
+    .flow-timeline {
+      display: flex; align-items: flex-end; gap: 0;
+      position: relative; padding-bottom: 40px;
+    }
+    .flow-turn {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; position: relative; min-width: 80px;
+    }
+    .flow-bar {
+      width: 36px; border-radius: 6px 6px 0 0;
+      transition: height 0.3s;
+      position: relative;
+    }
+    .flow-bar-label {
+      position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
+    .flow-turn-label {
+      position: absolute; bottom: -32px; left: 50%; transform: translateX(-50%);
+      font-size: 11px; color: var(--muted); font-weight: 600;
+      white-space: nowrap;
+    }
+    .flow-edge {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+    }
+    .flow-legend {
+      display: flex; gap: 20px; margin-top: 20px; justify-content: center;
+    }
+    .flow-legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--muted);
+    }
+    .flow-legend-dot {
+      width: 10px; height: 10px; border-radius: 3px;
+    }
+
+    /* Table */
+    .data-table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      background: var(--card); border-radius: 10px;
+      overflow: hidden; box-shadow: var(--shadow);
+    }
+    .data-table th {
+      text-align: left; padding: 10px 12px; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+      background: #f8f8f7; border-bottom: 2px solid var(--border);
+      font-weight: 700;
+    }
+    .data-table td {
+      padding: 8px 12px; border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table .best { font-weight: 700; color: var(--accent); }
+    .data-table .highlight-row { background: var(--accent-light); }
+
+    /* Limitation chips */
+    .limit-list { list-style: none; padding: 0; }
+    .limit-list li {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+      font-size: 14px; display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: var(--shadow);
+    }
+    .limit-icon {
+      flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--orange-bg); color: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; margin-top: 2px;
+    }
+
+    /* Insight box */
+    .insight-box {
+      background: var(--teal-bg);
+      border: 1px solid #99f6e4;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 16px 0;
+    }
+    .insight-box h4 {
+      color: #0f766e; font-size: 14px; font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .insight-box p, .insight-box li {
+      font-size: 14px; line-height: 1.7;
+    }
+    .insight-box ul {
+      padding-left: 18px; margin-top: 8px;
+    }
+
+    /* Sub-section */
+    .sub-title {
+      font-size: 15px; font-weight: 700; margin: 20px 0 12px;
+      color: var(--ink);
+    }
+    p { margin-bottom: 12px; }
+    p.note { font-size: 14px; color: var(--muted); }
+
+    /* Strategy tags */
+    .strat-tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px; margin: 2px 4px 2px 0;
+    }
+    .strat-tag.explore { background: var(--blue-bg); color: var(--blue); }
+    .strat-tag.comfort { background: var(--green-bg); color: #15803d; }
+    .strat-tag.action { background: var(--purple-bg); color: var(--purple); }
+
+    /* Three-column problem */
+    .problem-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      margin: 16px 0;
+    }
+    @media (max-width: 700px) {
+      .problem-grid { grid-template-columns: 1fr; }
+    }
+    .problem-card {
+      background: var(--card); border-radius: 10px; padding: 20px;
+      box-shadow: var(--shadow); border-top: 3px solid;
+    }
+    .problem-card h4 {
+      font-size: 13px; font-weight: 700; margin-bottom: 8px;
+    }
+    .problem-card p {
+      font-size: 13px; color: var(--muted); line-height: 1.6; margin: 0;
+    }
+    .problem-card.p1 { border-top-color: var(--red); }
+    .problem-card.p1 h4 { color: var(--red); }
+    .problem-card.p2 { border-top-color: var(--orange); }
+    .problem-card.p2 h4 { color: #b45309; }
+    .problem-card.p3 { border-top-color: var(--purple); }
+    .problem-card.p3 h4 { color: var(--purple); }
+
+    /* Ablation delta */
+    .ablation-bar {
+      display: flex; align-items: center; gap: 8px; margin: 6px 0;
+    }
+    .ablation-name {
+      font-size: 13px; font-weight: 600; min-width: 140px;
+    }
+    .ablation-track {
+      flex: 1; height: 20px; background: #f1f5f9; border-radius: 4px;
+      position: relative; overflow: hidden;
+    }
+    .ablation-fill {
+      height: 100%; border-radius: 4px;
+      position: absolute; left: 0; top: 0;
+    }
+    .ablation-delta {
+      font-size: 12px; font-weight: 700; min-width: 60px; text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <h1>AFlow: Affective Flow Language Model</h1>
+  <div class="tagline">Zou, Wang, Shen, Xiao, Ma, Li, Mao &amp; Cambria &middot; 2026-02 &middot; Chongqing Univ / NUS / NTU</div>
+  <a class="source-link" href="https://arxiv.org/abs/2602.08826" target="_blank">arXiv 2602.08826</a>
+  &nbsp;&middot;&nbsp;
+  <a class="source-link" href="https://github.com/chz2025/AffectiveFlow" target="_blank">GitHub</a>
+</div>
+
+<!-- 30-second TLDR -->
+<div class="tldr">
+  <div class="tldr-label">30 秒版本</div>
+  <strong>问题：</strong>现有 ESC (Emotional Support Conversation) 对齐方法只用<em>结局奖励</em>或<em>单轮偏好</em>来训练——中间轮的策略选择得不到有效信号，导致策略不连贯、前期支持行为与后续目标脱节。<br>
+  <strong>方案：</strong>AFlow 把多轮对话建模为有向无环图上的 <em>affective flow</em>（情感流），用 GFlowNet 的流守恒约束将结局偏好反向传播到每个中间状态，让策略序列自动保持全局一致性。<br>
+  <strong>效果：</strong>Qwen-2.5-7B 上实现的 AFlow 在策略 F1 和响应多样性上全面超越 GPT-4o、Claude-3.5，同时保持低困惑度。<br>
+  <strong>对 moodcoco：</strong>slow agent 的多轮规划可以直接借鉴 subpath flow-balance 思想——用流守恒把 session 结束时的情绪改善信号回传到每轮策略决策。
+</div>
+
+<!-- 三个核心问题 -->
+<div class="section">
+  <h2 class="section-title">AFlow 解决的三个核心痛点</h2>
+  <div class="problem-grid">
+    <div class="problem-card p1">
+      <h4>(i) 上下文敏感性</h4>
+      <p>现有方法无法充分建模轮级上下文演变——支持的时机和强度随对话进展变化，但训练信号没有反映这一点。</p>
+    </div>
+    <div class="problem-card p2">
+      <h4>(ii) 信用分配</h4>
+      <p>偏好方法依赖稀疏的单轮/结局级监督，无法将最终效果归因到更早的策略决策（credit assignment 断裂）。</p>
+    </div>
+    <div class="problem-card p3">
+      <h4>(iii) 情感动力学</h4>
+      <p>训练信号不反映细粒度的情感变化，阻碍了长期策略连贯性与心理学实践的对齐。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Affective Flow 建模机制图 -->
+<div class="section">
+  <h2 class="section-title">Affective Flow 建模机制</h2>
+
+  <p>AFlow 把对话轨迹 &tau; = (s<sub>0</sub>, a<sub>0</sub>, s<sub>1</sub>, a<sub>1</sub>, ..., s<sub>T</sub>) 视为有向无环图上的流网络，其中每个节点是对话前缀状态 s<sub>t</sub>，每条边是策略动作 a<sub>t</sub>。核心约束：<strong>流守恒</strong>——对任何非终端节点，流入量 = 流出量。</p>
+
+  <!-- Architecture: 3-stage pipeline -->
+  <div class="arch-diagram">
+    <div class="arch-label">Stage 1: 搜索 &amp; 奖励获取</div>
+    <div class="arch-row">
+      <div class="arch-node data">
+        ESConv / ExTES
+        <div class="arch-node-desc">种子对话</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node mcts">
+        MCTS 搜索
+        <div class="arch-node-desc">Selection + Expansion<br>+ Rollout + Backprop</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node data">
+        Q(s,a) / Q(s)
+        <div class="arch-node-desc">状态-动作值 &amp; 状态值</div>
+      </div>
+    </div>
+    <div class="arch-arrow-down">&darr;</div>
+    <div class="arch-label">Stage 2: Affective Flow 偏好优化 (AFPO)</div>
+    <div class="arch-row">
+      <div class="arch-node data">
+        Flow 构建
+        <div class="arch-node-desc">F(s) = Q&#770;(s) &middot; V<sub>&phi;</sub>(s)</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node afpo">
+        Subpath 流平衡
+        <div class="arch-node-desc">L<sub>policy</sub>: 流差 &asymp; 策略概率差</div>
+      </div>
+      <div class="arch-arrow">+</div>
+      <div class="arch-node afpo">
+        边级偏好排序
+        <div class="arch-node-desc">L<sub>evaluate</sub>: margin loss</div>
+      </div>
+    </div>
+    <div class="arch-row" style="margin-top: 8px;">
+      <div class="arch-node model" style="min-width: 280px;">
+        联合优化 &pi;<sub>&theta;</sub>(a|s) + V<sub>&phi;</sub>(s)
+        <div class="arch-node-desc">L<sub>AFPO</sub> = L<sub>policy</sub> + &lambda; &middot; L<sub>evaluate</sub></div>
+      </div>
+    </div>
+    <div class="arch-arrow-down">&darr;</div>
+    <div class="arch-label">Stage 3: 推理</div>
+    <div class="arch-row">
+      <div class="arch-node infer">
+        Affective Reasoning
+        <div class="arch-node-desc">score(a|s) = log&pi;(a|s) + V<sub>&phi;</sub>(s,a)</div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node infer">
+        策略选择 + 生成
+        <div class="arch-node-desc">Top-K 策略 &rarr; 支持性回复</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Affective Flow 可视化 -->
+<div class="section">
+  <h2 class="section-title">流守恒：中间轮信号传播可视化</h2>
+
+  <div class="flow-vis">
+    <div class="flow-vis-title">对话轨迹上的 Affective Flow 传播</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+      <!-- Left: outcome-only -->
+      <div>
+        <div style="text-align:center; font-size:13px; font-weight:700; color:var(--red); margin-bottom:16px;">
+          传统方法：仅结局奖励
+        </div>
+        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:140px; padding-bottom:30px; position:relative;">
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:20px; background:#fecaca; border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>0</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; color:#999;">?</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:20px; background:#fecaca; border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>1</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; color:#999;">?</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:20px; background:#fecaca; border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>2</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; color:#999;">?</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:20px; background:#fecaca; border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>3</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; color:#999;">?</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:100px; background:linear-gradient(to top, #ef4444, #fca5a5); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>T</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--red);">R=0.9</div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:12px; color:var(--muted); margin-top:8px;">
+          中间轮无监督信号 &mdash; 策略漂移不可控
+        </div>
+      </div>
+      <!-- Right: AFlow -->
+      <div>
+        <div style="text-align:center; font-size:13px; font-weight:700; color:var(--accent); margin-bottom:16px;">
+          AFlow：流守恒传播
+        </div>
+        <div style="display:flex; align-items:flex-end; justify-content:center; gap:8px; height:140px; padding-bottom:30px; position:relative;">
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:30px; background:linear-gradient(to top, #3b82f6, #93c5fd); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>0</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--accent);">F=0.2</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:50px; background:linear-gradient(to top, #3b82f6, #93c5fd); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>1</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--accent);">F=0.4</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:65px; background:linear-gradient(to top, #3b82f6, #93c5fd); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>2</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--accent);">F=0.6</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:80px; background:linear-gradient(to top, #3b82f6, #93c5fd); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>3</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--accent);">F=0.75</div>
+          </div>
+          <div style="position:relative; text-align:center;">
+            <div style="width:36px; height:100px; background:linear-gradient(to top, #3b82f6, #60a5fa); border-radius:4px 4px 0 0;"></div>
+            <div style="font-size:10px; color:var(--muted); margin-top:4px;">s<sub>T</sub></div>
+            <div style="position:absolute; top:-16px; left:50%; transform:translateX(-50%); font-size:10px; font-weight:700; color:var(--accent);">F=0.9</div>
+          </div>
+        </div>
+        <div style="text-align:center; font-size:12px; color:var(--muted); margin-top:8px;">
+          流守恒约束 &rarr; 每轮都有精确梯度信号
+        </div>
+      </div>
+    </div>
+    <div class="flow-legend">
+      <div class="flow-legend-item">
+        <div class="flow-legend-dot" style="background:#fecaca;"></div>
+        传统：无中间信号
+      </div>
+      <div class="flow-legend-item">
+        <div class="flow-legend-dot" style="background:var(--accent);"></div>
+        AFlow：连续流值
+      </div>
+      <div class="flow-legend-item">
+        <div class="flow-legend-dot" style="background:#e9d5ff;"></div>
+        流守恒边约束
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Subpath-level flow-balance objective 详解 -->
+<div class="section">
+  <h2 class="section-title">Subpath-Level Flow-Balance Objective 详解</h2>
+
+  <h3 class="sub-title">1. 对话建模为 MDP</h3>
+  <p>状态 s<sub>t</sub> &isin; S 编码到第 t 轮的对话历史，动作 a<sub>t</sub> &isin; A 是策略选择。终端状态 s<sub>T</sub> 被赋予非负终端奖励 R(s<sub>T</sub>) &ge; 0。</p>
+
+  <h3 class="sub-title">2. Affective Flow 参数化</h3>
+  <p>状态流定义为 MCTS 搜索值与可学习评估模型的乘积：</p>
+  <div class="eq-block">
+    <span class="eq-label">状态流</span>
+    F(s) = Q&#770;(s) &middot; V<sub>&phi;</sub>(s)
+    <div class="eq-note">Q&#770;(s) 来自 MCTS backpropagation；V<sub>&phi;</sub>(s) 是可训练的参数化值函数。</div>
+  </div>
+
+  <h3 class="sub-title">3. 边流与流守恒</h3>
+  <p>边流 F(s &rarr; s') 定义为状态流乘以策略概率。对非终端节点强制流守恒：</p>
+  <div class="eq-block">
+    <span class="eq-label">流守恒 (非终端)</span>
+    &sum;<sub>s'&isin;Pred(s)</sub> F(s' &rarr; s) = &sum;<sub>s''&isin;Succ(s)</sub> F(s &rarr; s'')
+    <div class="eq-note">这保证偏好信号可以从终端状态沿搜索树反向传播到任意中间节点。</div>
+  </div>
+  <div class="eq-block">
+    <span class="eq-label">边流分解 (前向)</span>
+    F(s<sub>i</sub> &rarr; s<sub>i+1</sub>) = F(s<sub>i</sub>) &middot; &pi;<sub>&theta;</sub>(a<sub>i</sub> | s<sub>i</sub>)
+  </div>
+  <div class="eq-block">
+    <span class="eq-label">边流分解 (后向)</span>
+    F(s<sub>i</sub> &rarr; s<sub>i+1</sub>) = F(s<sub>i+1</sub>) &middot; &pi;<sub>B</sub>(s<sub>i</sub> | s<sub>i+1</sub>)
+    <div class="eq-note">&pi;<sub>B</sub> 是后向策略。在搜索树中每个节点有唯一父节点，所以 &pi;<sub>B</sub>(s<sub>i</sub> | s<sub>i+1</sub>) = 1。</div>
+  </div>
+
+  <h3 class="sub-title">4. Subpath 流平衡约束（核心贡献）</h3>
+  <p>对轨迹 &tau; 上任意子路径 (s<sub>m</sub>, ..., s<sub>n</sub>)，流守恒递推可得：</p>
+  <div class="eq-block">
+    <span class="eq-label">Subpath 流平衡</span>
+    F(s<sub>n</sub>) = F(s<sub>m</sub>) &middot; &prod;<sub>i=m</sub><sup>n-1</sup> &pi;<sub>&theta;</sub>(a<sub>i</sub> | s<sub>i</sub>)
+    <br><br>
+    取对数 &rarr; log(Q&#770;(s<sub>n</sub>)V<sub>&phi;</sub>(s<sub>n</sub>)) - log(Q&#770;(s<sub>m</sub>)V<sub>&phi;</sub>(s<sub>m</sub>)) = &sum;<sub>i=m</sub><sup>n-1</sup> log &pi;<sub>&theta;</sub>(a<sub>i</sub> | s<sub>i</sub>)
+    <div class="eq-note">
+      记 &Delta;F<sub>m,n</sub> = log(Q&#770;(s<sub>n</sub>)V<sub>&phi;</sub>(s<sub>n</sub>)) - log(Q&#770;(s<sub>m</sub>)V<sub>&phi;</sub>(s<sub>m</sub>))，&Delta;&pi;<sub>m,n</sub> = &sum; log &pi;<sub>&theta;</sub>(a<sub>i</sub> | s<sub>i</sub>)
+    </div>
+  </div>
+
+  <h3 class="sub-title">5. 训练目标</h3>
+  <div class="eq-block">
+    <span class="eq-label">策略损失 (所有子路径)</span>
+    L<sub>policy</sub> = &sum;<sub>&tau;&isin;T</sub> &sum;<sub>0&le;m&lt;n&le;T<sub>&tau;</sub></sub> (&Delta;F<sub>m,n</sub> - &Delta;&pi;<sub>m,n</sub>)<sup>2</sup>
+    <div class="eq-note">对每条轨迹 &tau;，遍历所有 O(T<sup>2</sup>) 个子路径对，强制流差与策略对数概率差一致。这是 credit assignment 的核心机制。</div>
+  </div>
+  <div class="eq-block">
+    <span class="eq-label">边级偏好排序损失</span>
+    L<sub>evaluate</sub> = E<sub>(s<sub>t</sub>, a<sub>w</sub>, a<sub>l</sub>)</sub> max(0, &gamma; - (V<sub>&phi;</sub>(s<sub>t</sub>, a<sub>w</sub>) - V<sub>&phi;</sub>(s<sub>t</sub>, a<sub>l</sub>)))
+    <div class="eq-note">在同一状态 s<sub>t</sub> 下，Q&#770;(s<sub>t</sub>, a<sub>w</sub>) &gt; Q&#770;(s<sub>t</sub>, a<sub>l</sub>) 的策略对构成偏好信号。&gamma; 是 margin 超参。</div>
+  </div>
+  <div class="eq-block">
+    <span class="eq-label">总目标</span>
+    L<sub>AFPO</sub> = L<sub>policy</sub> + &lambda; &middot; L<sub>evaluate</sub>
+    <div class="eq-note">&lambda; 控制 subpath 流平衡与边级偏好的权衡。</div>
+  </div>
+</div>
+
+<!-- MCTS 细节 -->
+<div class="section">
+  <h2 class="section-title">MCTS 奖励获取细节</h2>
+  <div class="card">
+    <div class="card-title">角色分离的对话环境</div>
+    <p style="font-size:14px;">三个 LLM 角色实例化搜索环境：<strong>Seeker</strong>（用户模拟器）、<strong>Supporter</strong>（支持者）、<strong>Rewarder</strong>（评分器）。Rewarder 从四个维度打分：</p>
+    <div class="stats-row" style="margin-top:12px;">
+      <div class="stat-chip">
+        <div class="stat-num" style="font-size:1.2em;">E</div>
+        <div class="stat-label">Empathy<br>w=0.1</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num" style="font-size:1.2em;">I</div>
+        <div class="stat-label">Info Quality<br>w=0.1</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num" style="font-size:1.2em;">H</div>
+        <div class="stat-label">Humanoid<br>w=0.1</div>
+      </div>
+      <div class="stat-chip">
+        <div class="stat-num" style="font-size:1.2em;">S</div>
+        <div class="stat-label">Strategic Eff.<br>w=0.2</div>
+      </div>
+    </div>
+    <div class="eq-block" style="margin-top:12px;">
+      <span class="eq-label">即时奖励</span>
+      r<sub>t</sub> = (w<sub>E</sub>E<sub>t</sub> + w<sub>I</sub>I<sub>t</sub> + w<sub>H</sub>H<sub>t</sub> + w<sub>S</sub>S<sub>t</sub><sup>stra</sup>) / &ell;
+      <div class="eq-note">E, I, H, S &isin; [0, 5]；&ell; = 2.5 归一化。w<sub>S</sub> 权重最高 (0.2)，策略效能占主导。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">MCTS 四步循环</div>
+    <div class="flow-container">
+      <div class="flow-step">
+        <div class="flow-box" style="border-color:var(--blue);">
+          <div class="label" style="color:var(--blue);">Selection</div>
+          <div class="desc">PUCT 选择<br>&rho;<sub>t</sub> = &kappa;/(&kappa;+log(N(s)+1))<br>&kappa;=0.1</div>
+        </div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">
+        <div class="flow-box" style="border-color:var(--green);">
+          <div class="label" style="color:#15803d;">Expansion</div>
+          <div class="desc">Supporter 生成回复<br>Seeker 推进对话<br>新增子节点</div>
+        </div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">
+        <div class="flow-box" style="border-color:var(--orange);">
+          <div class="label" style="color:#b45309;">Rollout</div>
+          <div class="desc">最大深度 L=3<br>收集 r<sub>t+1</sub>...r<sub>t+L'</sub><br>G&#770; = I &middot; avg(r)</div>
+        </div>
+      </div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">
+        <div class="flow-box" style="border-color:var(--purple);">
+          <div class="label" style="color:var(--purple);">Backprop</div>
+          <div class="desc">沿路径更新<br>N(s,a) += 1<br>Q(s,a) += 增量均值</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 中间轮 vs 仅结局 对比 -->
+<div class="section">
+  <h2 class="section-title">中间轮 vs 仅结局奖励：关键差异</h2>
+
+  <div class="compare-grid">
+    <div class="compare-card bad">
+      <h4>传统方法（RLHF / DPO / 结局奖励）</h4>
+      <ul>
+        <li>只在对话结束时给一个标量奖励</li>
+        <li>中间轮策略选择无直接梯度</li>
+        <li>早期探索阶段的好决策得不到 credit</li>
+        <li>策略可能在 Exploration 和 Action 阶段不连贯</li>
+        <li>Value gap &Delta;Q 分布散乱，区分度低</li>
+      </ul>
+    </div>
+    <div class="compare-card good">
+      <h4>AFlow（Subpath Flow Balance）</h4>
+      <ul>
+        <li>每个子路径都有流平衡约束 &rarr; 密集信号</li>
+        <li>O(T<sup>2</sup>) 个子路径对提供 credit assignment</li>
+        <li>流守恒自动把终端偏好反传到初始状态</li>
+        <li>Exploration &rarr; Comforting &rarr; Action 全程连贯</li>
+        <li>Value gap &asymp;1.8 正向偏移，分离度 &Delta;Q*&asymp;0.63</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title">Figure 3 解读：Value Gap 分布</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+      <div>
+        <p style="font-size:14px;"><strong>(a) Value Gap &Delta;Q 分布</strong></p>
+        <p style="font-size:13px; color:var(--muted);">SFT 和 DPO 的 &Delta;Q 分布中心在 0 附近 &mdash; 无法区分好坏策略分支。AFlow 的分布正偏约 1.8，说明学到的值函数能有效区分高/低终端奖励的分支。</p>
+      </div>
+      <div>
+        <p style="font-size:14px;"><strong>(b) 逐轮分离度 &Delta;Q*</strong></p>
+        <p style="font-size:13px; color:var(--muted);">DPO 的分离度在后期轮次快速衰减至 0。AFlow 保持约 0.63 的稳定分离 &mdash; 即使到第 7-8 轮，值函数仍能区分好坏策略。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 实验结果 -->
+<div class="section">
+  <h2 class="section-title">实验结果</h2>
+
+  <div class="stats-row">
+    <div class="stat-chip">
+      <div class="stat-num">8</div>
+      <div class="stat-label">策略类别</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">1500</div>
+      <div class="stat-label">种子对话</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">7B</div>
+      <div class="stat-label">主模型 (Qwen-2.5)</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">3</div>
+      <div class="stat-label">骨干模型验证</div>
+    </div>
+  </div>
+
+  <h3 class="sub-title">Table 1: 自动评估（ESConv + ExTES）</h3>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>数据集</th>
+          <th>指标</th>
+          <th>GPT-4o</th>
+          <th>Claude 3.5</th>
+          <th>EmoDynamiX</th>
+          <th>DYN-Kn</th>
+          <th style="background:var(--accent-light);">AFlow</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="4"><strong>ExTES</strong></td>
+          <td>B-2 / B-4</td>
+          <td>15.8 / 6.55</td>
+          <td>16.5 / 7.25</td>
+          <td>10.1 / 10.3</td>
+          <td>19.2 / 7.10</td>
+          <td class="best highlight-row">22.85 / 9.25</td>
+        </tr>
+        <tr>
+          <td>MET</td>
+          <td>23.8</td>
+          <td>23.5</td>
+          <td>20.9</td>
+          <td>20.5</td>
+          <td class="best highlight-row">23.10</td>
+        </tr>
+        <tr>
+          <td>Diversity D-1 / D-2</td>
+          <td>4.05 / 21.8</td>
+          <td>4.85 / 23.8</td>
+          <td>4.35 / 19.1</td>
+          <td>4.20 / 18.8</td>
+          <td class="best highlight-row">5.10 / 21.05</td>
+        </tr>
+        <tr>
+          <td>Strategy Acc / F1</td>
+          <td>57.8 / 54.8</td>
+          <td>60.5 / 58.8</td>
+          <td>60.8 / 58.9</td>
+          <td>59.5 / 57.8</td>
+          <td class="best highlight-row">64.50 / 62.80</td>
+        </tr>
+        <tr style="border-top:2px solid var(--border);">
+          <td rowspan="4"><strong>ESConv</strong></td>
+          <td>B-2 / B-4</td>
+          <td>16.2 / 6.85</td>
+          <td>17.1 / 7.55</td>
+          <td>20.1 / 19.8</td>
+          <td>19.2 / 7.40</td>
+          <td class="best highlight-row">22.85 / 9.05</td>
+        </tr>
+        <tr>
+          <td>MET</td>
+          <td>24.1</td>
+          <td>24.2</td>
+          <td>21.3</td>
+          <td>21.0</td>
+          <td class="best highlight-row">23.55</td>
+        </tr>
+        <tr>
+          <td>Diversity D-1 / D-2</td>
+          <td>4.12 / 22.1</td>
+          <td>4.95 / 24.8</td>
+          <td>4.50 / 19.8</td>
+          <td>4.30 / 18.9</td>
+          <td class="best highlight-row">5.25 / 21.50</td>
+        </tr>
+        <tr>
+          <td>Strategy Acc / F1</td>
+          <td>58.4 / 55.2</td>
+          <td>61.2 / 59.5</td>
+          <td>61.8 / 60.1</td>
+          <td>60.5 / 58.8</td>
+          <td class="best highlight-row">65.10 / 63.50</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:8px;">AFlow (Qwen-2.5-7B) 在策略 F1 上超出 GPT-4o 约 8 个百分点，超出 Claude-3.5 约 4 个百分点。</p>
+
+  <h3 class="sub-title">Table 2: 跨骨干模型鲁棒性</h3>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>环境</th>
+          <th>骨干</th>
+          <th>Strategy Acc</th>
+          <th>Strategy F1</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="3">GPT-4o</td>
+          <td>Qwen-2.5</td>
+          <td>64.5</td>
+          <td>62.8</td>
+        </tr>
+        <tr>
+          <td>Gemma-2</td>
+          <td>63.8</td>
+          <td>62.1</td>
+        </tr>
+        <tr>
+          <td>LLaMA-3.1</td>
+          <td>63.0</td>
+          <td>61.5</td>
+        </tr>
+        <tr>
+          <td rowspan="3">Claude-3.5</td>
+          <td>Qwen-2.5</td>
+          <td class="best">65.2</td>
+          <td class="best">63.5</td>
+        </tr>
+        <tr>
+          <td>Gemma-2</td>
+          <td>64.4</td>
+          <td>62.8</td>
+        </tr>
+        <tr>
+          <td>LLaMA-3.1</td>
+          <td>63.6</td>
+          <td>62.2</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note" style="margin-top:8px;">三种骨干模型 + 两种 LLM 环境的组合下，性能稳定，最大波动 &lt; 2 个百分点。</p>
+
+  <h3 class="sub-title">Table 3: 人类偏好评估（Win/Tie/Lose %）</h3>
+  <div style="overflow-x:auto;">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>对手</th>
+          <th>维度</th>
+          <th>AFlow Win</th>
+          <th>Tie</th>
+          <th>Lose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td rowspan="2">vs GPT-4o</td>
+          <td>Overall (GPT-5.2 评)</td>
+          <td class="best">50.5</td>
+          <td>33.5</td>
+          <td>16.0</td>
+        </tr>
+        <tr>
+          <td>Overall (人类评)</td>
+          <td class="best">48.5</td>
+          <td>35.2</td>
+          <td>16.3</td>
+        </tr>
+        <tr>
+          <td rowspan="2">vs Claude-3.5</td>
+          <td>Overall (GPT-5.2 评)</td>
+          <td class="best">48.8</td>
+          <td>36.2</td>
+          <td>15.0</td>
+        </tr>
+        <tr>
+          <td>Overall (人类评)</td>
+          <td class="best">46.5</td>
+          <td>38.0</td>
+          <td>15.5</td>
+        </tr>
+        <tr>
+          <td>vs ESCoT</td>
+          <td>Overall (人类评)</td>
+          <td class="best">58.8</td>
+          <td>25.2</td>
+          <td>16.0</td>
+        </tr>
+        <tr>
+          <td>vs EmoDynamiX</td>
+          <td>Overall (人类评)</td>
+          <td class="best">54.5</td>
+          <td>28.5</td>
+          <td>17.0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="sub-title">Ablation Study (Table 4)</h3>
+  <div class="card">
+    <div class="card-title">移除各组件后的性能下降 (&Delta;)</div>
+    <div class="ablation-bar">
+      <div class="ablation-name">Full AFlow</div>
+      <div class="ablation-track">
+        <div class="ablation-fill" style="width:100%; background:var(--accent);"></div>
+      </div>
+      <div class="ablation-delta" style="color:var(--accent);">F1=62.40</div>
+    </div>
+    <div class="ablation-bar">
+      <div class="ablation-name">w/o Flow Balance</div>
+      <div class="ablation-track">
+        <div class="ablation-fill" style="width:88%; background:var(--red);"></div>
+      </div>
+      <div class="ablation-delta" style="color:var(--red);">-7.30</div>
+    </div>
+    <div class="ablation-bar">
+      <div class="ablation-name">w/o MCTS</div>
+      <div class="ablation-track">
+        <div class="ablation-fill" style="width:86%; background:var(--orange);"></div>
+      </div>
+      <div class="ablation-delta" style="color:#b45309;">-8.90</div>
+    </div>
+    <div class="ablation-bar">
+      <div class="ablation-name">w/o Process Sup.</div>
+      <div class="ablation-track">
+        <div class="ablation-fill" style="width:76%; background:var(--purple);"></div>
+      </div>
+      <div class="ablation-delta" style="color:var(--purple);">-14.90</div>
+    </div>
+
+    <div style="margin-top:16px; font-size:14px; color:var(--muted);">
+      <p><strong>关键发现：</strong>Process Supervision 贡献最大（F1 -14.9），说明 MCTS 搜索构建的中间信号是 AFlow 效果的核心来源。Flow Balance 单独贡献 F1 -7.3，验证了子路径约束的独立价值。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 策略多样性 -->
+<div class="section">
+  <h2 class="section-title">策略多样性分析 (RQ5)</h2>
+  <div class="card">
+    <p style="font-size:14px;">AFlow 的策略分布与人类 ground truth 高度一致，覆盖全部 8 种治疗策略：</p>
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin:12px 0;">
+      <span class="strat-tag explore">Clarification</span>
+      <span class="strat-tag explore">Restatement</span>
+      <span class="strat-tag explore">Emotional Validation</span>
+      <span class="strat-tag explore">Exploration of Situation</span>
+      <span class="strat-tag comfort">Affirmation</span>
+      <span class="strat-tag comfort">Self-disclosure</span>
+      <span class="strat-tag action">Coping Plan</span>
+      <span class="strat-tag action">Solution Offering</span>
+    </div>
+    <p style="font-size:14px; color:var(--muted);">人类对话呈高熵分散分布（所有策略均有覆盖），而模式坍缩的方法会集中在少数"安全"策略上。AFlow 保持了专家级的多样性，同时遵循 Exploration &rarr; Comforting &rarr; Action 的自然阶段进展。</p>
+  </div>
+</div>
+
+<!-- 对 moodcoco 的价值 -->
+<div class="section">
+  <h2 class="section-title">对 moodcoco slow agent 的价值</h2>
+
+  <div class="insight-box">
+    <h4>直接可借鉴的三个设计原则</h4>
+    <ul>
+      <li><strong>流守恒做 credit assignment：</strong>moodcoco slow agent 的多轮规划天然适合 flow-balance 框架。Session 结束时的情绪改善指标（对应 R(s<sub>T</sub>)）可以通过流守恒约束反传到每一轮的策略决策，不需要额外训练 reward model。</li>
+      <li><strong>MCTS 搜索做离线策略评估：</strong>用 MCTS 在历史对话上搜索策略树，获取 Q(s,a) 值函数，为 slow agent 的 "思考" 提供定量的策略选择依据，而不是纯靠 prompt 引导。</li>
+      <li><strong>Affective Reasoning 做在线推理：</strong>score(a|s) = log&pi;(a|s) + V<sub>&phi;</sub>(s,a) 这个公式可以直接用于 slow agent 的策略选择——策略先验概率 + 学到的情感价值估计的组合，计算开销极低。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="card-title">落地路径</div>
+    <div style="display:grid; grid-template-columns:auto 1fr; gap:8px 16px; font-size:14px;">
+      <div style="font-weight:700; color:var(--accent);">Phase 1</div>
+      <div>在 moodcoco 历史对话上跑 MCTS 搜索，构建 Q(s,a) 表。Rewarder 用 slow agent 本身做四维度打分（Empathy / Info / Humanoid / Strategy）。</div>
+      <div style="font-weight:700; color:var(--accent);">Phase 2</div>
+      <div>用 AFPO 目标微调 slow agent 的策略选择模块（或 LoRA），使其在推理时自动选择流平衡一致的策略序列。</div>
+      <div style="font-weight:700; color:var(--accent);">Phase 3</div>
+      <div>在线推理时，slow agent 用 Affective Reasoning 公式替代纯 prompt 策略选择，通过 V<sub>&phi;</sub> 值函数提供定量策略评分。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">需要注意的适配问题</div>
+    <div style="font-size:14px;">
+      <p><strong>1. 策略集合：</strong>AFlow 用 ESConv 的 8 种策略。moodcoco 的策略集需要根据实际场景重新定义（可能更细粒度，或增加中文语境的特有策略）。</p>
+      <p><strong>2. MCTS 成本：</strong>每条对话需要多次 LLM 调用做搜索。可以先在少量高质量对话上做，然后用蒸馏方式扩展。</p>
+      <p><strong>3. 评估维度权重：</strong>AFlow 的 w<sub>S</sub>=0.2 强调策略效能。moodcoco 可能需要更高的 Empathy 权重（情绪陪伴场景 vs 问题解决场景）。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 局限性 -->
+<div class="section">
+  <h2 class="section-title">局限性</h2>
+  <ul class="limit-list">
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>MCTS 搜索成本高</strong><br>
+        <span style="font-size:13px; color:var(--muted);">每条种子对话需要多轮 LLM 调用做 Selection/Expansion/Rollout，训练数据构建的计算成本是标准 DPO 的数倍。论文用 1000+500 条种子对话，规模有限。</span>
+      </div>
+    </li>
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>Seeker 模拟器的保真度</strong><br>
+        <span style="font-size:13px; color:var(--muted);">MCTS 中的用户侧由 LLM 模拟，其行为分布与真实求助者可能存在偏差。模拟器的质量直接影响 Q(s,a) 估计的准确性。</span>
+      </div>
+    </li>
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>策略集合固定</strong><br>
+        <span style="font-size:13px; color:var(--muted);">论文将策略合并为 8 类（来自 ESConv/ExTES 标注），不支持动态策略发现。在新场景或不同文化语境下可能需要重新定义策略空间。</span>
+      </div>
+    </li>
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>长对话的 O(T<sup>2</sup>) 子路径</strong><br>
+        <span style="font-size:13px; color:var(--muted);">L<sub>policy</sub> 遍历所有子路径对，复杂度为 O(T<sup>2</sup>)。论文称 "bounded horizon 下可控"，但对超长 session（>15 轮）的扩展性未经验证。</span>
+      </div>
+    </li>
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>后向策略的简化假设</strong><br>
+        <span style="font-size:13px; color:var(--muted);">&pi;<sub>B</sub>(s<sub>i</sub>|s<sub>i+1</sub>) = 1 依赖搜索树中每个节点唯一父节点的特性。在实际对话图（非树）中，这个假设不成立，需要显式参数化后向策略。</span>
+      </div>
+    </li>
+    <li>
+      <div class="limit-icon">!</div>
+      <div>
+        <strong>评估限于英文 ESC 数据集</strong><br>
+        <span style="font-size:13px; color:var(--muted);">仅在 ESConv 和 ExTES 上评估，均为英文。跨语言泛化（特别是中文心理支持对话）未验证。</span>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<!-- Footer -->
+<div style="margin-top:60px; padding-top:20px; border-top:1px solid var(--border); font-size:12px; color:var(--muted);">
+  AFlow 论文解读 &middot; moodcoco 内部参考 &middot; 2026-05-13
+</div>
+
+</body>
+</html>

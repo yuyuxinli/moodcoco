@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>moodcoco Voice Agent 技术方案 v3 — Speaker + Thinker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    line-height: 1.7;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 56px; }
+  .header h1 { font-size: 30px; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+  .header .subtitle { font-size: 15px; color: #636e72; }
+  .header .meta {
+    display: flex; justify-content: center; gap: 16px; margin-top: 14px;
+    font-size: 12px; color: #b2bec3;
+  }
+  .header .meta span {
+    display: inline-block; padding: 3px 14px;
+    background: #eee; border-radius: 20px;
+  }
+  .header .principle {
+    margin-top: 20px; padding: 14px 24px;
+    background: #fff8e1; border-radius: 12px;
+    border-left: 4px solid #fdcb6e;
+    font-size: 14px; color: #636e72;
+    display: inline-block;
+  }
+  .header .principle strong { color: #2d3436; }
+
+  /* Arch overview */
+  .arch-box {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    padding: 36px; margin-bottom: 48px;
+  }
+  .arch-box h2 { font-size: 20px; color: #1a1a2e; margin-bottom: 20px; }
+  .arch-diagram {
+    background: #f8f9fb; border-radius: 12px; padding: 28px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px; line-height: 1.9; overflow-x: auto;
+    color: #2d3436; white-space: pre;
+  }
+  .arch-note {
+    margin-top: 16px; font-size: 13px; color: #636e72;
+    padding: 12px 16px; background: #fff8e1; border-radius: 8px;
+    border-left: 4px solid #fdcb6e;
+  }
+  .arch-note strong { color: #2d3436; }
+
+  /* Decision cards */
+  .decisions { display: flex; flex-direction: column; gap: 20px; margin-bottom: 48px; }
+  .dec-card {
+    background: #fff; border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    overflow: hidden;
+  }
+  .dec-head {
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 24px;
+    background: #f8f9fb; border-bottom: 1px solid #f0f0f0;
+  }
+  .dec-num {
+    width: 32px; height: 32px; line-height: 32px; text-align: center;
+    border-radius: 50%; background: #e17055; color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0;
+  }
+  .dec-num.skip { background: #dfe6e9; color: #b2bec3; }
+  .dec-title { font-size: 16px; font-weight: 700; color: #2d3436; }
+  .dec-tag {
+    margin-left: auto; padding: 3px 12px; border-radius: 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .tag-new { background: #e8f8f5; color: #00b894; }
+  .tag-keep { background: #eee; color: #636e72; }
+  .tag-skip { background: #f0f0f0; color: #b2bec3; }
+  .tag-simple { background: #edf2ff; color: #0984e3; }
+  .dec-body { padding: 20px 24px; }
+  .dec-decision {
+    padding: 14px 18px; border-radius: 10px;
+    background: #f0fff4; border: 1px solid #b7e4c7;
+    margin-bottom: 16px;
+  }
+  .dec-decision .label {
+    font-size: 11px; font-weight: 700; color: #00b894;
+    text-transform: uppercase; margin-bottom: 4px;
+  }
+  .dec-decision .content { font-size: 14px; color: #2d3436; font-weight: 600; }
+
+  /* Mechanism block */
+  .mechanism {
+    background: #f8f9fb; border-radius: 10px; padding: 16px 20px;
+    margin-bottom: 16px; font-size: 13px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    white-space: pre-wrap; line-height: 1.8; color: #2d3436;
+  }
+
+  /* Reference pills */
+  .refs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .ref-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+    background: #edf2ff; color: #0984e3;
+  }
+  .ref-pill.primary { background: #0984e3; color: #fff; }
+  .ref-pill .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+  }
+
+  /* Rationale */
+  .rationale {
+    font-size: 13px; color: #636e72; margin-top: 12px;
+    padding-top: 12px; border-top: 1px dashed #eee; line-height: 1.7;
+  }
+  .rationale strong { color: #2d3436; }
+
+  /* State table */
+  .state-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  .state-table th {
+    text-align: left; padding: 8px 12px; background: #f8f9fb;
+    font-weight: 700; font-size: 12px; color: #636e72; border-bottom: 2px solid #eee;
+  }
+  .state-table td { padding: 8px 12px; border-bottom: 1px solid #f0f0f0; }
+  .state-table code {
+    padding: 2px 8px; border-radius: 4px;
+    background: #f0f0f0; font-size: 12px; font-family: 'SF Mono', monospace;
+  }
+
+  /* Priority section */
+  .priority-section {
+    background: #fff; border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    padding: 36px; margin-bottom: 48px;
+  }
+  .priority-section h2 { font-size: 20px; color: #1a1a2e; margin-bottom: 24px; }
+  .p-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .p-card {
+    border-radius: 12px; padding: 20px;
+    border: 1px solid #eee;
+  }
+  .p-card.p0 { background: #fff5f5; border-color: #fab1a0; }
+  .p-card.p1 { background: #fff8e1; border-color: #ffeaa7; }
+  .p-card.p2 { background: #f0fff4; border-color: #b7e4c7; }
+  .p-label {
+    font-size: 12px; font-weight: 700; margin-bottom: 10px;
+    padding: 2px 10px; border-radius: 8px; display: inline-block;
+  }
+  .p0 .p-label { background: #d63031; color: #fff; }
+  .p1 .p-label { background: #e17055; color: #fff; }
+  .p2 .p-label { background: #00b894; color: #fff; }
+  .p-items { font-size: 13px; color: #2d3436; line-height: 2; }
+  .p-items .dim-ref {
+    display: inline-block; padding: 1px 6px; border-radius: 4px;
+    background: #eee; font-size: 10px; font-weight: 700; color: #636e72;
+    margin-right: 4px;
+  }
+
+  /* Summary table */
+  .summary-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    margin-top: 16px;
+  }
+  .summary-table th {
+    text-align: left; padding: 10px 16px; background: #f8f9fb;
+    font-weight: 700; color: #636e72; border-bottom: 2px solid #eee;
+  }
+  .summary-table td {
+    padding: 10px 16px; border-bottom: 1px solid #f0f0f0; vertical-align: top;
+  }
+  .summary-table tr:hover { background: #fafbfd; }
+
+  /* Future box */
+  .future-box {
+    padding: 14px 18px;
+    background: #f3f0ff; border-radius: 10px;
+    border-left: 4px solid #6c5ce7;
+    font-size: 13px; color: #636e72;
+    line-height: 1.7; margin-top: 16px;
+  }
+  .future-box strong { color: #6c5ce7; }
+
+  @media (max-width: 900px) {
+    .p-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>moodcoco Voice Agent 技术方案 v3</h1>
+  <div class="subtitle">Speaker + Thinker 架构 · VAD 触发（LiveKit 默认）· Cross-turn Only</div>
+  <div class="meta">
+    <span>2026-05-13</span>
+    <span>分支: feat/fast-slow-sjtu-fusion</span>
+    <span>基座: LiveKit Agents SDK + pydantic-ai</span>
+  </div>
+  <div class="principle">
+    <strong>核心原则：</strong>最简单、最成熟的方案先上。没有 LLM 分类触发、没有 Gate、没有 same-turn mutation。所有高级能力（语义打断、状态分类、全双工）留给有 GPU + 训练数据时再做。
+  </div>
+</div>
+
+<!-- Architecture Overview -->
+<div class="arch-box">
+  <h2>整体架构</h2>
+  <div class="arch-diagram">
+┌─────────────────────────────────────────────────────────────────────┐
+│  用户语音输入                                                        │
+│  ┌──────┐     ┌──────────────────────────────────────┐              │
+│  │ VAD  │────▶│  LiveKit 默认触发                      │              │
+│  │Silero│     │  静音 → 触发 Speaker + Thinker         │              │
+│  └──────┘     │  用户出声 → 停止 Speaker               │              │
+│      │        └──────────────────┬───────────────────┘              │
+│      ▼                           │                                  │
+│  ┌──────┐                        │                                  │
+│  │ ASR  │                        │                                  │
+│  └──────┘                        │                                  │
+│                    ┌─────────────┴─────────────┐                    │
+│                    ▼                           ▼                    │
+│  ┌──────────────────────────┐  ┌──────────────────────────┐        │
+│  │  Speaker (Doubao Lite)   │  │  Thinker (Minimax m2.7)  │        │
+│  │                          │  │                          │        │
+│  │  读取: 上轮 Thinker 注入  │  │  输入: 多轮上下文         │        │
+│  │    · dynamic_inject      │  │       + 用户记忆(API)    │        │
+│  │    · skill_bundle        │  │                          │        │
+│  │    · retrieval_block     │  │  输出:                   │        │
+│  │    · prewarmed_contexts  │  │    · 情绪分析 → Context  │        │
+│  │                          │  │    · skill (Context一部分)│        │
+│  │  安全: prompt约束+关键词  │  │    · guidance            │        │
+│  │                          │  │    · next_likely_contexts │        │
+│  │  → 生成回复 → TTS → 用户  │  │    · 异步安全审查         │        │
+│  └──────────────────────────┘  └──────────┬───────────────┘        │
+│                                            │                        │
+│              cross-turn 写入               │                        │
+│              (本轮写入 → 下轮读取)           │                        │
+│                                            ▼                        │
+│  ┌────────────────────────────────────────────────────────┐        │
+│  │  Typed Protocol (Pydantic Model)                       │        │
+│  │  · deps 共享对象: inject / skill / retrieval           │        │
+│  │  · prewarmed_contexts: 预组装的下轮 Context            │        │
+│  │  · 进程内直接 mutation，延迟 ~0ms                      │        │
+│  └────────────────────────────────────────────────────────┘        │
+│                                                                     │
+│  ┌────────────────────────────────────────────────────────┐        │
+│  │  外部依赖                                              │        │
+│  │  · 记忆模块 (独立项目, API 调用)                        │        │
+│  │  · RAG (后续与记忆结合, 暂不实现)                       │        │
+│  └────────────────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────────────────┘
+
+关键约束:
+  1. Speaker 永远先完成（Doubao Lite 快）, Thinker 永远后完成（Minimax m2.7 + 记忆 API 慢）
+  2. 所有 Thinker 输出都是 cross-turn: 写入 deps → 下一轮 Speaker 读取
+  3. 不存在 same-turn mutation（Thinker 比 Speaker 慢，不可能同轮改 Speaker 行为）
+  4. 4 状态生命周期: Idle → UserSpeaking → Processing → AIResponding</div>
+  <div class="arch-note">
+    <strong>不引入新基础设施。</strong>所有改进在现有 LiveKit + pydantic-ai 同进程架构内完成。Thinker 走 API 调用（Minimax m2.7），不需要分布式部署、不需要 GPU。
+  </div>
+</div>
+
+<!-- 12 Decisions -->
+<div class="decisions">
+
+  <!-- D1 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">1</div>
+      <div class="dec-title">Speaker/Thinker 并行机制</div>
+      <div class="dec-tag tag-keep">优化现有</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">Typed Protocol + 现有共享对象，不做分布式拆分。Thinker 走 API。</div>
+      </div>
+      <div class="mechanism">现有 deps mutation 上层加 Pydantic Model 做 typed protocol
+Speaker/Thinker 同进程通信，延迟 ~0ms
+Thinker 走 API（Minimax m2.7），无需独立 GPU 部署
+未来若需分布式，protocol 层已定义好，只换传输层</div>
+      <div class="rationale">
+        <strong>为什么不选 Event Bus（VoiceAgentRAG）或 LiveKit Data Channel（Stimm）：</strong>
+        Thinker 走 API 调用而非本地推理，分布式部署是伪需求。Event Bus 多 5-15ms 延迟 + 新基础设施，Data Channel 多 2-5ms + 架构复杂度，收益为零。
+      </div>
+      <div class="refs">
+        <span class="ref-pill"><span class="dot"></span>参考: Stimm StimmProtocol 消息类型设计</span>
+        <span class="ref-pill"><span class="dot"></span>参考: LTS JSON State Schema</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- D2 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">2</div>
+      <div class="dec-title">触发机制</div>
+      <div class="dec-tag tag-simple">LiveKit 默认</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">纯 VAD 触发（LiveKit 默认行为），无 LLM 分类，无 Gate</div>
+      </div>
+      <div class="mechanism">触发方式: Silero VAD 检测到用户停止说话（静音）
+  → 同时触发 Speaker + Thinker
+  → Speaker 生成回复
+  → 中途没有新语音进来 → 发出去
+  → 有语音进来 → 停止 Speaker，等用户说完，重新触发
+
+状态机: 只有 4 个状态，全部由 VAD 驱动
+  Idle → UserSpeaking → Processing → AIResponding
+  (无 LLM 参与触发判断)</div>
+
+      <table class="state-table">
+        <thead><tr><th>状态</th><th>VAD 事件</th><th>动作</th></tr></thead>
+        <tbody>
+          <tr><td><code>Idle</code></td><td>检测到语音</td><td>→ UserSpeaking</td></tr>
+          <tr><td><code>UserSpeaking</code></td><td>检测到静音</td><td>→ Processing（触发 Speaker + Thinker）</td></tr>
+          <tr><td><code>Processing</code></td><td>Speaker 开始 TTS</td><td>→ AIResponding</td></tr>
+          <tr><td><code>AIResponding</code></td><td>Speaker 完毕 / 用户出声</td><td>→ Idle / UserSpeaking（停止 Speaker）</td></tr>
+        </tbody>
+      </table>
+
+      <div class="rationale">
+        <strong>为什么不用 LLM 做状态分类（6 状态）：</strong>业内没有用 API LLM 做 0.6s 轮询状态判断的成功案例。DuplexCascade 用 LoRA 微调本地模型，LTS 用 DistilBERT 5ms 分类器 — 都需要 GPU + 训练数据，我们目前不具备。<br>
+        <strong>为什么不加 Gate：</strong>Gate 存在的唯一理由是 0.6s 轮训判断用户状态（思考/说完/哭泣），但没有本地小模型就不可能做到。用 API LLM 轮询每分钟 ~100 次调用，成本不可接受。<br>
+        <strong>LiveKit 默认行为已足够：</strong>VAD 二值判断（说话/静音）是最成熟、最广泛使用的触发机制。高级状态判断作为未来升级。
+      </div>
+      <div class="refs">
+        <span class="ref-pill primary"><span class="dot"></span>采用: LiveKit Agents SDK 默认 VAD 行为</span>
+      </div>
+      <div class="future-box">
+        <strong>未来升级（需 GPU + 训练数据）：</strong>LTS 式 DistilBERT 语义完整度分类器（5ms），替代 VAD 静音门。可区分 user_finished / user_thinking / user_crying 等 6 种状态。
+      </div>
+    </div>
+  </div>
+
+  <!-- D3 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">3</div>
+      <div class="dec-title">Context 预热</div>
+      <div class="dec-tag tag-new">新增</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">Thinker 顺带输出 next_likely_contexts + 用户记忆驱动预测 + Context 预组装</div>
+      </div>
+      <div class="mechanism">Thinker 每轮输出 schema:
+{
+  emotion: "...",
+  skill: "untangle",          // skill 是 Context 的一部分
+  guidance: "...",
+  next_likely_contexts: ["decision(纠结)", "calm-body(焦虑)"]
+}
+
+预热动作（同步，~0ms）:
+  → 拼好 decision 的 prompt 模板 + 用户记忆 + 当前情绪
+  → 拼好 calm-body 的 prompt 模板 + 用户记忆 + 当前情绪
+  → 存入 deps.prewarmed_contexts
+
+下一轮:
+  → Thinker 判断 context = decision → 命中 → Speaker 直接用预热 context
+  → Thinker 判断 context = listen  → 未命中 → 正常流程</div>
+      <div class="rationale">
+        <strong>为什么不做 VoiceAgentRAG 式语义缓存：</strong>他们缓存的是向量数据库检索结果（文档），我们没有向量库。我们的瓶颈不是检索延迟，是 Thinker LLM 调用时间。<br>
+        <strong>预测依据：</strong>用户记忆中的历史 context 轨迹（通过外部记忆模块 API 获取）+ 当前 session 的 context 序列。不是瞎猜。<br>
+        <strong>零额外 API 调用：</strong>预测是 Thinker 输出 schema 的一个字段，不需要单独调 LLM。
+      </div>
+      <div class="refs">
+        <span class="ref-pill primary"><span class="dot"></span>核心参考: VoiceAgentRAG "LLM 预测后续话题"思路</span>
+        <span class="ref-pill"><span class="dot"></span>参考: VoiceAgentRAG Semantic Cache 架构（检索场景，未直接采用）</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- D4 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">4</div>
+      <div class="dec-title">打断处理</div>
+      <div class="dec-tag tag-simple">LiveKit 默认</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">用户出声 → 统一停止 Speaker（LiveKit 默认行为），不区分附和/打断/补充</div>
+      </div>
+      <div class="mechanism">AI 正在说话 + 用户出声
+  → VAD 检测到
+  → 停止 Speaker（整个停，不是停 TTS）
+  → 等用户说完
+  → 重新触发 Speaker + Thinker
+
+不区分：
+  · "嗯" (附和) → 停止 Speaker
+  · "不对" (打断) → 停止 Speaker
+  · "而且..." (补充) → 停止 Speaker
+  → 全部统一处理，最简单</div>
+      <div class="rationale">
+        <strong>为什么不做语义区分：</strong>DuplexCascade 的 backchannel/interrupt/supplement 区分需要 LoRA 微调本地模型做 0.6s 轮训判断。API LLM 做不到这个速度。<br>
+        <strong>为什么 LiveKit 默认够用：</strong>情绪陪伴场景下，多打断几次（把附和误判为打断）的体验损失远小于不打断（把打断误判为附和继续说）的体验损失。保守策略更安全。
+      </div>
+      <div class="refs">
+        <span class="ref-pill primary"><span class="dot"></span>采用: LiveKit 默认打断行为</span>
+      </div>
+      <div class="future-box">
+        <strong>未来升级（需 GPU + 训练数据）：</strong>DuplexCascade 式语义打断判断，区分"嗯"（附和，Speaker 继续）vs 真打断（停止 Speaker）vs 补充（拼入当前轮）。LTS Thought Rollback（Speaker 被打断后 Thinker 结果复用）。
+      </div>
+    </div>
+  </div>
+
+  <!-- D5 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">5</div>
+      <div class="dec-title">全双工能力</div>
+      <div class="dec-tag tag-keep">暂不需要</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">半双工 + 打断即停。AI 说话时能听到用户，但统一停止处理。</div>
+      </div>
+      <div class="rationale">
+        AI 说话时能听到用户 ✅ · 打断即停 ✅ · 双方同时语义输出 ❌（不需要）<br>
+        <strong>真全双工（DuplexCascade）需要 LoRA 微调本地模型 + 0.6s 微轮次，不在当前技术栈可达范围内。</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- D6 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">6</div>
+      <div class="dec-title">Thinker → Speaker 通信 + 注入</div>
+      <div class="dec-tag tag-keep">优化现有</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">3 种 mutation 通道 + next_likely_contexts，全部 cross-turn，单向 Thinker→Speaker</div>
+      </div>
+      <div class="mechanism">Thinker → Speaker 注入方式（Pydantic Model 约束）:
+  1. dynamic_inject       — 短指导语，跨轮 LRU 保留 3 条
+  2. skill_bundle         — 完整 skill prompt (SKILL.md)，跨轮 LRU 保留 2 个
+  3. retrieval_block      — ≤200 字摘要，跨轮保留最新 1 条
+  4. prewarmed_contexts   — 预组装的 Context（新增）
+
+所有写入都是 cross-turn: 本轮写入 → 下一轮 Speaker 读取
+
+Speaker 读取方式:
+  · @instructions hook → 编译为 system prompt
+  · 检查 prewarmed_contexts 是否命中
+
+Speaker → Thinker: 无直接信号
+  · Thinker 通过读取 ASR 文本 + deps 上下文获取信息</div>
+      <div class="rationale">
+        <strong>为什么单向（Thinker→Speaker）：</strong>VoiceAgentRAG 有 cache miss 事件（Fast→Slow），Stimm 有 4 种上行消息，但它们的 Slow 管知识（需要 Fast 反馈"缺什么"）。我们的 Thinker 管行为（Context），不需要 Speaker 反馈。
+      </div>
+      <div class="refs">
+        <span class="ref-pill"><span class="dot"></span>参考: Stimm StimmProtocol 5 下行 + 4 上行消息类型</span>
+        <span class="ref-pill"><span class="dot"></span>参考: LTS Thinker JSON State 结构化输出</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- D7/8 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num skip">7</div>
+      <div class="dec-title">记忆 + RAG</div>
+      <div class="dec-tag tag-skip">暂不动</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">记忆模块在独立项目中，moodcoco 只通过 API 调用。RAG 后续与记忆结合。</div>
+      </div>
+      <div class="rationale">
+        记忆是跨产品能力，不耦合在 voice agent 内。moodcoco 需要用户记忆时（如 next_likely_contexts 的历史 context 轨迹），通过外部记忆模块 API 获取。向量 RAG 在情绪陪伴场景暂无检索对象（无文档知识库），等记忆模块就绪后再整合。
+      </div>
+    </div>
+  </div>
+
+  <!-- D9 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num skip">8</div>
+      <div class="dec-title">情绪识别 / 技能路由</div>
+      <div class="dec-tag tag-keep">保持优势</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">保持现有 6 种 skill 路由，Thinker 核心职责是 Context 控制（skill 是 Context 的一部分）</div>
+      </div>
+      <div class="rationale">
+        crisis / calm-body / decision / untangle / relationship / listen — 业内无人做到这个粒度。DuplexCascade 仅识别"沉思"，Stimm 仅有安全过滤潜力，其余方案不涉及情绪。这是 moodcoco 的核心护城河。<br>
+        <strong>重要澄清：</strong>Thinker 的核心职责是控制 Context，skill 只是 Context 的一部分。Thinker 还输出情绪判断、guidance、预测等。不应把 Thinker 理解为"skill 路由器"。
+      </div>
+    </div>
+  </div>
+
+  <!-- D10 -->
+  <div class="dec-card">
+    <div class="dec-head">
+      <div class="dec-num">9</div>
+      <div class="dec-title">发言前安全过滤</div>
+      <div class="dec-tag tag-new">新增</div>
+    </div>
+    <div class="dec-body">
+      <div class="dec-decision">
+        <div class="label">决策</div>
+        <div class="content">三层防护：Speaker prompt 约束 + 关键词过滤 + Thinker 异步追溯修正</div>
+      </div>
+      <div class="mechanism">第 1 层: Speaker system prompt 内置安全红线（0ms）
+  · 不诊断、不替用户做决定
+  · 不对不在场的人做动机判断
+  · crisis 场景引导专业求助
+
+第 2 层: 关键词/正则兜底（~0ms）
+  · 极端有害内容过滤（黑名单）
+
+第 3 层: Thinker 异步追溯（不阻塞）
+  · Thinker 审查 Speaker 的输出内容
+  · 发现灰色地带问题 → 下一轮修正/补充
+  · 如 Speaker 给了不恰当建议 → Thinker 下轮注入修正指导</div>
+      <div class="rationale">
+        <strong>为什么不选 Stimm BeforeSpeak 同步否决：</strong>等 Thinker 判断 = +1-3s 延迟，废掉 Speaker 的速度优势。<br>
+        <strong>风险窗口：</strong>Speaker 说完到 Thinker 发现之间有 1-3s 窗口期。但 Doubao Lite 有安全对齐 + prompt 红线 + 关键词兜底，真正漏网的概率极低。灰色地带问题（不恰当建议等）由 Thinker 下轮修正，可接受。
+      </div>
+      <div class="refs">
+        <span class="ref-pill primary"><span class="dot"></span>核心参考: Stimm BeforeSpeakMessage 否决权思路（简化为异步）</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Implementation Priority -->
+<div class="priority-section">
+  <h2>实现优先级</h2>
+  <div class="p-grid">
+    <div class="p-card p0">
+      <div class="p-label">P0 · 先做</div>
+      <div class="p-items">
+        <span class="dim-ref">D1</span> Pydantic Typed Protocol<br>
+        <span class="dim-ref">D2</span> VAD 触发 + 4 状态生命周期<br>
+        <span class="dim-ref">D9</span> Speaker prompt 安全红线 + 关键词过滤<br>
+        <div style="margin-top:8px; font-size:12px; color:#636e72;">基础通信规范 + 触发机制 + 安全底线</div>
+      </div>
+    </div>
+    <div class="p-card p1">
+      <div class="p-label">P1 · 核心体验</div>
+      <div class="p-items">
+        <span class="dim-ref">D6</span> 3 种 mutation 通道规范化<br>
+        <span class="dim-ref">D3</span> Thinker next_likely_contexts 输出<br>
+        <span class="dim-ref">D9</span> Thinker 异步安全审查<br>
+        <div style="margin-top:8px; font-size:12px; color:#636e72;">Context 注入 + 预热 + 异步审查</div>
+      </div>
+    </div>
+    <div class="p-card p2">
+      <div class="p-label">P2 · 迭代优化</div>
+      <div class="p-items">
+        <span class="dim-ref">D3</span> Context 预组装命中率优化<br>
+        <span class="dim-ref">D6</span> 完善 protocol 字段定义<br>
+        <span class="dim-ref">D7</span> 记忆模块 API 接入<br>
+        <div style="margin-top:8px; font-size:12px; color:#636e72;">精细化打磨，数据驱动迭代</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reference Summary -->
+<div class="arch-box">
+  <h2>方案参考溯源</h2>
+  <table class="summary-table">
+    <thead>
+      <tr><th>业内方案</th><th>我们借鉴了什么</th><th>我们没采用什么</th><th>为什么不采用</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>VoiceAgentRAG</strong><br><span style="font-size:11px;color:#b2bec3;">Salesforce · arXiv 2603.02206</span></td>
+        <td>"LLM 预测后续话题"思路<br>→ next_likely_contexts</td>
+        <td>Semantic Cache 316x 加速<br>Event Bus 解耦架构</td>
+        <td>无向量库可缓存；Thinker 走 API 不需要解耦</td>
+      </tr>
+      <tr>
+        <td><strong>DuplexCascade</strong><br><span style="font-size:11px;color:#b2bec3;">SB Intuitions · arXiv 2603.09180</span></td>
+        <td>语义区分思路（附和 vs 打断 vs 补充）<br>→ 未来升级方向</td>
+        <td>0.6s 微轮次轮询<br>LoRA 微调本地模型<br>真全双工<br>7 种 control token</td>
+        <td>无本地模型；API 轮询成本不可接受</td>
+      </tr>
+      <tr>
+        <td><strong>LTS-VoiceAgent</strong><br><span style="font-size:11px;color:#b2bec3;">美团+中科院 · arXiv 2601.19952</span></td>
+        <td>Thinker JSON 结构化输出格式<br>→ Pydantic Model schema</td>
+        <td>DistilBERT 5ms 本地分类器<br>Thought Rollback</td>
+        <td>需标注数据+训练；Rollback 后续可迭代</td>
+      </tr>
+      <tr>
+        <td><strong>Enterprise VA</strong><br><span style="font-size:11px;color:#b2bec3;">Salesforce · 9 章教程</span></td>
+        <td>SentenceBuffer 句子边界切分<br>（LiveKit SDK 已内置类似机制）</td>
+        <td>标准 cascade pipeline</td>
+        <td>我们已是 Speaker/Thinker 架构，非标准 cascade</td>
+      </tr>
+      <tr>
+        <td><strong>Stimm</strong><br><span style="font-size:11px;color:#b2bec3;">stimm-ai · GitHub</span></td>
+        <td>StimmProtocol 强类型消息设计<br>→ Pydantic Typed Protocol<br>BeforeSpeakMessage 思路<br>→ 简化为 Thinker 异步追溯</td>
+        <td>LiveKit Data Channel 通信<br>同步 BeforeSpeak 否决</td>
+        <td>同进程不需要 Data Channel；同步否决杀延迟</td>
+      </tr>
+      <tr>
+        <td><strong>Iris / HF Toolkit</strong><br><span style="font-size:11px;color:#b2bec3;">Cloudflare + HuggingFace</span></td>
+        <td>Speculative EOT 投机思路（参考未采用）</td>
+        <td>投机生成 + abort 机制</td>
+        <td>情绪场景误触发风险高</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+</body>
+</html>

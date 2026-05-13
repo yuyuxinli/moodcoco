@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>开源 Pipeline 工具箱 · HF speech-to-speech + Iris Voice Agent</title>
+  <style>
+    :root {
+      --ink: #1a1a2e;
+      --muted: #6b7280;
+      --bg: #fafbfc;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --hf: #ff6f00;
+      --hf-bg: #fff8e1;
+      --iris: #0891b2;
+      --iris-bg: #ecfeff;
+      --spec: #7c3aed;
+      --spec-bg: #f5f3ff;
+      --mod: #059669;
+      --mod-bg: #ecfdf5;
+      --stt: #0891b2;
+      --tts: #d97706;
+      --tts-bg: #fffbeb;
+      --llm: #2563eb;
+      --llm-bg: #eff6ff;
+      --danger: #dc2626;
+      --win: #16a34a;
+      --win-bg: #f0fdf4;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.5em; margin-bottom: 4px; }
+    h1 small { font-weight: 400; color: var(--muted); font-size: 14px; }
+    .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+    h2 {
+      font-size: 1.1em;
+      margin: 36px 0 14px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .tag { display: inline-block; font-size: 14px; padding: 1px 8px; border-radius: 4px; font-weight: 600; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+    .card h3 { font-size: 16px; margin-bottom: 8px; }
+    .card ul { padding-left: 18px; font-size: 15px; }
+    .card li { margin-bottom: 5px; }
+    .overview { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin: 20px 0 36px; }
+    .overview-title { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 20px; text-align: center; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+    .note { margin: 12px 0; padding: 12px 16px; border-radius: 6px; font-size: 15px; line-height: 1.6; }
+    .note-key { background: var(--hf-bg); border-left: 3px solid var(--hf); }
+    .note-compare { background: #fefce8; border-left: 3px solid #eab308; }
+    .note-insight { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+    .note-danger { background: #fef2f2; border-left: 3px solid var(--danger); }
+    .note-win { background: var(--win-bg); border-left: 3px solid var(--win); }
+    code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 14px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; }
+    .divider { border: none; border-top: 2px dashed var(--border); margin: 40px 0 20px; }
+    .gl-item { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f3f4f6; font-size: 15px; }
+    .gl-term { flex-shrink: 0; width: 220px; font-weight: 600; }
+    .gl-def { color: var(--muted); }
+
+    .pipeline { display: flex; align-items: stretch; gap: 0; margin: 16px 0; flex-wrap: wrap; }
+    .pipe-node { flex: 1; min-width: 100px; padding: 12px; border-radius: 8px; text-align: center; }
+    .pipe-node .pipe-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .pipe-node .pipe-desc { font-size: 12px; line-height: 1.4; opacity: 0.8; }
+    .pipe-arrow { display: flex; align-items: center; font-size: 22px; color: var(--muted); padding: 0 3px; flex-shrink: 0; }
+
+    .slot-node {
+      flex: 1; min-width: 120px; padding: 14px; border-radius: 10px;
+      text-align: center; border: 2px dashed;
+    }
+    .slot-node .slot-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+    .slot-node .slot-options { font-size: 12px; line-height: 1.6; }
+    .slot-node .slot-options span { display: inline-block; background: rgba(255,255,255,.6); padding: 1px 6px; border-radius: 3px; margin: 1px; }
+
+    /* Timeline for speculative EOT */
+    .spec-timeline { margin: 20px 0; }
+    .spec-row { display: flex; align-items: flex-start; margin-bottom: 10px; min-height: 44px; }
+    .spec-time { width: 50px; flex-shrink: 0; font-weight: 700; font-size: 14px; color: var(--muted); padding-top: 8px; }
+    .spec-card { flex: 1; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.5; }
+    .spec-card strong { display: block; margin-bottom: 2px; }
+    .spec-branch { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-left: 50px; }
+    @media (max-width: 800px) { .spec-branch { grid-template-columns: 1fr; } }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    th, td { padding: 10px 12px; border: 1px solid var(--border); text-align: left; }
+    th { background: #f8fafc; font-weight: 700; }
+    td:first-child { font-weight: 600; width: 160px; }
+  </style>
+</head>
+<body>
+
+<h1>开源 Pipeline 工具箱 <small>— 两个工程参考</small></h1>
+<p class="subtitle">
+  HF speech-to-speech：全模块化级联管线，适合本地模型组合测试<br/>
+  Iris Voice Agent：标准级联 + 投机式 EOT 生成，Cloudflare Workers 边缘部署
+</p>
+
+<!-- ===== 术语速查 ===== -->
+<h2 style="background:#f1f5f9; color:var(--ink);">术语速查</h2>
+<div class="card" style="margin:14px 0 30px;">
+  <div class="gl-item">
+    <div class="gl-term">Cascade Pipeline</div>
+    <div class="gl-def">级联管线。VAD→STT→LLM→TTS 按阶段串行（可部分流式重叠），是当前语音 Agent 主流架构。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Modular Backend</div>
+    <div class="gl-def">可插拔后端。每个管线节点（STT/LLM/TTS）支持多种实现，运行时配置切换，不改代码。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Speculative Generation</div>
+    <div class="gl-def">投机生成。在不确定用户是否说完时就开始生成 LLM 回复，赌对了省延迟，赌错了丢弃重来。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">EOT（End-of-Turn）</div>
+    <div class="gl-def">轮次结束检测。判断用户是否已经说完。传统用 VAD 静音检测，Iris 用置信度阈值做提前判断。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Abort-Retry</div>
+    <div class="gl-def">中止重试。投机生成被打断时丢弃已有结果，等新的 EOT 信号后重新生成。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Edge Deployment</div>
+    <div class="gl-def">边缘部署。将服务运行在靠近用户的边缘节点（如 Cloudflare Workers），减少网络延迟。</div>
+  </div>
+  <div class="gl-item">
+    <div class="gl-term">Durable Objects</div>
+    <div class="gl-def">Cloudflare 的有状态边缘计算。Iris 用它维护对话状态，使无状态 Worker 能管理多轮对话。</div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Part A: HF speech-to-speech ========== -->
+<h2 style="background:var(--hf-bg); color:var(--hf);">Part A: HuggingFace speech-to-speech</h2>
+<p style="color:var(--muted); margin-bottom:8px;">
+  <strong>GitHub:</strong> huggingface/speech-to-speech &nbsp;|&nbsp; 全开源，模块化，适合本地模型组合测试
+</p>
+
+<div class="note note-key" style="font-size:16px;">
+  <strong>一个即插即用的全开源级联框架。</strong>不追求架构创新，追求模块化和可替换性——
+  每个环节都支持多种后端，适合快速比较不同 STT/LLM/TTS 组合的效果。
+</div>
+
+<div class="overview">
+  <div class="overview-title">模块化管线 —— 每个节点可独立替换</div>
+  <div class="pipeline">
+    <div class="slot-node" style="border-color:var(--stt);background:var(--iris-bg);">
+      <div class="slot-title" style="color:var(--stt);">VAD</div>
+      <div class="slot-options">
+        <span>Silero VAD</span>
+      </div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="slot-node" style="border-color:var(--stt);background:var(--iris-bg);">
+      <div class="slot-title" style="color:var(--stt);">STT</div>
+      <div class="slot-options">
+        <span>Whisper</span>
+        <span>faster-whisper</span>
+        <span>Parakeet TDT</span>
+        <span>FunASR</span>
+      </div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="slot-node" style="border-color:var(--llm);background:var(--llm-bg);">
+      <div class="slot-title" style="color:var(--llm);">LLM</div>
+      <div class="slot-options">
+        <span>HF Transformers</span>
+        <span>MLX (Apple)</span>
+        <span>OpenAI API</span>
+        <span>本地 GGUF</span>
+      </div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="slot-node" style="border-color:var(--tts);background:var(--tts-bg);">
+      <div class="slot-title" style="color:var(--tts);">TTS</div>
+      <div class="slot-options">
+        <span>ChatTTS</span>
+        <span>Kokoro</span>
+        <span>Qwen3-TTS</span>
+        <span>Pocket TTS</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="two-col">
+  <div class="card" style="border-left:3px solid var(--win);">
+    <h3 style="color:var(--win);">✓ 适用场景</h3>
+    <ul>
+      <li>本地模型组合测试和 benchmark</li>
+      <li>快速原型：换一行配置切换 STT/TTS</li>
+      <li>学术研究：控制变量对比不同组件</li>
+      <li>支持 realtime / server-client / WebSocket 模式</li>
+    </ul>
+  </div>
+  <div class="card" style="border-left:3px solid var(--danger);">
+    <h3 style="color:var(--danger);">✗ 局限</h3>
+    <ul>
+      <li>无 production 级错误处理和监控</li>
+      <li>无工具调用 / function calling 支持</li>
+      <li>无多轮对话状态管理</li>
+      <li>流式重叠有限——主要是串行执行</li>
+    </ul>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ========== Part B: Iris Voice Agent ========== -->
+<h2 style="background:var(--iris-bg); color:var(--iris);">Part B: Iris Voice Agent</h2>
+<p style="color:var(--muted); margin-bottom:8px;">
+  <strong>GitHub:</strong> cloudflare/iris &nbsp;|&nbsp; Cloudflare Workers + Durable Objects &nbsp;|&nbsp; 亮点：Speculative EOT
+</p>
+
+<div class="note" style="background:var(--iris-bg);border-left:3px solid var(--iris);font-size:16px;">
+  <strong>架构本身是标准级联</strong>（Deepgram STT + Groq LLM + ElevenLabs TTS），
+  但有一个值得注意的工程技巧：<strong>Speculative EOT Generation</strong>——在仅有 30% 置信度认为用户说完时就开始生成，
+  赌对了大幅降低延迟，赌错了 abort 重来。
+</div>
+
+<!-- Speculative EOT Timeline -->
+<div class="overview">
+  <div class="overview-title">Speculative EOT 投机生成流程</div>
+
+  <div class="spec-timeline">
+    <div class="spec-row">
+      <div class="spec-time">T0</div>
+      <div class="spec-card" style="background:var(--iris-bg);border:1px solid var(--iris);">
+        <strong style="color:var(--iris);">🎤 用户正在说话…</strong>
+        VAD 检测到语音活动，STT 流式转写中
+      </div>
+    </div>
+    <div class="spec-row">
+      <div class="spec-time">T1</div>
+      <div class="spec-card" style="background:var(--spec-bg);border:1px solid var(--spec);">
+        <strong style="color:var(--spec);">🎲 EOT 置信度 30% → 投机启动</strong>
+        不等 VAD 确认用户说完，提前将当前 transcript 送入 Groq LLM 开始生成回复
+      </div>
+    </div>
+  </div>
+
+  <!-- Branch -->
+  <div class="spec-branch">
+    <div style="padding:14px;border-radius:8px;background:#fef2f2;border:2px solid var(--danger);">
+      <strong style="color:var(--danger);">❌ 赌错了：用户继续说</strong><br/>
+      <span style="font-size:14px;">
+        VAD 检测到用户还在说话 →<br/>
+        <strong>ABORT</strong> 已生成的回复 →<br/>
+        丢弃全部投机结果 →<br/>
+        等下一个 EOT 信号重试
+      </span>
+    </div>
+    <div style="padding:14px;border-radius:8px;background:var(--win-bg);border:2px solid var(--win);">
+      <strong style="color:var(--win);">✓ 赌对了：用户确实说完了</strong><br/>
+      <span style="font-size:14px;">
+        VAD 确认静音 →<br/>
+        回复已部分生成完毕 →<br/>
+        <strong>立即送 TTS</strong>，用户更快听到 →<br/>
+        节省 LLM TTFT 的等待时间
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="note note-compare">
+  <strong>本质是一个赌注：</strong>用多余的计算（abort 掉的无用生成）换取延迟降低。
+  如果用户长句占比高（abort 率高），投机生成反而浪费；如果用户多为短句且停顿清晰，收益显著。
+</div>
+
+<!-- Iris pipeline -->
+<div style="margin-top:20px;">
+  <h3 style="color:var(--iris);margin-bottom:12px;">Iris 部署架构</h3>
+  <div class="pipeline">
+    <div class="pipe-node" style="background:#f1f5f9;border:2px solid #94a3b8;">
+      <div class="pipe-title" style="color:#475569;">用户浏览器</div>
+      <div class="pipe-desc">WebRTC</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:var(--iris-bg);border:2px solid var(--iris);">
+      <div class="pipe-title" style="color:var(--iris);">CF Workers</div>
+      <div class="pipe-desc">Durable Objects</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:var(--iris-bg);border:2px solid var(--stt);">
+      <div class="pipe-title" style="color:var(--stt);">Deepgram STT</div>
+      <div class="pipe-desc">nova-3</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:var(--llm-bg);border:2px solid var(--llm);">
+      <div class="pipe-title" style="color:var(--llm);">Groq LLM</div>
+      <div class="pipe-desc">fast inference</div>
+    </div>
+    <div class="pipe-arrow">→</div>
+    <div class="pipe-node" style="background:var(--tts-bg);border:2px solid var(--tts);">
+      <div class="pipe-title" style="color:var(--tts);">ElevenLabs TTS</div>
+      <div class="pipe-desc">或 Orpheus/Aura2</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ===== 对比表 ===== -->
+<h2 style="background:#fefce8; color:#92400e;">A vs B vs moodcoco</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>维度</th>
+      <th style="color:var(--hf);">HF speech-to-speech</th>
+      <th style="color:var(--iris);">Iris Voice Agent</th>
+      <th style="color:#d97706;">moodcoco</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>架构模式</td>
+      <td>标准级联 VAD→STT→LLM→TTS</td>
+      <td>标准级联 + Speculative EOT</td>
+      <td>Fast/Slow 双 Agent 并行</td>
+    </tr>
+    <tr>
+      <td>部署环境</td>
+      <td>本地（CPU/GPU）</td>
+      <td>Cloudflare 边缘</td>
+      <td>云端 (AWS)</td>
+    </tr>
+    <tr>
+      <td>延迟优化手段</td>
+      <td>无特殊优化</td>
+      <td>投机 EOT (30% 提前启动)</td>
+      <td>Fast 先说 + Slow 后注入</td>
+    </tr>
+    <tr>
+      <td>模块化程度</td>
+      <td>极高（每层可换后端）</td>
+      <td>固定 (Deepgram+Groq+ElevenLabs)</td>
+      <td>中等 (STT/TTS 插件化)</td>
+    </tr>
+    <tr>
+      <td>工具调用</td>
+      <td>✗</td>
+      <td>✗</td>
+      <td>✓ (Slow Agent)</td>
+    </tr>
+    <tr>
+      <td>生产就绪度</td>
+      <td>低（原型/测试用）</td>
+      <td>低（demo）</td>
+      <td>中（内部使用）</td>
+    </tr>
+    <tr>
+      <td>核心价值</td>
+      <td>模型组合快速对比</td>
+      <td>Speculative EOT 思路</td>
+      <td>情绪陪伴 + Skill 路由</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="divider" />
+
+<!-- ===== 对 moodcoco 的启发 ===== -->
+<h2 style="background:#f0f9ff; color:#0284c7;">对 moodcoco 的启发</h2>
+
+<div class="two-col">
+  <div class="card" style="border-left:3px solid var(--hf);">
+    <h3 style="color:var(--hf);">来自 HF speech-to-speech</h3>
+    <ul>
+      <li><strong>模块化后端验证</strong>——moodcoco 的 STT/TTS 插件化（XfyunSTTPlugin, MiniMaxTTS）已经走在这个方向上</li>
+      <li><strong>本地对比工具</strong>——可以用这个框架快速测试：Parakeet vs Whisper vs FunASR × Kokoro vs Qwen3-TTS，找出中文场景最优组合</li>
+    </ul>
+  </div>
+  <div class="card" style="border-left:3px solid var(--iris);">
+    <h3 style="color:var(--iris);">来自 Iris Voice Agent</h3>
+    <ul>
+      <li><strong>Speculative EOT 可叠加到 VAD 上</strong>——当 VAD 置信度中等（不确定用户说完没）时，投机启动 Fast Agent，用户继续说就 abort</li>
+      <li><strong>边缘部署思路</strong>——如果 moodcoco 要做全球化，CF Workers 方案值得参考</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note note-insight" style="margin-top:16px;">
+  <strong>Speculative EOT vs LTS Semantic Trigger：同一思路的两个层次</strong><br/>
+  Iris 在 <strong>管线层</strong> 做投机（不确定用户说完时就开始生成回复），
+  LTS-VoiceAgent 在 <strong>推理层</strong> 做投机（不确定语义完整时就开始后台思考）。<br/>
+  两者可以叠加：在 ASR partial 阶段用语义触发启动 Thinker，在 EOT 不确定时投机启动 Speaker。
+  moodcoco 如果要做极致低延迟，这是两个可以分层实现的优化点。
+</div>
+
+<p style="margin-top:32px; font-size:14px; color:var(--muted); text-align:center;">
+  — 基于 HuggingFace speech-to-speech 和 Cloudflare Iris 开源仓库分析，2026-05-11 —
+</p>
+
+</body>
+</html>

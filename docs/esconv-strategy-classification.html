@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESConv Strategy Classification 解读</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 650;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .card p, .card li {
+    font-size: 14.5px;
+    color: #44403c;
+  }
+
+  /* 30-second version */
+  .tldr {
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+    border: 1px solid #fde68a;
+  }
+  .tldr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .tldr-item {
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .tldr-item .num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .tldr-item .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Framework diagram */
+  .framework {
+    display: flex;
+    gap: 0;
+    margin: 20px 0 12px;
+    position: relative;
+  }
+  .framework::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--green), var(--amber));
+    z-index: 0;
+    transform: translateY(-50%);
+  }
+  .stage {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+  .stage-box {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px 12px;
+    margin: 0 6px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid;
+  }
+  .stage:nth-child(1) .stage-box { border-color: var(--blue); }
+  .stage:nth-child(2) .stage-box { border-color: var(--green); }
+  .stage:nth-child(3) .stage-box { border-color: var(--amber); }
+  .stage-num {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .stage:nth-child(1) .stage-num { color: var(--blue); }
+  .stage:nth-child(2) .stage-num { color: var(--green); }
+  .stage:nth-child(3) .stage-num { color: var(--amber); }
+  .stage-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .stage-strategies {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+  }
+  .stage-tag {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 500;
+  }
+  .stage:nth-child(1) .stage-tag { background: var(--blue-light); color: var(--blue); }
+  .stage:nth-child(2) .stage-tag { background: var(--green-light); color: var(--green); }
+  .stage:nth-child(3) .stage-tag { background: var(--amber-light); color: var(--amber); }
+
+  .stage-arrow {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: var(--text-secondary);
+    z-index: 2;
+  }
+
+  /* Role diagram */
+  .roles {
+    display: flex;
+    gap: 16px;
+    margin: 16px 0;
+    align-items: center;
+    justify-content: center;
+  }
+  .role-box {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+  }
+  .role-seeker { background: var(--red-light); color: var(--red); }
+  .role-supporter { background: var(--blue-light); color: var(--blue); }
+  .role-arrow {
+    font-size: 20px;
+    color: var(--text-secondary);
+  }
+
+  /* Strategy cards */
+  .strategy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 640px) {
+    .strategy-grid { grid-template-columns: 1fr; }
+    .framework { flex-direction: column; gap: 12px; }
+    .framework::before { display: none; }
+    .stage-arrow { display: none; }
+  }
+
+  .strategy-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: var(--shadow);
+    border-left: 4px solid;
+    transition: box-shadow 0.2s;
+  }
+  .strategy-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .strategy-card.s-question { border-left-color: var(--blue); }
+  .strategy-card.s-reflection { border-left-color: var(--purple); }
+  .strategy-card.s-restatement { border-left-color: var(--teal); }
+  .strategy-card.s-affirmation { border-left-color: var(--green); }
+  .strategy-card.s-selfdisclosure { border-left-color: var(--pink); }
+  .strategy-card.s-suggestion { border-left-color: var(--amber); }
+  .strategy-card.s-information { border-left-color: var(--slate); }
+  .strategy-card.s-other { border-left-color: #a8a29e; }
+
+  .strategy-card .s-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .strategy-card .s-name {
+    font-size: 14px;
+    font-weight: 650;
+  }
+  .strategy-card .s-pct {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  .s-question .s-pct { background: var(--blue-light); color: var(--blue); }
+  .s-reflection .s-pct { background: var(--purple-light); color: var(--purple); }
+  .s-restatement .s-pct { background: var(--teal-light); color: var(--teal); }
+  .s-affirmation .s-pct { background: var(--green-light); color: var(--green); }
+  .s-selfdisclosure .s-pct { background: var(--pink-light); color: var(--pink); }
+  .s-suggestion .s-pct { background: var(--amber-light); color: var(--amber); }
+  .s-information .s-pct { background: var(--slate-light); color: var(--slate); }
+  .s-other .s-pct { background: #f5f5f4; color: #78716c; }
+
+  .strategy-card .s-def {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    line-height: 1.5;
+  }
+  .strategy-card .s-example {
+    background: #fafaf9;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 12.5px;
+    line-height: 1.6;
+    border: 1px solid #f5f5f4;
+  }
+  .strategy-card .s-example .speaker {
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .speaker-seeker { color: var(--red); }
+  .speaker-supporter { color: var(--blue); }
+
+  /* Bar chart */
+  .bar-chart {
+    margin: 16px 0 8px;
+  }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+  .bar-label {
+    width: 200px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .bar-track {
+    flex: 1;
+    height: 28px;
+    background: #f5f5f4;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    transition: width 0.6s ease;
+    min-width: 50px;
+  }
+  .bar-count {
+    font-size: 12px;
+    color: var(--text-secondary);
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  @media (max-width: 640px) {
+    .bar-label { width: 120px; font-size: 11px; }
+    .bar-count { width: 40px; font-size: 11px; }
+  }
+
+  /* Mapping table */
+  .mapping-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+    margin-top: 12px;
+  }
+  .mapping-table th {
+    background: #f5f5f4;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+  }
+  .mapping-table th:first-child { border-radius: 8px 0 0 0; }
+  .mapping-table th:last-child { border-radius: 0 8px 0 0; }
+  .mapping-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .mapping-table tr:last-child td { border-bottom: none; }
+  .mapping-table tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+  .mapping-table tr:last-child td:last-child { border-radius: 0 0 8px 0; }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+  }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-green { background: var(--green-light); color: var(--green); }
+  .tag-amber { background: var(--amber-light); color: var(--amber); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-teal { background: var(--teal-light); color: var(--teal); }
+  .tag-pink { background: var(--pink-light); color: var(--pink); }
+  .tag-slate { background: var(--slate-light); color: var(--slate); }
+  .tag-red { background: var(--red-light); color: var(--red); }
+
+  /* Task section */
+  .task-box {
+    background: linear-gradient(135deg, var(--blue-light) 0%, #f0f9ff 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .task-box h3 {
+    color: var(--blue);
+    margin-bottom: 8px;
+  }
+  .task-box p {
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .task-formula {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    background: rgba(255,255,255,0.6);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin: 10px 0;
+    text-align: center;
+    color: var(--accent);
+  }
+
+  /* Limitation list */
+  .limit-list {
+    list-style: none;
+    padding: 0;
+  }
+  .limit-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .limit-list li:last-child { border-bottom: none; }
+  .limit-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    background: var(--red-light);
+    color: var(--red);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .note-box {
+    background: var(--amber-light);
+    border: 1px solid #fbbf24;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  .section-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .footer a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>ESConv Strategy Classification</h1>
+    <p class="subtitle">Towards Emotional Support Dialog Systems (ACL 2021)</p>
+    <div class="meta">
+      <span>Liu et al., THU-COAI</span>
+      <span>ACL 2021 Long Paper</span>
+      <span>PsyEval: Empathy Capability</span>
+    </div>
+  </div>
+
+  <!-- 30-second version -->
+  <div class="card tldr">
+    <h2>30 秒版本</h2>
+    <p style="font-size:14px; margin-bottom:12px;">
+      ESConv 是首个标注了 <strong>supporter 回应策略</strong> 的情绪支持对话数据集。众包 seeker（求助者）和 supporter（支持者）按 <strong>Helping Skills Theory 三阶段框架</strong> 进行对话，每条 supporter 回复标注 8 类策略之一。核心价值：把"什么是好的情绪支持"从主观判断变成可量化、可训练的分类任务。
+    </p>
+    <div class="tldr-grid">
+      <div class="tldr-item">
+        <div class="num">1,300</div>
+        <div class="label">对话数</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">~18.7K</div>
+        <div class="label">策略标注 utterances</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">8</div>
+        <div class="label">策略类别</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">10</div>
+        <div class="label">问题主题</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Framework -->
+  <div class="card">
+    <h2>情绪支持三阶段框架</h2>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:16px;">
+      基于 Hill (2009) Helping Skills Theory，将情绪支持拆分为三个递进阶段。Supporter 在对话中应从左到右推进，但可以回退。
+    </p>
+    <div class="framework">
+      <div class="stage">
+        <div class="stage-box">
+          <div class="stage-num">Stage 1</div>
+          <div class="stage-title">Exploration</div>
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">探索情绪，建立信任</p>
+          <div class="stage-strategies">
+            <span class="stage-tag">Questions</span>
+            <span class="stage-tag">Restatement</span>
+            <span class="stage-tag">Reflection</span>
+          </div>
+        </div>
+        <span class="stage-arrow">&#8594;</span>
+      </div>
+      <div class="stage">
+        <div class="stage-box">
+          <div class="stage-num">Stage 2</div>
+          <div class="stage-title">Comforting</div>
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">共情安慰，情绪验证</p>
+          <div class="stage-strategies">
+            <span class="stage-tag">Affirmation</span>
+            <span class="stage-tag">Self-disclosure</span>
+          </div>
+        </div>
+        <span class="stage-arrow">&#8594;</span>
+      </div>
+      <div class="stage">
+        <div class="stage-box">
+          <div class="stage-num">Stage 3</div>
+          <div class="stage-title">Action</div>
+          <p style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;">提供建议，推动行动</p>
+          <div class="stage-strategies">
+            <span class="stage-tag">Suggestions</span>
+            <span class="stage-tag">Information</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Roles -->
+    <div style="margin-top: 20px;">
+      <h3 style="margin-bottom: 10px;">对话角色</h3>
+      <div class="roles">
+        <div class="role-box role-seeker">
+          Seeker 求助者<br/>
+          <span style="font-size:12px; font-weight:400;">分享情绪困扰</span>
+        </div>
+        <span class="role-arrow">&#8596;</span>
+        <div class="role-box role-supporter">
+          Supporter 支持者<br/>
+          <span style="font-size:12px; font-weight:400;">策略性回应，标注策略标签</span>
+        </div>
+      </div>
+      <p class="section-note">众包平台招募，supporter 经过 Helping Skills Theory 培训教程后上岗。</p>
+    </div>
+  </div>
+
+  <!-- 8 Strategies -->
+  <div class="card">
+    <h2>8 个策略标签详解</h2>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:16px;">
+      每条 supporter utterance 标注唯一策略标签。以下按使用频率降序排列。
+    </p>
+    <div class="strategy-grid">
+
+      <!-- Questions -->
+      <div class="strategy-card s-question">
+        <div class="s-header">
+          <span class="s-name">Questions 提问</span>
+          <span class="s-pct">20.7%</span>
+        </div>
+        <p class="s-def">
+          通过开放式或封闭式提问探索求助者的情绪、想法和处境，帮助对方自我梳理。Exploration 阶段核心技能。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 我最近工作压力很大，经常失眠。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 你觉得是什么让你压力最大？是工作量本身，还是和同事的关系？
+        </div>
+      </div>
+
+      <!-- Other -->
+      <div class="strategy-card s-other">
+        <div class="s-header">
+          <span class="s-name">Other 其他</span>
+          <span class="s-pct">18.3%</span>
+        </div>
+        <p class="s-def">
+          不属于其余 7 类的回应，包括寒暄、过渡语、澄清、礼貌用语等。占比高反映真实对话中"连接性话语"的普遍性。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-supporter">Supporter:</span> 谢谢你愿意跟我聊这些，我很高兴你迈出了这一步。
+        </div>
+      </div>
+
+      <!-- Providing Suggestions -->
+      <div class="strategy-card s-suggestion">
+        <div class="s-header">
+          <span class="s-name">Providing Suggestions 提供建议</span>
+          <span class="s-pct">16.1%</span>
+        </div>
+        <p class="s-def">
+          在充分理解问题后，提出具体可行的应对建议或行动方案。Action 阶段的核心技能，过早使用会让求助者感到不被理解。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 我知道自己该运动，但就是提不起劲。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 你可以先从每天散步 10 分钟开始，不用给自己设太高目标，重要的是建立一个小习惯。
+        </div>
+      </div>
+
+      <!-- Affirmation and Reassurance -->
+      <div class="strategy-card s-affirmation">
+        <div class="s-header">
+          <span class="s-name">Affirmation & Reassurance 肯定与安抚</span>
+          <span class="s-pct">15.4%</span>
+        </div>
+        <p class="s-def">
+          肯定求助者的感受、努力或个人品质，提供情绪上的安抚和支持，让对方感到被认可。Comforting 阶段核心技能。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 我觉得自己什么都做不好。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 你能意识到自己的状态并且来寻求帮助，这本身就需要很大的勇气。你比自己以为的要坚强。
+        </div>
+      </div>
+
+      <!-- Self-disclosure -->
+      <div class="strategy-card s-selfdisclosure">
+        <div class="s-header">
+          <span class="s-name">Self-disclosure 自我披露</span>
+          <span class="s-pct">9.3%</span>
+        </div>
+        <p class="s-def">
+          Supporter 分享自己的类似经历或感受，建立连接和共鸣。使用需谨慎：过多会抢占对话空间，重点应始终在求助者身上。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 失恋以后我觉得再也不会爱了。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 我以前也经历过一段很痛苦的分手，那时候也觉得世界末日了，后来慢慢好了很多。
+        </div>
+      </div>
+
+      <!-- Reflection of feelings -->
+      <div class="strategy-card s-reflection">
+        <div class="s-header">
+          <span class="s-name">Reflection of Feelings 情感映射</span>
+          <span class="s-pct">7.8%</span>
+        </div>
+        <p class="s-def">
+          精确识别并回应求助者话语中隐含的情绪，帮助对方"看见"自己的感受。咨询师核心技能，在 ESConv 中被标注比例偏低。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 我妈又打电话催婚了，我都不想接她电话了。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 听起来你不只是烦，更多是一种被不断施压的无力感和委屈。
+        </div>
+      </div>
+
+      <!-- Information -->
+      <div class="strategy-card s-information">
+        <div class="s-header">
+          <span class="s-name">Information 信息提供</span>
+          <span class="s-pct">6.6%</span>
+        </div>
+        <p class="s-def">
+          提供与求助者问题相关的事实性知识或教育性信息（如心理健康知识、资源推荐），帮助对方建立认知框架。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-supporter">Supporter:</span> 失眠持续超过三个月就算慢性失眠了，可以考虑做一下 CBT-I（认知行为失眠治疗），很多研究证明它比安眠药更持久有效。
+        </div>
+      </div>
+
+      <!-- Restatement or Paraphrasing -->
+      <div class="strategy-card s-restatement">
+        <div class="s-header">
+          <span class="s-name">Restatement / Paraphrasing 复述改述</span>
+          <span class="s-pct">5.9%</span>
+        </div>
+        <p class="s-def">
+          用自己的语言重述求助者的核心内容，确认理解正确，让对方感到被听见。与 Reflection 的区别：Restatement 聚焦内容事实，Reflection 聚焦情绪感受。
+        </p>
+        <div class="s-example">
+          <span class="speaker speaker-seeker">Seeker:</span> 老板说下季度要裁员，我觉得肯定轮到我。<br/>
+          <span class="speaker speaker-supporter">Supporter:</span> 所以你现在最担心的是自己可能会被裁？
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Distribution chart -->
+  <div class="card">
+    <h2>策略分布可视化</h2>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:4px;">
+      1,300 段对话中 supporter 回应的策略标注分布 (N = 18,696)
+    </p>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">Questions</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:100%; background:var(--blue);">20.7%</div>
+        </div>
+        <span class="bar-count">3,801</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Other</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:88.4%; background:#a8a29e;">18.3%</div>
+        </div>
+        <span class="bar-count">3,661</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Providing Suggestions</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:77.7%; background:var(--amber);">16.1%</div>
+        </div>
+        <span class="bar-count">2,954</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Affirmation & Reassurance</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:74.4%; background:var(--green);">15.4%</div>
+        </div>
+        <span class="bar-count">2,827</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Self-disclosure</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:44.9%; background:var(--pink);">9.3%</div>
+        </div>
+        <span class="bar-count">1,713</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Reflection of Feelings</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:37.7%; background:var(--purple);">7.8%</div>
+        </div>
+        <span class="bar-count">1,436</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Information</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:31.9%; background:var(--slate);">6.6%</div>
+        </div>
+        <span class="bar-count">1,215</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Restatement / Paraphrasing</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:28.5%; background:var(--teal);">5.9%</div>
+        </div>
+        <span class="bar-count">1,089</span>
+      </div>
+    </div>
+    <p class="section-note">
+      注意：Questions 和 Other 合计占 39%，说明众包 supporter 最常用的技能是"问"和"闲聊连接"，而 Reflection（情感映射）和 Restatement（复述）这两个咨询师核心技能使用率偏低。
+    </p>
+  </div>
+
+  <!-- Strategy Prediction Task -->
+  <div class="card">
+    <h2>Strategy Prediction 任务</h2>
+    <p style="font-size:14px; margin-bottom:12px;">
+      ESConv 论文定义的核心下游任务：给定对话历史，预测 supporter 下一轮应该使用哪个策略。
+    </p>
+    <div class="task-box">
+      <h3>任务定义</h3>
+      <div class="task-formula">
+        strategy = f(dialog_history, seeker_emotion, problem_type)
+      </div>
+      <p>
+        <strong>输入</strong>：对话历史 (前 N 轮 seeker + supporter utterances) + 情绪标签 + 问题类型<br/>
+        <strong>输出</strong>：8 个策略标签中的一个<br/>
+        <strong>评估指标</strong>：Accuracy / Weighted-F1
+      </p>
+    </div>
+    <div class="task-box" style="background: linear-gradient(135deg, var(--green-light) 0%, #f0fdf4 100%); border-color: #86efac;">
+      <h3 style="color:var(--green);">PsyEval 中的定位</h3>
+      <p>
+        PsyEval benchmark 将 ESConv Strategy Classification 归入 <strong>Empathy Capability</strong> 维度，用来评估模型"能否识别并选择合适的情绪支持策略"。这不是测生成质量，而是测策略判断能力 -- 相当于"做对的事"比"把事做好"更前置。
+      </p>
+    </div>
+  </div>
+
+  <!-- Moodcoco Mapping -->
+  <div class="card">
+    <h2>moodcoco Skill 映射</h2>
+    <p style="font-size:13.5px; color:var(--text-secondary); margin-bottom:12px;">
+      ESConv 的 8 个策略标签如何对应 moodcoco 的 Skill 体系。映射不是 1:1 的 -- moodcoco 做了更细粒度的拆分和约束。
+    </p>
+    <table class="mapping-table">
+      <thead>
+        <tr>
+          <th>ESConv 策略</th>
+          <th>moodcoco Skill</th>
+          <th>映射说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-purple">Reflection of Feelings</span></td>
+          <td><span class="tag tag-purple">listen</span></td>
+          <td>精确映射。moodcoco 的 listen 核心就是情感映射 -- 把用户模糊的感受精确命名。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-teal">Restatement / Paraphrasing</span></td>
+          <td><span class="tag tag-teal">listen</span> / <span class="tag tag-blue">base-comm</span></td>
+          <td>简单复述归 base-comm（基础沟通），涉及情绪内容的改述归 listen。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-green">Affirmation & Reassurance</span></td>
+          <td><span class="tag tag-green">validation</span></td>
+          <td>精确映射。肯定用户的感受和努力，不是说"你没事"，而是说"你的感受是合理的"。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-blue">Questions</span></td>
+          <td><span class="tag tag-blue">untangle</span> / <span class="tag tag-blue">narrowing-question</span></td>
+          <td>探索性提问归 untangle（帮用户解开混乱），聚焦性提问归 narrowing-question。moodcoco 比 ESConv 做了更细的拆分。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-amber">Providing Suggestions</span></td>
+          <td><span class="tag tag-amber">face-decision</span></td>
+          <td>条件性映射。只在用户问题足够清晰、已经走过 Exploration + Comforting 后才触发。moodcoco 对"过早建议"有显式抑制。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-slate">Information</span></td>
+          <td><span class="tag tag-slate">psychoeducation</span></td>
+          <td>条件性映射。提供心理健康知识，但需要克制 -- 只在用户明确需要认知框架时使用，避免说教感。</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-pink">Self-disclosure</span></td>
+          <td><span style="color:var(--text-secondary); font-size:13px;">慎用 / 不映射</span></td>
+          <td>AI 没有真实经历，伪造 self-disclosure 会破坏信任。moodcoco 选择不使用此策略，转而用 validation 和 listen 替代共情功能。</td>
+        </tr>
+        <tr>
+          <td><span style="color:#78716c; font-size:12px; background:#f5f5f4; padding:2px 8px; border-radius:5px;">Other</span></td>
+          <td><span class="tag tag-blue">base-comm</span></td>
+          <td>寒暄、过渡、连接性话语归入基础沟通。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note-box">
+      <strong>关键差异：</strong>ESConv 是"描述性标注"（人们实际用了什么策略），moodcoco 是"规范性设计"（在什么阶段应该用什么策略）。ESConv 的分布反映众包 supporter 的自然倾向（过多 Questions + Other，过少 Reflection），moodcoco 需要修正这种偏差。
+    </div>
+  </div>
+
+  <!-- Limitations -->
+  <div class="card">
+    <h2>局限性</h2>
+    <ul class="limit-list">
+      <li>
+        <span class="limit-icon">1</span>
+        <div>
+          <strong>缺少 Challenge / Confrontation 标签</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            真实咨询中"温和质疑"是重要技能（如指出矛盾、挑战认知扭曲），ESConv 完全没有覆盖。这意味着用 ESConv 训练的模型不会学到"适时推一把"的能力。
+          </span>
+        </div>
+      </li>
+      <li>
+        <span class="limit-icon">2</span>
+        <div>
+          <strong>不能测 Crisis / 安全场景</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            数据集刻意避开了自杀/自伤等高危场景，没有 safety boundary 相关标注。moodcoco 的安全边界能力需要额外数据源评估。
+          </span>
+        </div>
+      </li>
+      <li>
+        <span class="limit-icon">3</span>
+        <div>
+          <strong>众包 supporter ≠ 专业咨询师</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            Supporter 只接受了简短培训教程，策略分布偏向"容易做的"（Questions 20.7%）而非"最有效的"（Reflection 仅 7.8%）。以此为 ground truth 训练可能固化低质量模式。
+          </span>
+        </div>
+      </li>
+      <li>
+        <span class="limit-icon">4</span>
+        <div>
+          <strong>单标签限制</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            每条 utterance 只标一个策略，但真实回应经常混合多个策略（如"你感到很委屈(Reflection) + 这完全可以理解(Affirmation)"）。强制单标签丢失了策略组合信息。
+          </span>
+        </div>
+      </li>
+      <li>
+        <span class="limit-icon">5</span>
+        <div>
+          <strong>Other 类占比过高 (18.3%)</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            将近五分之一的 supporter 回应被归入"Other"，这是一个噪声桶。如果用作分类任务的训练数据，模型可能学到"安全地选 Other"。
+          </span>
+        </div>
+      </li>
+      <li>
+        <span class="limit-icon">6</span>
+        <div>
+          <strong>只有英文</strong><br/>
+          <span style="font-size:13px; color:var(--text-secondary);">
+            数据集为英文，情绪支持的文化差异（如中文语境下的含蓄表达、面子问题）未被覆盖。直接迁移到中文/印尼语场景需验证。
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>
+      Liu, S., Zheng, C., Demasi, O., Sabour, S., Li, Y., Yu, Z., Jiang, Y., & Huang, M. (2021).<br/>
+      <a href="https://aclanthology.org/2021.acl-long.269/" target="_blank">Towards Emotional Support Dialog Systems</a>. ACL 2021.<br/>
+      GitHub: <a href="https://github.com/thu-coai/Emotional-Support-Conversation" target="_blank">thu-coai/Emotional-Support-Conversation</a>
+    </p>
+    <p style="margin-top:8px;">moodcoco internal reference &middot; 2026-05-13</p>
+  </div>
+
+</div>
+</body>
+</html>

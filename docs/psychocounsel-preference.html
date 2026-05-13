@@ -1,0 +1,812 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PsychoCounsel &middot; Preference Learning 解读</title>
+  <style>
+    :root {
+      --ink: #1c1c1e;
+      --muted: #6b7280;
+      --bg: #fafaf9;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #0071e3;
+      --accent-light: #e8f4fd;
+      --green: #34c759;
+      --green-bg: #f0fdf4;
+      --orange: #f59e0b;
+      --orange-bg: #fffbeb;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --teal: #14b8a6;
+      --teal-bg: #f0fdfa;
+      --blue: #3b82f6;
+      --blue-bg: #eff6ff;
+      --warm: #78716c;
+      --warm-bg: #f5f5f4;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px 24px 64px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header { margin-bottom: 40px; }
+    .page-header h1 { font-size: 1.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .page-header .source-link {
+      display: inline-block; margin-top: 8px; font-size: 13px;
+      color: var(--accent); text-decoration: none;
+      border-bottom: 1px solid var(--accent-light);
+    }
+    .page-header .source-link:hover { border-bottom-color: var(--accent); }
+
+    /* TLDR */
+    .tldr {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--accent);
+      margin-bottom: 40px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .tldr-label {
+      font-weight: 700; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 1.15em; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-weight: 600; font-size: 14px; margin-bottom: 12px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    /* Flow diagram */
+    .flow-container {
+      display: flex; align-items: stretch; gap: 0;
+      overflow-x: auto; padding: 8px 0;
+    }
+    .flow-step {
+      flex: 1; min-width: 160px; text-align: center; position: relative;
+    }
+    .flow-box {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      min-height: 110px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+    .flow-box .icon { font-size: 28px; margin-bottom: 8px; }
+    .flow-box .label { font-weight: 600; font-size: 14px; }
+    .flow-box .desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center;
+      min-width: 40px; color: var(--muted); font-size: 20px; flex-shrink: 0;
+    }
+
+    /* Principle cards */
+    .principle-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .principle-grid { grid-template-columns: 1fr; }
+    }
+    .principle-card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--border);
+      position: relative;
+    }
+    .principle-card.basic { border-left-color: var(--blue); }
+    .principle-card.effective { border-left-color: var(--purple); }
+    .principle-card .p-num {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 6px;
+    }
+    .principle-card.basic .p-num { color: var(--blue); }
+    .principle-card.effective .p-num { color: var(--purple); }
+    .principle-card .p-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+    .principle-card .p-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* Stats row */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 640px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    .stat-card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .stat-card .stat-num {
+      font-size: 1.6em; font-weight: 800; letter-spacing: -0.03em;
+    }
+    .stat-card .stat-label {
+      font-size: 12px; color: var(--muted); margin-top: 4px;
+    }
+    .stat-card.blue .stat-num { color: var(--accent); }
+    .stat-card.green .stat-num { color: var(--green); }
+    .stat-card.purple .stat-num { color: var(--purple); }
+    .stat-card.orange .stat-num { color: var(--orange); }
+
+    /* Table */
+    .data-table {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+      background: var(--card); border-radius: 12px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .data-table th {
+      background: var(--warm-bg); text-align: left;
+      padding: 12px 16px; font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+    }
+    .data-table td {
+      padding: 10px 16px; border-top: 1px solid var(--border);
+    }
+    .data-table tr:hover td { background: #fafaf9; }
+    .data-table .highlight { font-weight: 700; color: var(--green); }
+    .data-table .winner {
+      background: var(--green-bg);
+    }
+
+    /* Pipeline detail */
+    .pipeline-detail {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .pipeline-detail { grid-template-columns: 1fr; }
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px; margin-right: 4px;
+      letter-spacing: 0.03em;
+    }
+    .tag-blue { background: var(--blue-bg); color: var(--blue); }
+    .tag-green { background: var(--green-bg); color: var(--green); }
+    .tag-purple { background: var(--purple-bg); color: var(--purple); }
+    .tag-orange { background: var(--orange-bg); color: var(--orange); }
+    .tag-red { background: var(--red-bg); color: var(--red); }
+
+    /* Iterative DPO diagram */
+    .iter-loop {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .iter-loop .loop-title {
+      font-weight: 700; font-size: 14px; margin-bottom: 16px;
+      text-align: center; color: var(--purple);
+    }
+    .iter-steps {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; flex-wrap: wrap;
+    }
+    .iter-step-box {
+      background: var(--purple-bg);
+      border: 1px solid #ddd6fe;
+      border-radius: 8px;
+      padding: 12px 16px;
+      text-align: center;
+      min-width: 120px;
+    }
+    .iter-step-box .s-label { font-weight: 600; font-size: 13px; color: var(--purple); }
+    .iter-step-box .s-desc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+    .iter-arrow {
+      color: var(--purple); font-size: 20px; padding: 0 8px; flex-shrink: 0;
+    }
+    .loop-badge {
+      display: inline-block;
+      background: var(--purple);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 12px;
+      margin-top: 12px;
+    }
+
+    /* Mapping card */
+    .mapping-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .mapping-grid { grid-template-columns: 1fr; }
+    }
+    .mapping-item {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .mapping-item .m-from {
+      font-size: 12px; font-weight: 600; color: var(--purple);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+    .mapping-item .m-arrow {
+      font-size: 12px; color: var(--muted); margin: 6px 0;
+    }
+    .mapping-item .m-to {
+      font-size: 12px; font-weight: 600; color: var(--green);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px;
+    }
+    .mapping-item .m-detail {
+      font-size: 13px; color: var(--muted); line-height: 1.5;
+    }
+
+    /* Limitation */
+    .limitation-list {
+      list-style: none; padding: 0;
+    }
+    .limitation-list li {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+      border-left: 4px solid var(--orange);
+      font-size: 14px;
+    }
+    .limitation-list li strong {
+      display: block; margin-bottom: 4px;
+    }
+
+    /* Annotation */
+    .anno {
+      font-size: 12px; color: var(--muted); text-align: center;
+      margin-top: 8px;
+    }
+
+    /* Section subtitle */
+    .sub-title {
+      font-weight: 600; font-size: 14px; margin-bottom: 12px;
+      color: var(--ink);
+    }
+
+    /* Compact list in card */
+    .compact-list {
+      list-style: none; padding: 0; font-size: 14px;
+    }
+    .compact-list li {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: baseline; gap: 8px;
+    }
+    .compact-list li:last-child { border-bottom: none; }
+    .compact-list .cl-label { font-weight: 600; min-width: 120px; flex-shrink: 0; }
+    .compact-list .cl-value { color: var(--muted); }
+
+    /* Phase label */
+    .phase-label {
+      display: inline-block;
+      font-size: 10px; font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-bottom: 8px;
+    }
+    .phase-1 { background: var(--blue-bg); color: var(--blue); }
+    .phase-2 { background: var(--green-bg); color: var(--green); }
+    .phase-3 { background: var(--purple-bg); color: var(--purple); }
+    .phase-4 { background: var(--orange-bg); color: var(--orange); }
+  </style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<div class="page-header">
+  <h1>PsychoCounsel: Preference Learning 解锁 LLM 心理咨询能力</h1>
+  <div class="tagline">Mian Zhang, Shaun M. Eack, Zhiyu Zoey Chen &middot; 2025-02 &middot; ACL 2026</div>
+  <a class="source-link" href="https://arxiv.org/abs/2502.19731" target="_blank">arXiv 2502.19731</a>
+  &nbsp;
+  <a class="source-link" href="https://huggingface.co/Psychotherapy-LLM" target="_blank">HuggingFace Models & Data</a>
+</div>
+
+<!-- ============ 30 秒版本 ============ -->
+<div class="tldr">
+  <div class="tldr-label">30 秒版本</div>
+  <p>心理咨询数据因隐私极度稀缺，LLM 在咨询场景表现不稳定。本文与心理学教授合作，提炼出 <strong>7 条专业评估原则</strong>，用 20 个 LLM 生成候选回复、GPT-4o 按原则评分，构建 <strong>36k preference pairs</strong>（PsyCoPref）。用迭代 DPO 训练的 <strong>PsyCo-Llama3-8B 对 GPT-4o 胜率 87%</strong>，且其 reward model（8B）在领域准确率达 97.8%。对 moodcoco 的核心价值：7 条原则可直接映射为"看见情绪/原因/模式/方法"四维评估器；preference data 可用于后续模型微调。</p>
+</div>
+
+<!-- ============ 关键指标 ============ -->
+<div class="section">
+  <div class="stats-row">
+    <div class="stat-card green">
+      <div class="stat-num">87%</div>
+      <div class="stat-label">vs GPT-4o 胜率</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-num">36k</div>
+      <div class="stat-label">Preference Pairs</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-num">97.8%</div>
+      <div class="stat-label">Reward Model 准确率</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-num">88.5%</div>
+      <div class="stat-label">专家-模型一致率</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Preference Learning 流水线 ============ -->
+<div class="section">
+  <h2 class="section-title">Preference Learning 流水线</h2>
+
+  <div class="flow-container">
+    <div class="flow-step">
+      <div class="flow-box" style="border-color: var(--blue);">
+        <div class="icon">&#128221;</div>
+        <div class="label">Phase 1</div>
+        <div class="desc">Client Speech 收集<br/>7 个数据源<br/>26,483 条</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10140;</div>
+    <div class="flow-step">
+      <div class="flow-box" style="border-color: var(--green);">
+        <div class="icon">&#129302;</div>
+        <div class="label">Phase 2</div>
+        <div class="desc">20 个 LLM 生成回复<br/>每条随机抽 4 个模型<br/>3B-70B 参数</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10140;</div>
+    <div class="flow-step">
+      <div class="flow-box" style="border-color: var(--purple);">
+        <div class="icon">&#9878;</div>
+        <div class="label">Phase 3</div>
+        <div class="desc">GPT-4o 按 7 原则评分<br/>5-point Likert<br/>分差 &ge;1 配对</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10140;</div>
+    <div class="flow-step">
+      <div class="flow-box" style="border-color: var(--orange);">
+        <div class="icon">&#9989;</div>
+        <div class="label">Phase 4</div>
+        <div class="desc">专家验证<br/>200 对 &times; 2 位心理治疗师<br/>88.5% 一致率</div>
+      </div>
+    </div>
+  </div>
+  <p class="anno">PsyCoPref 数据集构建四阶段流水线</p>
+
+  <!-- Phase detail cards -->
+  <div style="margin-top: 20px;">
+    <div class="pipeline-detail">
+      <div class="card">
+        <div class="phase-label phase-1">Phase 1 &mdash; 数据收集</div>
+        <ul class="compact-list">
+          <li><span class="cl-label">数据源</span><span class="cl-value">counsel-chat, MentalAgora, TherapistQA, Psycho8k, Amod, MentalChat16K, phi2Mental</span></li>
+          <li><span class="cl-label">筛选</span><span class="cl-value">长度 100-1,000 字符 + 去重</span></li>
+          <li><span class="cl-label">结果</span><span class="cl-value">26,483 条，平均 366 字符</span></li>
+          <li><span class="cl-label">覆盖</span><span class="cl-value">8 粗粒度 + 42 细粒度话题</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="phase-label phase-2">Phase 2 &mdash; 回复生成</div>
+        <ul class="compact-list">
+          <li><span class="cl-label">模型池</span><span class="cl-value">20 个 LLM（3B-70B，transformer + hybrid）</span></li>
+          <li><span class="cl-label">采样</span><span class="cl-value">每条 client speech 随机抽 4 个模型</span></li>
+          <li><span class="cl-label">Prompt</span><span class="cl-value">指令模型扮演心理治疗师角色</span></li>
+          <li><span class="cl-label">多样性</span><span class="cl-value">不同架构 + 尺寸确保偏好分布广</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="phase-label phase-3">Phase 3 &mdash; 评分配对</div>
+        <ul class="compact-list">
+          <li><span class="cl-label">评分器</span><span class="cl-value">GPT-4o，按 7 条原则逐条打分</span></li>
+          <li><span class="cl-label">量表</span><span class="cl-value">5-point Likert scale</span></li>
+          <li><span class="cl-label">配对规则</span><span class="cl-value">训练集: 平均分差 &ge;1；测试集: 最高 vs 最低</span></li>
+          <li><span class="cl-label">产出</span><span class="cl-value">34,329 训练 + 2,324 测试</span></li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="phase-label phase-4">Phase 4 &mdash; 专家验证</div>
+        <ul class="compact-list">
+          <li><span class="cl-label">验证人</span><span class="cl-value">2 位专业心理治疗师</span></li>
+          <li><span class="cl-label">样本量</span><span class="cl-value">200 对 preference pairs</span></li>
+          <li><span class="cl-label">评估者间一致率</span><span class="cl-value">87%</span></li>
+          <li><span class="cl-label">专家-GPT-4o 一致率</span><span class="cl-value">88.5%</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 7 条评估原则 ============ -->
+<div class="section">
+  <h2 class="section-title">7 条评估原则（心理学教授定义）</h2>
+  <p style="font-size: 14px; color: var(--muted); margin-bottom: 16px;">
+    与社会工作和精神病学专家合作提炼，分为<span class="tag tag-blue">基础要求</span>和<span class="tag tag-purple">有效性维度</span>两层。
+  </p>
+
+  <!-- Basic -->
+  <div class="sub-title" style="margin-top: 20px; margin-bottom: 12px;">
+    <span class="tag tag-blue">基础要求</span> &mdash; 回复必须满足的底线
+  </div>
+  <div class="principle-grid">
+    <div class="principle-card basic">
+      <div class="p-num">P1 &mdash; Empathy & Emotional Understanding</div>
+      <div class="p-title">共情与情绪理解</div>
+      <div class="p-desc">传达真诚的共情，通过情绪反映、情感验证和非评判性语气，承认并确认来访者的感受。不是"我理解你"的套话，而是准确捕捉情绪底色。</div>
+    </div>
+    <div class="principle-card basic">
+      <div class="p-num">P2 &mdash; Personalization & Relevance</div>
+      <div class="p-title">个性化与相关性</div>
+      <div class="p-desc">回复必须针对来访者的独特处境，引用具体细节，避免泛泛而谈的模板化回答。同时尊重文化和个人敏感性。</div>
+    </div>
+    <div class="principle-card basic">
+      <div class="p-num">P3 &mdash; Clarity & Conciseness</div>
+      <div class="p-title">清晰与简洁</div>
+      <div class="p-desc">用平实语言表达，保持逻辑连贯，在覆盖关键点的同时保持简洁，不用专业术语堆砌。</div>
+    </div>
+    <div class="principle-card basic">
+      <div class="p-num">P4 &mdash; Avoidance of Harmful Content</div>
+      <div class="p-title">避免有害内容</div>
+      <div class="p-desc">防止任何可能伤害、造成困扰或触发来访者的语言，确保交互的安全性。这是绝对红线。</div>
+    </div>
+  </div>
+
+  <!-- Effectiveness -->
+  <div class="sub-title" style="margin-top: 24px; margin-bottom: 12px;">
+    <span class="tag tag-purple">有效性维度</span> &mdash; 以来访者为中心的治疗效果
+  </div>
+  <div class="principle-grid">
+    <div class="principle-card effective">
+      <div class="p-num">P5 &mdash; Facilitation of Self-Exploration</div>
+      <div class="p-title">促进自我探索</div>
+      <div class="p-desc">通过开放式提问、反思性陈述和对深层情绪/信念的引导，鼓励来访者进行自我反思。让来访者自己发现，而不是咨询师直接告知。</div>
+    </div>
+    <div class="principle-card effective">
+      <div class="p-num">P6 &mdash; Promotion of Autonomy & Confidence</div>
+      <div class="p-title">促进自主性与信心</div>
+      <div class="p-desc">肯定来访者的优势和过往成功经验，激励其主动行动，支持其掌控感。目标是来访者自己找到方向，而非依赖咨询师。</div>
+    </div>
+    <div class="principle-card effective" style="grid-column: 1 / -1;">
+      <div class="p-num">P7 &mdash; Sensitivity to Stage of Change</div>
+      <div class="p-title">对改变阶段的敏感度</div>
+      <div class="p-desc">识别来访者当前处于改变的哪个阶段（早期/犹豫 vs 后期/已承诺），并相应调整回复策略。早期阶段探索动机，后期阶段强化进展。这是最具临床智慧的维度，泛用型 LLM 几乎完全忽略。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 训练方法 ============ -->
+<div class="section">
+  <h2 class="section-title">训练方法：DPO vs DPO-Iter</h2>
+
+  <div class="pipeline-detail">
+    <div class="card">
+      <div class="card-title">方案 A &mdash; DPO（离线）</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">基座</span><span class="cl-value">Llama3.1-8B-Instruct</span></li>
+        <li><span class="cl-label">数据</span><span class="cl-value">PsyCoPref 离线 preference pairs</span></li>
+        <li><span class="cl-label">配置</span><span class="cl-value">batch 64, lr 5e-7, 1600 steps, &beta;=0.1</span></li>
+        <li><span class="cl-label">胜率</span><span class="cl-value">72.9% vs GPT-4o</span></li>
+        <li><span class="cl-label">局限</span><span class="cl-value">易受分布漂移影响</span></li>
+      </ul>
+    </div>
+    <div class="card" style="border: 2px solid var(--green);">
+      <div class="card-title" style="color: var(--green);">方案 B &mdash; DPO-Iter（在线迭代） &#9733; 最优</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">基座</span><span class="cl-value">Llama3.1-8B-Instruct</span></li>
+        <li><span class="cl-label">每轮</span><span class="cl-value">生成 8 个候选回复/条</span></li>
+        <li><span class="cl-label">排序</span><span class="cl-value">用同尺寸 reward model 排序</span></li>
+        <li><span class="cl-label">配对</span><span class="cl-value">最高 vs 最低作为新 preference pair</span></li>
+        <li><span class="cl-label">采样</span><span class="cl-value">每轮 6,400 条，迭代优化</span></li>
+        <li><span class="cl-label">胜率</span><span class="cl-value" style="color: var(--green); font-weight: 700;">87.0% vs GPT-4o</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Iterative DPO loop -->
+  <div class="iter-loop" style="margin-top: 16px;">
+    <div class="loop-title">DPO-Iter 迭代循环</div>
+    <div class="iter-steps">
+      <div class="iter-step-box">
+        <div class="s-label">Policy Model</div>
+        <div class="s-desc">当前策略生成<br/>8 个候选回复</div>
+      </div>
+      <div class="iter-arrow">&#10140;</div>
+      <div class="iter-step-box">
+        <div class="s-label">Reward Model</div>
+        <div class="s-desc">8B reward model<br/>排序打分</div>
+      </div>
+      <div class="iter-arrow">&#10140;</div>
+      <div class="iter-step-box">
+        <div class="s-label">Pair Selection</div>
+        <div class="s-desc">取最高+最低<br/>组成新 pair</div>
+      </div>
+      <div class="iter-arrow">&#10140;</div>
+      <div class="iter-step-box">
+        <div class="s-label">DPO Update</div>
+        <div class="s-desc">更新 policy<br/>进入下一轮</div>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 8px;">
+      <div style="font-size: 24px; color: var(--purple);">&#8635;</div>
+      <div class="loop-badge">每轮 6,400 samples &middot; 在线生成新 pairs</div>
+    </div>
+    <p class="anno" style="margin-top: 12px;">关键洞察：3B + 在线迭代 = 8B + 离线 DPO 的效果</p>
+  </div>
+</div>
+
+<!-- ============ 实验结果 ============ -->
+<div class="section">
+  <h2 class="section-title">实验结果</h2>
+
+  <!-- Win rate table -->
+  <div class="sub-title">vs GPT-4o 胜率对比</div>
+  <table class="data-table" style="margin-bottom: 20px;">
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>无长度限制</th>
+        <th>匹配 GPT-4o 长度</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Llama3-8B（基座）</td>
+        <td>29.3%</td>
+        <td>18.5%</td>
+      </tr>
+      <tr>
+        <td>Llama3-8B + DPO</td>
+        <td>72.9%</td>
+        <td>49.3%</td>
+      </tr>
+      <tr class="winner">
+        <td><strong>Llama3-8B + DPO-Iter</strong></td>
+        <td class="highlight">87.0%</td>
+        <td class="highlight">77.0%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Topic breakdown -->
+  <div class="sub-title">按话题类别胜率（无长度限制）</div>
+  <table class="data-table" style="margin-bottom: 20px;">
+    <thead>
+      <tr>
+        <th>话题类别</th>
+        <th>DPO-Iter 胜率</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Safety（安全）</td><td class="highlight">90.8%</td></tr>
+      <tr><td>Social Issues（社会议题）</td><td class="highlight">91.4%</td></tr>
+      <tr><td>Life Changes（生活变化）</td><td>87.0%</td></tr>
+      <tr><td>Youth Development（青少年发展）</td><td>87.0%</td></tr>
+      <tr><td>Special Topics（特殊话题）</td><td>84.3%</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Reward model -->
+  <div class="sub-title">Reward Model 性能</div>
+  <table class="data-table" style="margin-bottom: 20px;">
+    <thead>
+      <tr>
+        <th>模型</th>
+        <th>Accuracy</th>
+        <th>AUC</th>
+        <th>Brier Score</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Skywork-Reward-Gemma-2-27B</td>
+        <td>69.2%</td>
+        <td>&mdash;</td>
+        <td>&mdash;</td>
+      </tr>
+      <tr>
+        <td>Llama-3.1-Nemotron-70B-Reward</td>
+        <td>87.3%</td>
+        <td>&mdash;</td>
+        <td>0.102</td>
+      </tr>
+      <tr>
+        <td>Llama-70B-Instruct（生成式）</td>
+        <td>88.2%</td>
+        <td>&mdash;</td>
+        <td>&mdash;</td>
+      </tr>
+      <tr class="winner">
+        <td><strong>PsyCo-Llama3-3B-Reward</strong></td>
+        <td class="highlight">98.1%</td>
+        <td class="highlight">0.997</td>
+        <td>0.016</td>
+      </tr>
+      <tr class="winner">
+        <td><strong>PsyCo-Llama3-8B-Reward</strong></td>
+        <td class="highlight">97.8%</td>
+        <td class="highlight">0.998</td>
+        <td>0.014</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="anno">领域专用 reward model 大幅碾压通用 reward model，3B 已足够强</p>
+
+  <!-- Human evaluation -->
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-title">人类评估验证</div>
+    <ul class="compact-list">
+      <li><span class="cl-label">样本量</span><span class="cl-value">200 对，专家评估</span></li>
+      <li><span class="cl-label">GPT-4o-专家一致率</span><span class="cl-value">82.5%</span></li>
+      <li><span class="cl-label">无限制条件</span><span class="cl-value">PsyCo 在 6/7 维度领先，仅 Clarity 略低（回复更长）</span></li>
+      <li><span class="cl-label">限制长度条件</span><span class="cl-value">PsyCo 在 Clarity、Safety、Stage Sensitivity 全面领先</span></li>
+      <li><span class="cl-label">绝对分数</span><span class="cl-value">多数原则 &gt; 4.0/5.0</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ============ 对 moodcoco 的价值 ============ -->
+<div class="section">
+  <h2 class="section-title">对 moodcoco 的价值</h2>
+
+  <div class="mapping-grid">
+    <div class="mapping-item" style="border-left: 4px solid var(--green);">
+      <div class="m-from">PsychoCounsel P1: 共情与情绪理解</div>
+      <div class="m-arrow">&#8595; 直接映射到</div>
+      <div class="m-to">moodcoco: 看见情绪</div>
+      <div class="m-detail">从模糊到精确命名情绪，P1 的 emotional reflection + validation 正是"看见情绪"的操作定义。可直接用 P1 的 Likert 量表做自动评分。</div>
+    </div>
+    <div class="mapping-item" style="border-left: 4px solid var(--green);">
+      <div class="m-from">PsychoCounsel P5: 促进自我探索</div>
+      <div class="m-arrow">&#8595; 直接映射到</div>
+      <div class="m-to">moodcoco: 看见原因</div>
+      <div class="m-detail">开放式提问 + 引导来访者自己发现深层情绪/信念，完全对齐"用户自己发现，不是 AI 告知"的要求。</div>
+    </div>
+    <div class="mapping-item" style="border-left: 4px solid var(--green);">
+      <div class="m-from">PsychoCounsel P7: 改变阶段敏感度</div>
+      <div class="m-arrow">&#8595; 间接映射到</div>
+      <div class="m-to">moodcoco: 看见模式</div>
+      <div class="m-detail">识别来访者处于哪个改变阶段需要"看见模式"能力（重复行为是否在变化）。P7 的阶段识别可扩展为模式检测评估器。</div>
+    </div>
+    <div class="mapping-item" style="border-left: 4px solid var(--green);">
+      <div class="m-from">PsychoCounsel P6: 促进自主性与信心</div>
+      <div class="m-arrow">&#8595; 直接映射到</div>
+      <div class="m-to">moodcoco: 看见方法</div>
+      <div class="m-detail">肯定优势、激励行动、支持掌控感 = 用户自己找到解决方向。P6 直接定义了"看见方法"的评估标准。</div>
+    </div>
+    <div class="mapping-item" style="border-left: 4px solid var(--red);">
+      <div class="m-from">PsychoCounsel P4: 避免有害内容</div>
+      <div class="m-arrow">&#8595; 直接映射到</div>
+      <div class="m-to">moodcoco: 安全边界</div>
+      <div class="m-detail">不诊断、不替用户做决定、不对不在场的人做动机判断。P4 + P2 的文化敏感性覆盖安全边界需求。</div>
+    </div>
+    <div class="mapping-item" style="border-left: 4px solid var(--blue);">
+      <div class="m-from">PsyCoPref 36k pairs + Reward Model</div>
+      <div class="m-arrow">&#8595; 可用于</div>
+      <div class="m-to">moodcoco: 训练 / 评估</div>
+      <div class="m-detail">
+        <strong>短期</strong>：用 PsyCo-Reward-3B 做自动评分器，替代 GPT-4o 降本 50x+。<br/>
+        <strong>中期</strong>：用 PsyCoPref dataset 做 DPO 微调 moodcoco 模型。<br/>
+        <strong>长期</strong>：7 原则改造为 moodcoco 四维评估器的评分 rubric。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 局限性 ============ -->
+<div class="section">
+  <h2 class="section-title">局限性</h2>
+  <ul class="limitation-list">
+    <li>
+      <strong>仅限单轮交互</strong>
+      只评估了单条 client speech + 单条回复，未涉及多轮对话中的治疗联盟维护和纵向关系建设。moodcoco 的语音场景是多轮实时对话，需要扩展评估框架。
+    </li>
+    <li>
+      <strong>原则权重固定</strong>
+      7 条原则被等权处理，但实际临床中不同个案应有不同权重（如危机情境下 P4 安全 >> P5 自我探索）。moodcoco 评估器需要动态调整权重。
+    </li>
+    <li>
+      <strong>合成标注</strong>
+      偏好标签由 GPT-4o 生成而非人类直接标注，尽管 88.5% 的专家一致率验证了有效性，但仍存在 GPT-4o 自身偏见传播的风险。
+    </li>
+    <li>
+      <strong>长度偏差</strong>
+      无长度限制时模型生成更长的回复，导致 Clarity 评分下降。moodcoco 语音场景下回复长度需严格控制，这一问题更加突出。
+    </li>
+  </ul>
+</div>
+
+<!-- ============ 技术细节速查 ============ -->
+<div class="section">
+  <h2 class="section-title">技术细节速查</h2>
+  <div class="pipeline-detail">
+    <div class="card">
+      <div class="card-title">数据集 PsyCoPref</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">训练集</span><span class="cl-value">34,329 preference pairs</span></li>
+        <li><span class="cl-label">测试集</span><span class="cl-value">2,324 preference pairs</span></li>
+        <li><span class="cl-label">原始对话</span><span class="cl-value">26,483 unique client speeches</span></li>
+        <li><span class="cl-label">话题</span><span class="cl-value">8 coarse + 42 fine-grained</span></li>
+        <li><span class="cl-label">模型池</span><span class="cl-value">20 LLMs, 3B-70B</span></li>
+        <li><span class="cl-label">配对阈值</span><span class="cl-value">分差 &ge; 1（训练）</span></li>
+        <li><span class="cl-label">开源</span><span class="cl-value">HuggingFace: Psychotherapy-LLM</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">训练配置</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">基座模型</span><span class="cl-value">Llama3.1-8B-Instruct</span></li>
+        <li><span class="cl-label">方法</span><span class="cl-value">DPO-Iter（迭代 DPO）</span></li>
+        <li><span class="cl-label">Batch size</span><span class="cl-value">64</span></li>
+        <li><span class="cl-label">Learning rate</span><span class="cl-value">5e-7</span></li>
+        <li><span class="cl-label">Steps</span><span class="cl-value">1,600 / iteration</span></li>
+        <li><span class="cl-label">Beta</span><span class="cl-value">0.1</span></li>
+        <li><span class="cl-label">Dev set</span><span class="cl-value">10% for checkpoint selection</span></li>
+        <li><span class="cl-label">每轮采样</span><span class="cl-value">6,400 samples, 8 候选/条</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">Reward Model</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">架构</span><span class="cl-value">Bradley-Terry + linear head</span></li>
+        <li><span class="cl-label">3B 版本</span><span class="cl-value">98.1% acc, 0.997 AUC</span></li>
+        <li><span class="cl-label">8B 版本</span><span class="cl-value">97.8% acc, 0.998 AUC</span></li>
+        <li><span class="cl-label">ECE</span><span class="cl-value">0.045-0.050</span></li>
+        <li><span class="cl-label">Brier</span><span class="cl-value">0.014-0.016</span></li>
+        <li><span class="cl-label">迁移</span><span class="cl-value">PsyCoPref + HelpSteer2 互补</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">关键发现</div>
+      <ul class="compact-list">
+        <li><span class="cl-label">小模型潜力</span><span class="cl-value">3B online = 8B offline</span></li>
+        <li><span class="cl-label">在线优势</span><span class="cl-value">稳定性和上限均优于离线</span></li>
+        <li><span class="cl-label">领域 RM</span><span class="cl-value">3B 领域 RM >> 70B 通用 RM</span></li>
+        <li><span class="cl-label">数据互补</span><span class="cl-value">PsyCoPref 提供通用 RM 缺失的领域信号</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div style="text-align: center; padding: 32px 0; color: var(--muted); font-size: 12px;">
+  PsychoCounsel 论文解读 &middot; moodcoco docs &middot; 2026-05-13
+</div>
+
+</body>
+</html>

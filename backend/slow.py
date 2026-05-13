@@ -9,25 +9,77 @@ Agent loop：读 Skill → 写记忆 → 必要时多轮迭代，直到产出**�
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import logging
+import os
+import re
+import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_ai import Agent, RunContext
 
-from backend.llm_provider import PROJECT_ROOT, create_agent_model, load_prompt
+from backend.llm_provider import PROJECT_ROOT, create_slow_model, load_prompt
 
-SKILLS_DIR = PROJECT_ROOT / "backend" / "skills"
+logger = logging.getLogger("backend.slow")
+
+
+def _resolve_skills_dir() -> Path:
+    """SKILLS_DIR 解析：环境变量 MOODCOCO_SKILLS_DIR 优先，相对路径基于 PROJECT_ROOT。
+
+    用于让 SJTU 同学指向他们自己的 bundle 跑 web 调试，例如：
+        MOODCOCO_SKILLS_DIR=SJTU_skills/moodcoco-psych-companion-openclaw-v1/skills
+    """
+    override = os.environ.get("MOODCOCO_SKILLS_DIR")
+    if not override:
+        return PROJECT_ROOT / "backend" / "skills"
+    path = Path(override).expanduser()
+    return path if path.is_absolute() else PROJECT_ROOT / path
+
+
+SKILLS_DIR = _resolve_skills_dir()
 MEMORY_FILE = PROJECT_ROOT / "backend" / "state" / "MEMORY.md"
 
 
-@dataclass
-class SlowThinkDeps:
-    """慢思考 Agent 的运行时依赖。"""
+class SlowThinkDeps(BaseModel):
+    """Thinker 的运行时依赖（原 Slow Agent）。
+
+    所有输出都是 cross-turn：写入 carryover_* 字段 → 下一轮 Speaker 读取。
+    不持有 fast_deps 引用，不做 same-turn mutation。
+    """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     session_id: str
     user_message: str
-    fast_reply_text: str = ""  # 同轮 fast-think 回复，用于避免复读
-    tool_call_history: list[str] = field(default_factory=list)
+    fast_reply_text: str = ""
+    tool_call_history: list[str] = Field(default_factory=list)
+    reasoning_trail: list[str] = Field(default_factory=list)
+    search_cache: dict[str, str] = Field(default_factory=dict)
+    pending_actions: list[dict] = Field(default_factory=list)
+    carryover_inject: list[str] = Field(default_factory=list)
+    carryover_skills: list[str] = Field(default_factory=list)
+    carryover_retrieval: str = ""
+    next_likely_contexts: list[str] = Field(default_factory=list)
+    speaker_output: str = ""
+    mutation_count_this_iter: int = 0
+
+
+VOICE_MUTATION_TOOL_GUIDE = """
+## Voice 模式工具选用指南（cross-turn: 本轮写入 → 下一轮 Speaker 读取）
+
+- Use slow_attach_skill_to_fast(name) when the conversation needs a SJTU skill
+  (listen / validation / face-decision / relationship-guide / etc).
+- Use slow_set_fast_retrieval(text) when you've gathered context that should
+  replace the retrieval block (compact, <=200 chars).
+- Use slow_inject_to_fast(text) for short notes that augment but don't replace.
+- Across iters in one turn, prefer using >=2 distinct tools to enrich Speaker.
+- For non-trivial emotional or relationship turns, the strongest default is:
+  attach the most relevant skill, set a compact retrieval block, then inject one
+  short next-step note. Do not route every turn through only slow_inject_to_fast.
+- All mutations are cross-turn: they take effect on the NEXT Speaker turn.
+"""
 
 
 SLOW_SYSTEM_PROMPT = "\n\n".join(
@@ -36,12 +88,13 @@ SLOW_SYSTEM_PROMPT = "\n\n".join(
         load_prompt("backend/prompts/IDENTITY.md"),
         load_prompt("backend/prompts/AGENTS.md"),
         load_prompt("backend/prompts/slow-instructions.md"),
+        VOICE_MUTATION_TOOL_GUIDE,
     ]
 )
 
 
 slow_agent: Agent[SlowThinkDeps, str] = Agent(
-    create_agent_model(),
+    create_slow_model(),
     deps_type=SlowThinkDeps,
     output_type=str,
     system_prompt=SLOW_SYSTEM_PROMPT,
@@ -61,15 +114,132 @@ async def inject_context(ctx: RunContext[SlowThinkDeps]) -> str:
     return "\n\n".join(parts)
 
 
+def _turn_id() -> str:
+    try:
+        from backend.voice.plugins._context import voice_turn_ctx
+
+        return voice_turn_ctx.get() or "unknown"
+    except (ImportError, LookupError, RuntimeError):
+        return "unknown"
+
+
+def _log_slow_tool_call(
+    ctx: RunContext[SlowThinkDeps],
+    *,
+    tool: str,
+    started_at: float,
+    text_len: int = 0,
+) -> None:
+    logger.info(
+        "slow_tool_call",
+        extra={
+            "session_id": ctx.deps.session_id,
+            "turn_id": _turn_id(),
+            "phase": "slow",
+            "tool": tool,
+            "text_len": text_len,
+            "latency_ms": round((time.monotonic() - started_at) * 1000),
+            "mutations_made": ctx.deps.mutation_count_this_iter,
+        },
+    )
+
+
+def _append_lru(items: list[str], value: str, *, limit: int) -> None:
+    normalized = value.strip()
+    if not normalized:
+        return
+    if normalized in items:
+        items.remove(normalized)
+    items.append(normalized)
+    del items[:-limit]
+
+
+def _select_voice_skill(user_message: str) -> str | None:
+    message = user_message.strip()
+    if not message:
+        return None
+
+    crisis_terms = ("想死", "不想活", "伤害自己", "活着没意思", "消失")
+    body_terms = ("喘不上气", "心跳", "发抖", "手抖", "慌", "恐慌", "失眠")
+    decision_terms = ("该不该", "要不要", "拿不定", "不知道怎么选", "立刻", "马上")
+    untangle_terms = ("好乱", "脑子很乱", "说不清", "一团乱")
+    relationship_terms = (
+        "吵",
+        "冷战",
+        "妈妈",
+        "男朋友",
+        "女朋友",
+        "对象",
+        "聊天记录",
+        "隐私",
+        "不回",
+        "分手",
+        "沟通",
+        "剃光",
+        "头发",
+    )
+    emotion_terms = (
+        "委屈",
+        "难过",
+        "生气",
+        "气",
+        "烦",
+        "崩溃",
+        "哭",
+        "害怕",
+        "焦虑",
+        "伤心",
+        "过分",
+        "不三不四",
+        "糟蹋",
+    )
+
+    if any(term in message for term in crisis_terms):
+        return "crisis"
+    if any(term in message for term in body_terms):
+        return "calm-body"
+    if any(term in message for term in decision_terms):
+        return "face-decision"
+    if any(term in message for term in untangle_terms):
+        return "untangle"
+    if any(term in message for term in relationship_terms):
+        return "relationship-guide"
+    if any(term in message for term in emotion_terms):
+        return "listen"
+    return None
+
+
+def _compact_voice_retrieval(user_message: str) -> str:
+    block = f"本轮用户线索：{user_message.strip()}"
+    if len(block) > 200:
+        return block[:197].rstrip() + "..."
+    return block
+
+
+async def _auto_complete_voice_mutations(ctx: RunContext[SlowThinkDeps]) -> None:
+    skill_name = _select_voice_skill(ctx.deps.user_message)
+    if skill_name is None:
+        return
+    if skill_name and not ctx.deps.carryover_skills:
+        await slow_attach_skill_to_fast(ctx, skill_name)
+
+    if not ctx.deps.carryover_retrieval.strip():
+        await slow_set_fast_retrieval(ctx, _compact_voice_retrieval(ctx.deps.user_message))
+
+
 @slow_agent.tool
 async def list_skills(ctx: RunContext[SlowThinkDeps]) -> list[str]:
     """列出所有可用 Skill 名称。"""
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append("list_skills")
     if not SKILLS_DIR.exists():
+        _log_slow_tool_call(ctx, tool="list_skills", started_at=started_at)
         return []
-    return sorted(
+    skills = sorted(
         p.name for p in SKILLS_DIR.iterdir() if p.is_dir() and (p / "SKILL.md").exists()
     )
+    _log_slow_tool_call(ctx, tool="list_skills", started_at=started_at)
+    return skills
 
 
 @slow_agent.tool
@@ -79,14 +249,18 @@ async def read_skill(ctx: RunContext[SlowThinkDeps], skill_name: str) -> str:
     Args:
         skill_name: skill 目录名，如 "diary"、"breathing-ground"、"relationship-guide"。
     """
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append(f"read_skill({skill_name})")
     skill_path = SKILLS_DIR / skill_name / "SKILL.md"
     if not skill_path.exists():
         available = ", ".join(
             p.name for p in SKILLS_DIR.iterdir() if p.is_dir()
         )
+        _log_slow_tool_call(ctx, tool="read_skill", started_at=started_at)
         return f"Skill not found: {skill_name}. Available: {available}"
-    return skill_path.read_text(encoding="utf-8")
+    content = skill_path.read_text(encoding="utf-8")
+    _log_slow_tool_call(ctx, tool="read_skill", started_at=started_at, text_len=len(content))
+    return content
 
 
 @slow_agent.tool
@@ -102,9 +276,133 @@ async def write_memory(
             "## 核心信念变化轨迹"；如不存在会自动创建。
         content: 要追加的 Markdown 内容（建议一行 bullet，含日期标签）。
     """
+    started_at = time.monotonic()
     ctx.deps.tool_call_history.append(f"write_memory({section})")
     _append_to_memory_section(section, content, ctx.deps.session_id)
+    _log_slow_tool_call(ctx, tool="write_memory", started_at=started_at, text_len=len(content))
     return f"written to {section}"
+
+
+@slow_agent.tool
+async def slow_inject_to_fast(ctx: RunContext[SlowThinkDeps], system_text: str) -> str:
+    """Inject short guidance for Speaker's next turn (cross-turn)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_inject_to_fast")
+    _append_lru(ctx.deps.carryover_inject, system_text, limit=3)
+    ctx.deps.reasoning_trail.append(f"inject:{system_text[:80]}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_inject_to_fast",
+        started_at=started_at,
+        text_len=len(system_text),
+    )
+    await _auto_complete_voice_mutations(ctx)
+    return "injected (cross-turn, effective next turn)"
+
+
+@slow_agent.tool
+async def slow_set_fast_retrieval(ctx: RunContext[SlowThinkDeps], block: str) -> str:
+    """Set retrieval block for Speaker's next turn (cross-turn, <=200 chars)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_set_fast_retrieval")
+    compact_block = block.strip()
+    if len(compact_block) > 200:
+        compact_block = compact_block[:197].rstrip() + "..."
+    ctx.deps.carryover_retrieval = compact_block
+    ctx.deps.search_cache[ctx.deps.user_message] = compact_block
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_set_fast_retrieval",
+        started_at=started_at,
+        text_len=len(compact_block),
+    )
+    return "retrieval set (cross-turn, effective next turn)"
+
+
+@slow_agent.tool
+async def slow_attach_skill_to_fast(ctx: RunContext[SlowThinkDeps], skill_name: str) -> str:
+    """Attach a Skill to Speaker's next turn (cross-turn)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append(f"slow_attach_skill_to_fast({skill_name})")
+    skill_text = await read_skill(ctx, skill_name)
+    if skill_text.startswith("Skill not found:"):
+        ctx.deps.mutation_count_this_iter += 1
+        _log_slow_tool_call(
+            ctx,
+            tool="slow_attach_skill_to_fast",
+            started_at=started_at,
+            text_len=len(skill_text),
+        )
+        return skill_text
+    if skill_text not in ctx.deps.carryover_skills:
+        ctx.deps.carryover_skills.append(skill_text)
+    ctx.deps.reasoning_trail.append(f"skill:{skill_name}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_attach_skill_to_fast",
+        started_at=started_at,
+        text_len=len(skill_text),
+    )
+    return f"skill attached (cross-turn, effective next turn): {skill_name}"
+
+
+@slow_agent.tool
+async def slow_set_next_likely_contexts(
+    ctx: RunContext[SlowThinkDeps], contexts: list[str]
+) -> str:
+    """Predict next likely contexts for pre-warming (cross-turn)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_set_next_likely_contexts")
+    ctx.deps.next_likely_contexts = contexts[:3]
+    ctx.deps.reasoning_trail.append(f"predict:{','.join(contexts[:3])}")
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_set_next_likely_contexts",
+        started_at=started_at,
+    )
+    return f"next_likely_contexts set: {contexts[:3]}"
+
+
+SAFETY_REVIEW_PATTERNS = [
+    ("诊断", ["你可能患有", "你可能有", "你有抑郁症", "你有焦虑症", "诊断为", "你患了"]),
+    ("替用户做决定", ["你应该分手", "你必须离开", "你应该辞职", "你不应该原谅"]),
+    ("动机判断", ["他就是想控制你", "她根本不爱你", "他们的目的是"]),
+]
+
+
+@slow_agent.tool
+async def slow_safety_review(ctx: RunContext[SlowThinkDeps]) -> str:
+    """Review Speaker's last output for safety issues (async, non-blocking)."""
+    started_at = time.monotonic()
+    ctx.deps.tool_call_history.append("slow_safety_review")
+    output = ctx.deps.speaker_output
+    if not output.strip():
+        _log_slow_tool_call(ctx, tool="slow_safety_review", started_at=started_at)
+        return "no speaker output to review"
+
+    issues = []
+    for category, patterns in SAFETY_REVIEW_PATTERNS:
+        for pattern in patterns:
+            if re.search(re.escape(pattern), output, re.DOTALL):
+                issues.append(f"{category}: '{pattern}'")
+    if not issues:
+        _log_slow_tool_call(ctx, tool="slow_safety_review", started_at=started_at)
+        return "speaker output OK, no safety issues"
+
+    correction = f"上轮 Speaker 输出有安全问题({'; '.join(issues)})。下轮避免诊断、替用户做决定、对不在场的人做动机判断。"
+    _append_lru(ctx.deps.carryover_inject, correction, limit=3)
+    ctx.deps.mutation_count_this_iter += 1
+    _log_slow_tool_call(
+        ctx,
+        tool="slow_safety_review",
+        started_at=started_at,
+        text_len=len(correction),
+    )
+    return f"correction injected: {correction}"
 
 
 def _append_to_memory_section(section: str, content: str, session_id: str) -> None:
@@ -150,3 +448,7 @@ def reset_memory_file_for_demo() -> None:
         "## 核心信念变化轨迹\n"
     )
     MEMORY_FILE.write_text(skeleton, encoding="utf-8")
+
+
+ThinkerDeps = SlowThinkDeps
+thinker_agent = slow_agent

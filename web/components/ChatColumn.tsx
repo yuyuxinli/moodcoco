@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { ChatHistoryItem } from "@/lib/types";
 import MessageBubble from "./MessageBubble";
+import VoiceButton from "./voice/VoiceButton";
 
 interface Props {
   title: string;
@@ -56,6 +57,11 @@ export default function ChatColumn({
           ))}
         <div ref={endRef} />
       </div>
+      {filter === "coco" && (
+        <div className="border-t border-zinc-200 bg-white p-3">
+          <VoiceButton />
+        </div>
+      )}
       {children}
     </div>
   );

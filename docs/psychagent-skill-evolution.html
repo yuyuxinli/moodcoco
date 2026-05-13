@@ -1,0 +1,865 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PsychAgent 论文解读：经验驱动的终身学习心理咨询 Agent</title>
+  <style>
+    :root {
+      --paper: #fafaf9;
+      --ink: #1a1a1a;
+      --muted: #6b6b6b;
+      --line: #e5e5e5;
+      --panel: #ffffff;
+      --accent: #2563eb;
+      --accent-light: #dbeafe;
+      --green: #16a34a;
+      --green-light: #dcfce7;
+      --purple: #7c3aed;
+      --purple-light: #ede9fe;
+      --orange: #ea580c;
+      --orange-light: #fff7ed;
+      --red: #dc2626;
+      --red-light: #fef2f2;
+      --teal: #0d9488;
+      --teal-light: #ccfbf1;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 24px rgba(0,0,0,.05);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,.1), 0 16px 48px rgba(0,0,0,.08);
+      --radius: 10px;
+      --max: 960px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      color: var(--ink);
+      background: var(--paper);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Noto Sans CJK SC", "Segoe UI", sans-serif;
+      line-height: 1.75;
+      font-size: 15px;
+    }
+
+    /* ── Sticky Header ── */
+    .top {
+      position: sticky; top: 0; z-index: 20;
+      border-bottom: 1px solid var(--line);
+      background: rgba(250,250,249,.92);
+      backdrop-filter: blur(14px);
+    }
+    .top-inner {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto; min-height: 54px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .brand {
+      font-weight: 700; font-size: 14px; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .brand-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--purple));
+    }
+    nav { display: flex; gap: 18px; font-size: 13px; flex-wrap: wrap; }
+    nav a { color: var(--muted); text-decoration: none; transition: color .15s; }
+    nav a:hover { color: var(--ink); }
+
+    /* ── Main Content ── */
+    .wrap { width: min(var(--max), calc(100% - 32px)); margin: 0 auto; padding: 40px 0 80px; }
+
+    /* Hero */
+    .hero { text-align: center; margin-bottom: 48px; }
+    .hero h1 { font-size: 28px; font-weight: 800; line-height: 1.35; margin-bottom: 12px; }
+    .hero .sub { color: var(--muted); font-size: 14px; line-height: 1.6; }
+    .hero .sub a { color: var(--accent); text-decoration: none; }
+
+    /* TLDR */
+    .tldr {
+      background: linear-gradient(135deg, var(--accent-light), var(--purple-light));
+      border-radius: var(--radius); padding: 28px 32px; margin-bottom: 48px;
+      border: 1px solid rgba(37,99,235,.15);
+    }
+    .tldr h2 { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+    .tldr p { font-size: 15px; line-height: 1.8; }
+    .tldr strong { color: var(--ink); }
+
+    /* Section */
+    section { margin-bottom: 48px; }
+    section > h2 {
+      font-size: 20px; font-weight: 700; margin-bottom: 20px;
+      padding-bottom: 8px; border-bottom: 2px solid var(--line);
+    }
+    section > h3 { font-size: 16px; font-weight: 700; margin: 20px 0 10px; }
+    section p { margin-bottom: 12px; }
+
+    /* Cards */
+    .card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .card h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+    .card ul { padding-left: 20px; }
+    .card li { margin-bottom: 6px; }
+
+    /* Architecture Diagram */
+    .arch-diagram {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 32px 24px;
+      box-shadow: var(--shadow-lg); margin-bottom: 48px; overflow-x: auto;
+    }
+    .arch-title {
+      text-align: center; font-size: 17px; font-weight: 700;
+      margin-bottom: 24px; color: var(--ink);
+    }
+
+    /* Three-column modules */
+    .modules { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 768px) { .modules { grid-template-columns: 1fr; } }
+
+    .mod-box {
+      border-radius: 8px; padding: 20px 16px; position: relative;
+      border: 2px solid; min-height: 240px;
+    }
+    .mod-box.mape { border-color: var(--accent); background: var(--accent-light); }
+    .mod-box.see  { border-color: var(--green); background: var(--green-light); }
+    .mod-box.rie  { border-color: var(--purple); background: var(--purple-light); }
+
+    .mod-label {
+      font-size: 13px; font-weight: 800; letter-spacing: .5px;
+      text-transform: uppercase; margin-bottom: 4px;
+    }
+    .mod-box.mape .mod-label { color: var(--accent); }
+    .mod-box.see  .mod-label { color: var(--green); }
+    .mod-box.rie  .mod-label { color: var(--purple); }
+
+    .mod-name { font-size: 15px; font-weight: 700; margin-bottom: 12px; }
+
+    .mod-item {
+      background: rgba(255,255,255,.7); border-radius: 6px;
+      padding: 8px 12px; margin-bottom: 8px; font-size: 13px; line-height: 1.5;
+    }
+    .mod-item .label { font-weight: 600; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .3px; }
+
+    /* Flow arrows */
+    .flow-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 16px 0; flex-wrap: wrap;
+    }
+    .flow-box {
+      padding: 8px 18px; border-radius: 20px; font-size: 13px; font-weight: 600;
+      white-space: nowrap;
+    }
+    .flow-arrow { font-size: 18px; color: var(--muted); }
+
+    /* Skill Hierarchy */
+    .skill-tree {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 24px; margin: 16px 0;
+      box-shadow: var(--shadow);
+    }
+    .tree-level {
+      display: flex; align-items: stretch; margin-bottom: 12px; gap: 12px;
+    }
+    .tree-depth {
+      width: 100px; min-width: 100px; text-align: right; padding: 8px 12px 8px 0;
+      border-right: 3px solid var(--line); font-size: 12px; font-weight: 700;
+      color: var(--muted); display: flex; align-items: center; justify-content: flex-end;
+    }
+    .tree-nodes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 4px 0; }
+    .tree-node {
+      padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      border: 1px solid;
+    }
+    .tree-node.l1 { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+    .tree-node.l2 { background: #dbeafe; border-color: #3b82f6; color: #1e40af; }
+    .tree-node.l3 { background: #dcfce7; border-color: #22c55e; color: #166534; }
+    .tree-node.l4 { background: #ede9fe; border-color: #8b5cf6; color: #5b21b6; }
+    .tree-connector { color: var(--muted); font-size: 11px; }
+
+    /* Stats grid */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 16px 0; }
+    .stat-card {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 8px; padding: 16px; text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .stat-num { font-size: 28px; font-weight: 800; }
+    .stat-num.blue { color: var(--accent); }
+    .stat-num.green { color: var(--green); }
+    .stat-num.purple { color: var(--purple); }
+    .stat-num.orange { color: var(--orange); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* Results table */
+    .table-wrap { overflow-x: auto; margin: 16px 0; }
+    table {
+      width: 100%; border-collapse: collapse; font-size: 13px;
+      background: var(--panel); border-radius: 8px; overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    th {
+      background: #f5f5f4; padding: 10px 14px; text-align: left;
+      font-weight: 700; font-size: 12px; color: var(--muted);
+      text-transform: uppercase; letter-spacing: .3px;
+      border-bottom: 2px solid var(--line);
+    }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+    tr:last-child td { border-bottom: none; }
+    tr.highlight { background: rgba(37,99,235,.04); }
+    tr.highlight td { font-weight: 600; }
+    .best { color: var(--accent); font-weight: 700; }
+
+    /* Process flow */
+    .process-flow {
+      display: flex; flex-direction: column; gap: 0; margin: 16px 0;
+    }
+    .pf-step {
+      display: flex; gap: 16px; align-items: flex-start;
+    }
+    .pf-line {
+      display: flex; flex-direction: column; align-items: center; min-width: 32px;
+    }
+    .pf-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+      border: 2px solid;
+    }
+    .pf-dot.green { border-color: var(--green); background: var(--green-light); }
+    .pf-dot.blue { border-color: var(--accent); background: var(--accent-light); }
+    .pf-dot.purple { border-color: var(--purple); background: var(--purple-light); }
+    .pf-dot.orange { border-color: var(--orange); background: var(--orange-light); }
+    .pf-bar { width: 2px; flex: 1; min-height: 24px; background: var(--line); }
+    .pf-content { padding-bottom: 20px; }
+    .pf-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+    .pf-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* Tags */
+    .tag {
+      display: inline-block; padding: 2px 10px; border-radius: 12px;
+      font-size: 11px; font-weight: 600; margin-right: 6px; margin-bottom: 4px;
+    }
+    .tag.blue { background: var(--accent-light); color: var(--accent); }
+    .tag.green { background: var(--green-light); color: var(--green); }
+    .tag.purple { background: var(--purple-light); color: var(--purple); }
+    .tag.orange { background: var(--orange-light); color: var(--orange); }
+    .tag.red { background: var(--red-light); color: var(--red); }
+
+    /* Value card */
+    .value-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+    @media (max-width: 640px) { .value-grid { grid-template-columns: 1fr; } }
+    .value-card {
+      background: var(--panel); border-radius: 8px; padding: 20px;
+      border: 1px solid var(--line); box-shadow: var(--shadow);
+    }
+    .value-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .value-card p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* Formula */
+    .formula {
+      background: #f5f5f4; border: 1px solid var(--line);
+      border-radius: 6px; padding: 14px 20px; margin: 12px 0;
+      font-family: "SF Mono", "Fira Code", "JetBrains Mono", monospace;
+      font-size: 13px; overflow-x: auto; line-height: 1.8;
+    }
+
+    /* Callout */
+    .callout {
+      border-left: 4px solid; border-radius: 0 8px 8px 0;
+      padding: 16px 20px; margin: 16px 0; font-size: 14px;
+    }
+    .callout.blue { border-color: var(--accent); background: var(--accent-light); }
+    .callout.green { border-color: var(--green); background: var(--green-light); }
+    .callout.orange { border-color: var(--orange); background: var(--orange-light); }
+    .callout.red { border-color: var(--red); background: var(--red-light); }
+
+    /* Loop diagram */
+    .loop-diagram {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 20px 0; flex-wrap: wrap;
+    }
+    .loop-node {
+      padding: 10px 20px; border-radius: 8px; font-size: 13px;
+      font-weight: 600; text-align: center; border: 2px solid;
+      min-width: 120px;
+    }
+    .loop-node.n1 { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+    .loop-node.n2 { background: var(--green-light); border-color: var(--green); color: var(--green); }
+    .loop-node.n3 { background: var(--purple-light); border-color: var(--purple); color: var(--purple); }
+    .loop-node.n4 { background: var(--orange-light); border-color: var(--orange); color: var(--orange); }
+    .loop-arrow {
+      font-size: 20px; color: var(--muted); padding: 0 8px;
+    }
+    .loop-back {
+      display: block; text-align: center; font-size: 12px;
+      color: var(--muted); margin-top: 8px;
+    }
+
+    /* Comparison highlight */
+    .compare-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;
+    }
+    @media (max-width: 640px) { .compare-row { grid-template-columns: 1fr; } }
+    .compare-box {
+      border-radius: 8px; padding: 20px; border: 1px solid;
+    }
+    .compare-box.before { background: #fef2f2; border-color: #fecaca; }
+    .compare-box.after { background: #f0fdf4; border-color: #bbf7d0; }
+    .compare-box h4 { font-size: 14px; font-weight: 700; margin-bottom: 8px; }
+    .compare-box p { font-size: 13px; line-height: 1.6; }
+
+    .footer {
+      text-align: center; padding: 40px 0 20px;
+      font-size: 12px; color: var(--muted);
+      border-top: 1px solid var(--line);
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><div class="brand-dot"></div>PsychAgent 论文解读</div>
+    <nav>
+      <a href="#tldr">30s 速读</a>
+      <a href="#arch">架构</a>
+      <a href="#see">技能进化</a>
+      <a href="#mape">记忆规划</a>
+      <a href="#rie">强化内化</a>
+      <a href="#results">实验</a>
+      <a href="#value">moodcoco</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <h1>PsychAgent：经验驱动的终身学习<br>心理咨询 Agent</h1>
+    <div class="sub">
+      Yang et al. &middot; arXiv 2604.00931 &middot; 2026-04<br>
+      <a href="https://arxiv.org/abs/2604.00931" target="_blank">arxiv.org/abs/2604.00931</a>
+    </div>
+  </div>
+
+  <!-- ── 30s TLDR ── -->
+  <div class="tldr" id="tldr">
+    <h2>30 秒版本</h2>
+    <p>
+      现有 AI 心理咨询靠静态数据 SFT，而人类咨询师靠<strong>临床实践持续进化</strong>。
+      PsychAgent 提出三引擎闭环：<strong>记忆增强规划</strong>维持跨 session 连续性，
+      <strong>技能进化引擎</strong>从历史咨询轨迹自动提取新技能，
+      <strong>强化内化引擎</strong>通过 Rejection Fine-Tuning 将技能写入模型参数。
+      结果：在 5 个治疗流派上全面超越 GPT-5.4、Gemini-3 和领域专用模型。
+      消融实验显示<strong>技能进化引擎贡献最大</strong>。
+    </p>
+  </div>
+
+  <!-- ── Architecture Diagram ── -->
+  <section id="arch">
+    <h2>三大模块架构</h2>
+
+    <div class="arch-diagram">
+      <div class="arch-title">PsychAgent 闭环架构</div>
+
+      <!-- Three module boxes -->
+      <div class="modules">
+        <!-- MAPE -->
+        <div class="mod-box mape">
+          <div class="mod-label">Module A</div>
+          <div class="mod-name">Memory-Augmented Planning Engine</div>
+          <div class="mod-item">
+            <div class="label">动态画像 P_t</div>
+            每次 session 后提取属性更新
+          </div>
+          <div class="mod-item">
+            <div class="label">情景摘要 H_t</div>
+            记录情绪变化 + 干预效果
+          </div>
+          <div class="mod-item">
+            <div class="label">计划推理</div>
+            治疗阶段 + Session 目标
+          </div>
+        </div>
+
+        <!-- SEE -->
+        <div class="mod-box see">
+          <div class="mod-label">Module B</div>
+          <div class="mod-name">Skill Evolution Engine</div>
+          <div class="mod-item">
+            <div class="label">四级技能树 T</div>
+            范式 / 阶段 / 元技能 / 原子技能
+          </div>
+          <div class="mod-item">
+            <div class="label">定向技能提取</div>
+            从最优轨迹 S* 抽象新技能
+          </div>
+          <div class="mod-item">
+            <div class="label">自适应管理</div>
+            追加新节点 or 合并到现有技能
+          </div>
+        </div>
+
+        <!-- RIE -->
+        <div class="mod-box rie">
+          <div class="mod-label">Module C</div>
+          <div class="mod-name">Reinforced Internalization Engine</div>
+          <div class="mod-item">
+            <div class="label">平行探索</div>
+            每步生成 N=8 条候选 session
+          </div>
+          <div class="mod-item">
+            <div class="label">多维奖励</div>
+            LLM-as-a-Judge 评估
+          </div>
+          <div class="mod-item">
+            <div class="label">Rejection FT</div>
+            只保留最优轨迹训练
+          </div>
+        </div>
+      </div>
+
+      <!-- Closed-loop flow -->
+      <div class="loop-diagram">
+        <div class="loop-node n1">咨询实践<br><span style="font-size:11px;opacity:.7">积累经验</span></div>
+        <div class="loop-arrow">&#8594;</div>
+        <div class="loop-node n2">技能提取<br><span style="font-size:11px;opacity:.7">SEE 抽象</span></div>
+        <div class="loop-arrow">&#8594;</div>
+        <div class="loop-node n3">参数内化<br><span style="font-size:11px;opacity:.7">RFT 训练</span></div>
+        <div class="loop-arrow">&#8594;</div>
+        <div class="loop-node n4">性能提升<br><span style="font-size:11px;opacity:.7">更好的咨询</span></div>
+      </div>
+      <div class="loop-back">&#x21A9; 闭环：性能提升 &#8594; 更多高质量经验 &#8594; 更好的技能</div>
+    </div>
+  </section>
+
+  <!-- ── Skill Evolution Engine ── -->
+  <section id="see">
+    <h2>Skill Evolution Engine 详解</h2>
+
+    <p>这是论文<strong>贡献最大</strong>的模块（消融实验 drop 最大）。核心思想：从咨询实践的最优轨迹中自动提取、组织和更新治疗技能。</p>
+
+    <h3>四级技能层次树</h3>
+    <p>技能库组织为四级层次树 T = (N, E)：</p>
+
+    <div class="skill-tree">
+      <div class="tree-level">
+        <div class="tree-depth">L1 根范式</div>
+        <div class="tree-nodes">
+          <span class="tree-node l1">CBT</span>
+          <span class="tree-node l1">人本主义</span>
+          <span class="tree-node l1">精神动力</span>
+          <span class="tree-node l1">行为疗法</span>
+          <span class="tree-node l1">后现代</span>
+        </div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-depth">L2 治疗阶段</div>
+        <div class="tree-nodes">
+          <span class="tree-node l2">个案概念化</span>
+          <span class="tree-node l2">核心干预</span>
+          <span class="tree-node l2">巩固与预防</span>
+        </div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-depth">L3 元技能</div>
+        <div class="tree-nodes">
+          <span class="tree-node l3">共情建立</span>
+          <span class="tree-node l3">认知重构</span>
+          <span class="tree-node l3">行为激活</span>
+          <span class="tree-node l3">情绪聚焦</span>
+          <span class="tree-connector">...</span>
+        </div>
+      </div>
+      <div class="tree-level">
+        <div class="tree-depth">L4 原子技能</div>
+        <div class="tree-nodes">
+          <span class="tree-node l4">苏格拉底提问</span>
+          <span class="tree-node l4">低门槛流程卡</span>
+          <span class="tree-node l4">暂停-回退规则</span>
+          <span class="tree-node l4">最小可行行动</span>
+          <span class="tree-connector">...</span>
+        </div>
+      </div>
+    </div>
+
+    <h3>技能提取流程</h3>
+
+    <div class="process-flow">
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot green"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">1. 选取最优轨迹 S*</div>
+          <div class="pf-desc">从 N=8 条平行候选 session 中，经多维奖励模型评分后选出最高分轨迹。</div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot blue"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">2. 定向技能提取 (Targeted Skill Extraction)</div>
+          <div class="pf-desc">模型分析最优轨迹，结合记忆 M 和 session 目标 Goal，抽象出对应元技能下的原子技能：<br>
+          <code style="background:#f5f5f4;padding:2px 6px;border-radius:4px;font-size:12px;">K_atom &larr; E_&theta;(S* | M, Goal)</code></div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot purple"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">3. 语义检索最近邻</div>
+          <div class="pf-desc">在现有技能库中检索与新提取技能 K_atom 语义最相似的已有技能 K_ref。</div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot orange"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">4. 自适应技能管理 (Adaptive Skill Management)</div>
+          <div class="pf-desc">管理策略 &pi;_mgt 做出决策：如果新技能与已有技能差异足够大，<strong>追加为新节点</strong>；如果是已有技能的变体，<strong>合并融合</strong>以细化定义。</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>原子技能的表示格式</h3>
+    <div class="card">
+      <p>每个原子技能包含结构化字段：</p>
+      <ul>
+        <li><strong>触发条件</strong> -- 何时使用这个技能</li>
+        <li><strong>执行步骤</strong> -- 具体操作序列</li>
+        <li><strong>最小可行行动</strong> -- 降低用户启动门槛的最简版本</li>
+        <li><strong>量化阈值</strong> -- 何时判断技能生效</li>
+        <li><strong>监控规则</strong> -- 持续追踪效果</li>
+        <li><strong>暂停/回退规则</strong> -- 何时停下、换策略</li>
+      </ul>
+    </div>
+
+    <h3>关键发现：73.29% 是实践增量</h3>
+
+    <div class="callout green">
+      <strong>73.29%</strong> 的提取技能引入了"实践增量" -- 不是发明全新疗法，而是在现有微技能基础上增加：操作排序、最小可行行动、量化阈值、监控循环、暂停/回退规则。这更接近人类咨询师的成长方式：不是学新理论，而是把理论变成可操作的直觉。
+    </div>
+
+    <div class="compare-row">
+      <div class="compare-box before">
+        <h4>传统技能定义</h4>
+        <p>"使用苏格拉底式提问帮助来访者识别认知扭曲"</p>
+        <p style="margin-top:8px;font-size:12px;color:#991b1b;">-- 抽象、无操作细节</p>
+      </div>
+      <div class="compare-box after">
+        <h4>PsychAgent 提取的技能</h4>
+        <p>"一页流程卡 + 低门槛激活"：将 CBT 多要素压缩为可复用工作流 -- 步骤顺序、可选低负担记录、用户专属触发短语、情境内校准动作。当来访者犹豫时主动降低启动门槛。</p>
+        <p style="margin-top:8px;font-size:12px;color:#166534;">-- 具体、可执行、有兜底</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Memory-Augmented Planning ── -->
+  <section id="mape">
+    <h2>Memory-Augmented Planning 机制</h2>
+
+    <p>为多 session 纵向交互设计的记忆和规划系统。核心思想：咨询不是单轮对话，需要跨 session 的治疗连续性。</p>
+
+    <div class="modules" style="grid-template-columns: 1fr 1fr;">
+      <div class="card">
+        <h3 style="color:var(--accent);">记忆状态 M_t = (P_t, H_t)</h3>
+        <p><strong>动态客户画像 P_t</strong></p>
+        <ul>
+          <li>语义级记忆，每次 session 后通过属性提取更新</li>
+          <li>包含人口学信息、主诉、核心议题、进展状态</li>
+        </ul>
+        <p style="margin-top:12px;"><strong>情景 Session 摘要 H_t</strong></p>
+        <ul>
+          <li>结构化摘要，渐进式追加</li>
+          <li>捕捉情绪变化轨迹和干预效果</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--accent);">计划推理</h3>
+        <p>综合累积记忆生成连贯的治疗策略方向：</p>
+        <ul>
+          <li><strong>治疗阶段识别</strong>：个案概念化 / 核心干预 / 巩固预防</li>
+          <li><strong>Session 目标制定</strong>：具体、可操作的当次目标</li>
+          <li>只有最优轨迹的结果才更新记忆，确保记忆质量</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>训练任务</h3>
+    <p>MAPE 通过三个 SFT 任务联合训练：</p>
+
+    <div class="flow-row">
+      <div class="flow-box" style="background:var(--accent-light);color:var(--accent);">D_mem 记忆提取</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box" style="background:var(--green-light);color:var(--green);">D_plan 计划推理</div>
+      <span class="flow-arrow">+</span>
+      <div class="flow-box" style="background:var(--purple-light);color:var(--purple);">D_resp 回复生成</div>
+      <span class="flow-arrow">=</span>
+      <div class="flow-box" style="background:#f5f5f4;color:var(--ink);">NLL Loss</div>
+    </div>
+  </section>
+
+  <!-- ── Reinforced Internalization ── -->
+  <section id="rie">
+    <h2>Reinforced Internalization 方法</h2>
+
+    <p>目标：将 SEE 提取的<strong>显式技能</strong>逐步"蒸馏"进模型参数，变成<strong>内隐直觉</strong>，减少对外部检索的依赖。</p>
+
+    <h3>Rejection Fine-Tuning (RFT) 流程</h3>
+
+    <div class="process-flow">
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot blue"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">1. 平行探索</div>
+          <div class="pf-desc">在每个时间步 t，Agent 生成 N=8 条平行候选 session {S_t^(1), ..., S_t^(N)}，探索不同技能 + 对话组合。</div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot green"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">2. 多维奖励评估</div>
+          <div class="pf-desc">使用 LLM-as-a-Judge 对每条候选进行多维评分，涵盖来访者维度（情绪变化、满意度）和咨询师维度（技术运用、联盟质量）。</div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot purple"></div><div class="pf-bar"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">3. 贪心选择</div>
+          <div class="pf-desc">
+            <code style="background:#f5f5f4;padding:2px 6px;border-radius:4px;font-size:12px;">S_t* = argmax_k R(S_t^(k))</code><br>
+            选出最优轨迹。只有这条轨迹的结果会更新记忆，用于下一个 session。
+          </div>
+        </div>
+      </div>
+      <div class="pf-step">
+        <div class="pf-line"><div class="pf-dot orange"></div></div>
+        <div class="pf-content">
+          <div class="pf-title">4. 似然最大化训练</div>
+          <div class="pf-desc">用选出的黄金轨迹 T* = {S_1*, S_2*, ..., S_T*} 训练模型，被拒绝的 session 作为隐式负样本。</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>训练目标</h3>
+    <div class="formula">
+      L_RFT(&theta;) = -&sum;_t log P_&theta;(S_t* | H_{t-1}*)
+    </div>
+    <p>本质：<strong>最大化最优轨迹的生成概率</strong>。与 RLHF 不同，不需要显式奖励模型参数化，而是直接用拒绝采样构造训练数据。</p>
+  </section>
+
+  <!-- ── Experimental Results ── -->
+  <section id="results">
+    <h2>实验结果</h2>
+
+    <h3>实验配置</h3>
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-num blue">Qwen3-32B</div>
+        <div class="stat-label">基座模型</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num green">5</div>
+        <div class="stat-label">治疗流派 (BT/CBT/HET/PDT/PMT)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num purple">2000+</div>
+        <div class="stat-label">客户画像</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num orange">16xH200</div>
+        <div class="stat-label">训练硬件</div>
+      </div>
+    </div>
+
+    <h3>主要结果（PsychEval 自动评估）</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>模型</th>
+            <th>类型</th>
+            <th>咨询师-通用</th>
+            <th>咨询师-专项</th>
+            <th>来访者-通用</th>
+            <th>来访者-专项</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>GPT-5.4</td>
+            <td><span class="tag blue">通用</span></td>
+            <td>5.54</td>
+            <td>7.41</td>
+            <td>5.07</td>
+            <td>7.72</td>
+          </tr>
+          <tr>
+            <td>Gemini-3</td>
+            <td><span class="tag blue">通用</span></td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>Qwen3-Max</td>
+            <td><span class="tag blue">通用</span></td>
+            <td>5.88</td>
+            <td>7.74</td>
+            <td>5.41</td>
+            <td>7.81</td>
+          </tr>
+          <tr>
+            <td>DeepSeek-V3.2</td>
+            <td><span class="tag blue">通用</span></td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr>
+            <td>TheraMind</td>
+            <td><span class="tag green">心理专用</span></td>
+            <td>6.25</td>
+            <td>6.94</td>
+            <td>5.48</td>
+            <td>7.83</td>
+          </tr>
+          <tr>
+            <td>CPsyCounX</td>
+            <td><span class="tag green">心理专用</span></td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+            <td>--</td>
+          </tr>
+          <tr class="highlight">
+            <td><strong>PsychAgent</strong></td>
+            <td><span class="tag purple">本文</span></td>
+            <td class="best">7.32</td>
+            <td class="best">7.91</td>
+            <td class="best">5.92</td>
+            <td class="best">8.24</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout blue">
+      相比基座 Qwen3-Max：咨询师通用维度 <strong>+1.44</strong>（+24.5%），来访者通用维度 <strong>+0.51</strong>（+9.4%）。全面超越 GPT-5.4 和领域专用模型。
+    </div>
+
+    <h3>消融实验</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>配置</th>
+            <th>咨询师-通用</th>
+            <th>咨询师-专项</th>
+            <th>来访者-通用</th>
+            <th>来访者-专项</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="highlight">
+            <td><strong>PsychAgent (完整)</strong></td>
+            <td class="best">7.32</td>
+            <td class="best">7.91</td>
+            <td class="best">5.92</td>
+            <td class="best">8.24</td>
+          </tr>
+          <tr>
+            <td>w/o MAPE（去记忆规划）</td>
+            <td>7.07 <span style="color:var(--red);font-size:12px;">-0.25</span></td>
+            <td>7.66 <span style="color:var(--red);font-size:12px;">-0.25</span></td>
+            <td>5.86 <span style="color:var(--red);font-size:12px;">-0.06</span></td>
+            <td>8.03 <span style="color:var(--red);font-size:12px;">-0.21</span></td>
+          </tr>
+          <tr>
+            <td>w/o SEE（去技能进化）</td>
+            <td>7.02 <span style="color:var(--red);font-size:12px;font-weight:700;">-0.30</span></td>
+            <td>7.52 <span style="color:var(--red);font-size:12px;font-weight:700;">-0.39</span></td>
+            <td>5.61 <span style="color:var(--red);font-size:12px;font-weight:700;">-0.31</span></td>
+            <td>7.90 <span style="color:var(--red);font-size:12px;font-weight:700;">-0.34</span></td>
+          </tr>
+          <tr>
+            <td>w/o RIE（去强化内化）</td>
+            <td>7.05 <span style="color:var(--red);font-size:12px;">-0.27</span></td>
+            <td>7.67 <span style="color:var(--red);font-size:12px;">-0.24</span></td>
+            <td>5.67 <span style="color:var(--red);font-size:12px;">-0.25</span></td>
+            <td>7.89 <span style="color:var(--red);font-size:12px;">-0.35</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout orange">
+      <strong>SEE 移除造成最大性能下降</strong>（所有维度 drop 最大），表明技能进化引擎是三个模块中最关键的组件。
+    </div>
+
+    <h3>人工评估</h3>
+    <div class="card">
+      <p>522 条对话，由 2 位人类评估者 + 1 个 LLM 评估者评分，涵盖：</p>
+      <div style="margin:8px 0;">
+        <span class="tag blue">伦理</span>
+        <span class="tag green">互动</span>
+        <span class="tag purple">干预</span>
+        <span class="tag orange">感知</span>
+      </div>
+      <p><strong>PsychAgent 在所有评估者中排名第一。</strong></p>
+      <p>评估者间一致性：人-人 QWK 0.675，LLM-人 QWK 0.770-0.877。</p>
+    </div>
+  </section>
+
+  <!-- ── Value to moodcoco ── -->
+  <section id="value">
+    <h2>对 moodcoco 的价值</h2>
+
+    <div class="value-grid">
+      <div class="value-card" style="border-left:4px solid var(--green);">
+        <h4>技能库自动进化</h4>
+        <p>PsychAgent 的 SEE 验证了"从咨询轨迹自动提取技能"的可行性。moodcoco 的 Skill 体系可以借鉴四级层次树和自适应管理策略，从用户实际对话中持续进化技能库，而非依赖人工编写。</p>
+      </div>
+      <div class="value-card" style="border-left:4px solid var(--accent);">
+        <h4>73% 是"实践增量"而非新理论</h4>
+        <p>最有价值的不是发明新疗法，而是把已有技能变得更可操作 -- 加上步骤顺序、最小可行行动、暂停规则。这与 moodcoco 的"看见方法"目标高度一致：帮用户找到具体可做的事。</p>
+      </div>
+      <div class="value-card" style="border-left:4px solid var(--purple);">
+        <h4>技能表示格式可直接复用</h4>
+        <p>触发条件 + 执行步骤 + 最小可行行动 + 量化阈值 + 监控规则 + 暂停/回退 -- 这套原子技能结构可以作为 moodcoco Skill 定义的参考模板。</p>
+      </div>
+      <div class="value-card" style="border-left:4px solid var(--orange);">
+        <h4>RFT 比 RLHF 更轻量</h4>
+        <p>Rejection Fine-Tuning 不需要训练单独的奖励模型，直接用 LLM-as-Judge + 拒绝采样。如果 moodcoco 后续需要用对话数据微调模型，RFT 是比 RLHF 更现实的路径。</p>
+      </div>
+    </div>
+
+    <div class="callout green">
+      <strong>核心启示</strong>：技能进化 > 记忆 > 参数内化。moodcoco 当前阶段应优先投入技能库的自动进化机制（对应 SEE），而非急于做模型微调（对应 RIE）。先让技能库通过 prompt engineering 和 RAG 运转起来，积累足够高质量轨迹后再考虑内化。
+    </div>
+  </section>
+
+  <!-- ── Limitations ── -->
+  <section id="limits">
+    <h2>局限性</h2>
+
+    <div class="card">
+      <ul>
+        <li><strong>未经真实临床验证</strong> -- 所有实验在模拟客户上进行，与真实咨询场景的 gap 未知。</li>
+        <li><strong>不创造新疗法</strong> -- 技能进化本质是对现有技能的操作化改良，不能发现全新的治疗技术。</li>
+        <li><strong>跨流派迁移有限</strong> -- 功能族（如"共情建立"）可跨流派复用，但具体技能包不能直接迁移。</li>
+        <li><strong>评估主观性</strong> -- 人工评估 QWK 仅 0.675，反映心理咨询质量评估本身就高度主观。</li>
+        <li><strong>部分指标天花板效应</strong> -- 感知维度出现 ceiling effect，说明评估基准在某些维度上已经饱和。</li>
+        <li><strong>安全与隐私</strong> -- 论文承认实际部署需要"加强安全和隐私保护"，但未给出具体方案。</li>
+        <li><strong>计算成本高</strong> -- 16 块 H200 GPU，N=8 平行探索，729 session 的 rollout，对于大多数团队不现实。</li>
+      </ul>
+    </div>
+  </section>
+
+</div>
+
+<div class="footer">
+  PsychAgent (arXiv 2604.00931) 论文解读 &middot; moodcoco 内部参考 &middot; 2026-05-13
+</div>
+
+</body>
+</html>

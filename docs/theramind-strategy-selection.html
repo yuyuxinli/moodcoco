@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheraMind 深度解读 — Strategy Selection 机制</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --indigo: #4f46e5;
+    --indigo-light: #e0e7ff;
+    --orange: #ea580c;
+    --orange-light: #ffedd5;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 650;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .card h3:first-child { margin-top: 0; }
+  .card p, .card li {
+    font-size: 14.5px;
+    color: #44403c;
+  }
+  .card ul, .card ol {
+    padding-left: 20px;
+    margin-top: 6px;
+  }
+  .card li { margin-bottom: 4px; }
+
+  /* 30-second version */
+  .tldr {
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+    border: 1px solid #fde68a;
+  }
+  .tldr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .tldr-item {
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    padding: 14px;
+  }
+  .tldr-item .label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--amber);
+    margin-bottom: 4px;
+  }
+  .tldr-item .value {
+    font-size: 14.5px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: #fafaf9;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 24px;
+    margin: 20px 0;
+    overflow-x: auto;
+  }
+
+  .dual-loop-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    min-width: 700px;
+  }
+
+  .loop-box {
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+  }
+  .loop-intra {
+    background: linear-gradient(135deg, var(--blue-light) 0%, #eff6ff 100%);
+    border: 2px solid var(--blue);
+  }
+  .loop-cross {
+    background: linear-gradient(135deg, var(--purple-light) 0%, #f5f3ff 100%);
+    border: 2px solid var(--purple);
+  }
+
+  .loop-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 14px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    display: inline-block;
+  }
+  .loop-intra .loop-title {
+    background: var(--blue);
+    color: white;
+  }
+  .loop-cross .loop-title {
+    background: var(--purple);
+    color: white;
+  }
+
+  .module-box {
+    background: white;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .module-box:last-child { margin-bottom: 0; }
+  .module-name {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .module-desc {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+  .module-formula {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 11.5px;
+    color: var(--blue);
+    margin-top: 4px;
+    background: rgba(37,99,235,0.06);
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+  }
+  .loop-cross .module-formula {
+    color: var(--purple);
+    background: rgba(124,58,237,0.06);
+  }
+
+  .arrow-down {
+    text-align: center;
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin: 4px 0;
+    line-height: 1;
+  }
+
+  .arrow-between {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 8px 0;
+  }
+  .arrow-between .arrow-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+  }
+
+  /* Strategy table */
+  .strategy-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 13.5px;
+  }
+  .strategy-table th {
+    background: var(--slate-light);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 2px solid var(--border);
+  }
+  .strategy-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: #44403c;
+  }
+  .strategy-table tr:last-child td { border-bottom: none; }
+  .strategy-table tr:hover { background: #fafaf9; }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .tag-support { background: var(--green-light); color: var(--green); }
+  .tag-challenge { background: var(--red-light); color: var(--red); }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-amber { background: var(--amber-light); color: var(--amber); }
+  .tag-teal { background: var(--teal-light); color: var(--teal); }
+
+  /* Results table */
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+    font-size: 13px;
+  }
+  .results-table th {
+    background: var(--slate-light);
+    padding: 8px 10px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .results-table th:first-child { text-align: left; }
+  .results-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  .results-table td:first-child { text-align: left; font-weight: 500; }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table .best {
+    font-weight: 700;
+    color: var(--blue);
+  }
+  .results-table .model-highlight {
+    background: linear-gradient(135deg, var(--blue-light) 0%, #eff6ff 100%);
+  }
+  .col-divider {
+    border-left: 2px solid var(--border);
+  }
+
+  /* Flow diagram for strategy selection */
+  .flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .flow-node {
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    text-align: center;
+    min-width: 260px;
+    position: relative;
+  }
+  .flow-input {
+    background: var(--slate-light);
+    border: 1px solid #cbd5e1;
+    color: var(--slate);
+  }
+  .flow-process {
+    background: var(--blue-light);
+    border: 2px solid var(--blue);
+    color: var(--blue);
+  }
+  .flow-decision {
+    background: var(--amber-light);
+    border: 2px solid var(--amber);
+    color: #92400e;
+    transform: none;
+    padding: 14px 24px;
+  }
+  .flow-output-support {
+    background: var(--green-light);
+    border: 2px solid var(--green);
+    color: #15803d;
+  }
+  .flow-output-challenge {
+    background: var(--red-light);
+    border: 2px solid var(--red);
+    color: #b91c1c;
+  }
+  .flow-arrow {
+    font-size: 20px;
+    color: var(--text-secondary);
+    line-height: 1;
+  }
+  .flow-branch {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .flow-branch-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  /* Phase timeline */
+  .phase-timeline {
+    display: flex;
+    gap: 0;
+    margin: 16px 0;
+  }
+  .phase-block {
+    flex: 1;
+    padding: 14px;
+    text-align: center;
+    position: relative;
+  }
+  .phase-block:first-child { border-radius: 12px 0 0 12px; }
+  .phase-block:last-child { border-radius: 0 12px 12px 0; }
+  .phase-engagement {
+    background: linear-gradient(135deg, var(--teal-light) 0%, #f0fdfa 100%);
+    border: 1px solid var(--teal);
+  }
+  .phase-exploration {
+    background: linear-gradient(135deg, var(--blue-light) 0%, #eff6ff 100%);
+    border: 1px solid var(--blue);
+    border-left: none;
+  }
+  .phase-integration {
+    background: linear-gradient(135deg, var(--purple-light) 0%, #f5f3ff 100%);
+    border: 1px solid var(--purple);
+    border-left: none;
+  }
+  .phase-label {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .phase-sessions {
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .phase-desc {
+    font-size: 12px;
+    color: #44403c;
+    margin-top: 4px;
+  }
+
+  /* Insight box */
+  .insight {
+    background: linear-gradient(135deg, var(--teal-light) 0%, #f0fdfa 100%);
+    border: 1px solid var(--teal);
+  }
+  .insight h2 { color: var(--teal); }
+
+  .limitation {
+    background: linear-gradient(135deg, var(--slate-light) 0%, #f8fafc 100%);
+    border: 1px solid #94a3b8;
+  }
+
+  /* Ablation bars */
+  .ablation-bar-container {
+    margin: 6px 0;
+  }
+  .ablation-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+  .ablation-label {
+    font-size: 13px;
+    font-weight: 500;
+    width: 160px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .ablation-bar-bg {
+    flex: 1;
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+  .ablation-bar {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    transition: width 0.6s ease;
+  }
+
+  /* Emotion distribution */
+  .emo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .emo-item {
+    background: #fafaf9;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+  }
+  .emo-pct {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  .emo-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .dual-loop-container { grid-template-columns: 1fr; min-width: auto; }
+    .flow-branch { flex-direction: column; align-items: center; }
+    .emo-grid { grid-template-columns: repeat(2, 1fr); }
+    .phase-timeline { flex-direction: column; gap: 8px; }
+    .phase-block { border-radius: 12px !important; }
+    .phase-exploration, .phase-integration { border-left: 1px solid; }
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  /* Code inline */
+  code {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 13px;
+    background: var(--slate-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--slate);
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  .highlight-number {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.2;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>TheraMind 深度解读</h1>
+    <p class="subtitle">A Strategic and Adaptive Agent for Longitudinal Psychological Counseling</p>
+    <div class="meta">
+      <span>arXiv 2510.25758</span>
+      <span>2025.10 / rev. 2026.03</span>
+      <span>Shenzhen Univ + Macau + CUHK-SZ</span>
+      <span>Backbone: DeepSeek-V3</span>
+    </div>
+  </div>
+
+  <!-- 30 秒版本 -->
+  <div class="card tldr">
+    <h2>30 秒版本</h2>
+    <div class="tldr-grid">
+      <div class="tldr-item">
+        <div class="label">核心问题</div>
+        <div class="value">现有 LLM 咨询 agent 只会一种疗法，不能跨 session 调整策略</div>
+      </div>
+      <div class="tldr-item">
+        <div class="label">核心方案</div>
+        <div class="value">双循环架构: 轮内选 response strategy，跨 session 选/换 therapy 疗法</div>
+      </div>
+      <div class="tldr-item">
+        <div class="label">关键创新</div>
+        <div class="value">12 种 response strategy + 情绪-态度感知 + 疗效评估驱动的疗法切换</div>
+      </div>
+      <div class="tldr-item">
+        <div class="label">核心指标</div>
+        <div class="value">Multi-session 平均 2.755/3.0, 比 backbone +18.2%</div>
+      </div>
+      <div class="tldr-item">
+        <div class="label">对 moodcoco</div>
+        <div class="value">Strategy selection 机制可直接迁移到 voice agent 的 response 环节</div>
+      </div>
+      <div class="tldr-item">
+        <div class="label">局限</div>
+        <div class="value">仅模拟测试，中文单语，无真实用户验证</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心架构图 -->
+  <div class="card">
+    <h2>核心架构: Dual-Loop Framework</h2>
+    <p>TheraMind 将咨询师的认知过程拆为两个层级的循环: <strong>Intra-Session Loop</strong> 管每一轮对话的战术决策，<strong>Cross-Session Loop</strong> 管跨 session 的战略规划。这是论文的核心贡献。</p>
+
+    <div class="arch-diagram">
+      <div class="dual-loop-container">
+        <!-- Intra-Session Loop -->
+        <div class="loop-box loop-intra">
+          <div style="text-align:center">
+            <span class="loop-title">Intra-Session Loop</span>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">轮内战术 -- 每轮对话执行一次</div>
+          </div>
+
+          <div class="module-box" style="margin-top:14px">
+            <div class="module-name">1. Reaction Classifier 情绪感知</div>
+            <div class="module-desc">从用户话语中解析出结构化状态三元组</div>
+            <div class="module-formula">St = (Et, It, At)</div>
+            <div class="module-desc" style="margin-top:4px">Et=主情绪 | It=[0,1] 情绪强度 | At=Cooperative/Resistant</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">2. Memory Recall 记忆检索</div>
+            <div class="module-desc">从跨 session 历史中检索相关记忆摘要，无相关则返回 null</div>
+            <div class="module-formula">Mt = &Phi;memory(Ut, H)</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">3. Response Strategy Selector 策略选择</div>
+            <div class="module-desc">根据情绪状态，从 12 种策略中选择一个，输出策略名 + 30 字指导</div>
+            <div class="module-formula">&sigma;t = f_strategy(St)</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">4. Therapeutic Phase Analyzer 阶段分析</div>
+            <div class="module-desc">判断当前处于哪个咨询阶段（投入/探索/整合）</div>
+            <div class="module-formula">Pt = f_phase(Tk, Ht-1)</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">5. Response Generator 回复生成</div>
+            <div class="module-desc">综合所有信号生成最终回复</div>
+            <div class="module-formula">Rt ~ G(- | Ut, Ht-1, Tk, &sigma;t, Pt, Mt)</div>
+          </div>
+        </div>
+
+        <!-- Cross-Session Loop -->
+        <div class="loop-box loop-cross">
+          <div style="text-align:center">
+            <span class="loop-title">Cross-Session Loop</span>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">跨 session 战略 -- 每次 session 结束执行</div>
+          </div>
+
+          <div class="module-box" style="margin-top:14px">
+            <div class="module-name">1. Session 结束</div>
+            <div class="module-desc">收集完整对话历史 Hk</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">2. Therapy Evaluator 疗效评估</div>
+            <div class="module-desc">对本 session 使用的疗法打分，评估是否产生治疗效果</div>
+            <div class="module-formula">Ek = f_eval(Hk, Tk)</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">3. Therapy Selector 疗法选择</div>
+            <div class="module-desc">根据评分 + 对话历史，决定维持当前疗法或切换</div>
+            <div class="module-formula">Tk+1 = f_select(Tk, Hk, Ek)</div>
+          </div>
+
+          <div class="arrow-down">&darr;</div>
+
+          <div class="module-box">
+            <div class="module-name">4. 下一 Session 启动</div>
+            <div class="module-desc">带着新疗法 Tk+1 进入 Intra-Session Loop</div>
+          </div>
+
+          <div style="margin-top:24px;padding:14px;background:rgba(124,58,237,0.06);border-radius:10px">
+            <div style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:6px">核心逻辑</div>
+            <div style="font-size:12.5px;color:#44403c;line-height:1.6">
+              有效 &rarr; 维持当前疗法<br>
+              无效但用户配合 &rarr; 换技术手段<br>
+              无效且用户抵触 &rarr; 换整个疗法框架
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connection arrow -->
+      <div class="arrow-between" style="margin-top:16px">
+        <div class="arrow-line">
+          <span style="color:var(--blue);font-weight:700">Intra-Session</span>
+          &nbsp;&larr;&rarr;&nbsp;
+          <span style="color:var(--purple);font-weight:700">Cross-Session</span>
+          &nbsp;|&nbsp; 通过 Memory + Therapy Config 连接
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Strategy Selection 详解 (核心部分) -->
+  <div class="card">
+    <h2>Strategy Selection 机制详解 (论文核心)</h2>
+    <p>这是 TheraMind 最值得深入的部分。论文将 "咨询师下一步该怎么回" 这个模糊问题，分解为了一个可计算的决策流程。</p>
+
+    <h3>决策流程</h3>
+    <div class="flow-container">
+      <div class="flow-node flow-input">用户话语 Ut</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-node flow-process">Reaction Classifier 解析<br><span style="font-size:12px;font-weight:400">(Et=情绪, It=强度, At=态度)</span></div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-node flow-decision">At = Cooperative or Resistant?</div>
+      <div class="flow-arrow">&darr;</div>
+      <div class="flow-branch">
+        <div>
+          <div class="flow-branch-label">Cooperative (积极配合)</div>
+          <div class="flow-node flow-output-challenge" style="min-width:200px">
+            Challenging 策略组<br>
+            <span style="font-size:12px;font-weight:400">推动、挑战、激发行动</span>
+          </div>
+        </div>
+        <div>
+          <div class="flow-branch-label">Resistant (抵触抗拒)</div>
+          <div class="flow-node flow-output-support" style="min-width:200px">
+            Supportive 策略组<br>
+            <span style="font-size:12px;font-weight:400">共情、支持、稳固联盟</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h3>12 种 Response Strategy 完整列表</h3>
+    <p style="margin-bottom:4px">论文将 12 种策略按用户态度分为两组。<strong>反直觉设计</strong>: 用户越配合，越用 challenging 策略推动改变；用户越抵触，越用 supportive 策略修复关系。这与真实咨询师的判断逻辑一致。</p>
+
+    <table class="strategy-table">
+      <thead>
+        <tr>
+          <th>策略名</th>
+          <th>类型</th>
+          <th>触发条件</th>
+          <th>作用</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Interpretation</strong></td>
+          <td><span class="tag tag-challenge">Challenging</span></td>
+          <td>Cooperative</td>
+          <td>对用户的行为/情绪做深层解读</td>
+        </tr>
+        <tr>
+          <td><strong>Confrontation</strong></td>
+          <td><span class="tag tag-challenge">Challenging</span></td>
+          <td>Cooperative</td>
+          <td>指出矛盾或不一致之处</td>
+        </tr>
+        <tr>
+          <td><strong>Invite to Take New Perspectives</strong></td>
+          <td><span class="tag tag-challenge">Challenging</span></td>
+          <td>Cooperative</td>
+          <td>邀请从新角度审视问题</td>
+        </tr>
+        <tr>
+          <td><strong>Invite to Explore New Actions</strong></td>
+          <td><span class="tag tag-challenge">Challenging</span></td>
+          <td>Cooperative</td>
+          <td>邀请尝试新的应对方式</td>
+        </tr>
+        <tr style="background:#f9fafb"><td colspan="4" style="padding:4px"></td></tr>
+        <tr>
+          <td><strong>Restatement</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>用自己的话重述用户的内容</td>
+        </tr>
+        <tr>
+          <td><strong>Reflection of Feelings</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>映射并确认用户的情绪状态</td>
+        </tr>
+        <tr>
+          <td><strong>Self-disclosure</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>咨询师分享自身经验以建立连接</td>
+        </tr>
+        <tr>
+          <td><strong>Inquiring Subjective Info</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>询问感受、想法等主观体验</td>
+        </tr>
+        <tr>
+          <td><strong>Inquiring Objective Info</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>询问事实性信息</td>
+        </tr>
+        <tr>
+          <td><strong>Affirmation & Reassurance</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>肯定用户的感受或努力</td>
+        </tr>
+        <tr>
+          <td><strong>Minimal Encouragement</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>用简短回应鼓励继续表达</td>
+        </tr>
+        <tr>
+          <td><strong>Answer</strong></td>
+          <td><span class="tag tag-support">Supportive</span></td>
+          <td>Resistant</td>
+          <td>直接回答用户的问题</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:16px;padding:14px;background:var(--amber-light);border-radius:10px;border:1px solid #fde68a">
+      <div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:4px">Strategy Selector 的输出格式</div>
+      <div style="font-size:13px;color:#78350f">
+        输出: <code>策略名</code> + 最多 30 字的 guidance text（具体指导这一轮该怎么用这个策略）<br>
+        这个 guidance 和策略名一起作为 prompt 注入 Response Generator。
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenging vs Supportive -->
+  <div class="card">
+    <h2>Challenging vs Supportive: 判断逻辑</h2>
+    <p>这是论文中最有临床智慧的设计决策。</p>
+
+    <h3>核心原则</h3>
+    <p>用户态度 At 是唯一的一级分流信号:</p>
+    <ul>
+      <li><strong>Cooperative (配合)</strong> &rarr; 用户当前有能量和意愿 &rarr; 适合 <span class="tag tag-challenge">Challenging</span> 推动改变</li>
+      <li><strong>Resistant (抵触)</strong> &rarr; 用户处于防御状态 &rarr; 需要 <span class="tag tag-support">Supportive</span> 重建安全感</li>
+    </ul>
+
+    <h3>为什么是"反直觉"的?</h3>
+    <p>多数产品的直觉是: 用户难受 &rarr; 安慰，用户好了 &rarr; 少管。TheraMind 的设计刚好相反:</p>
+    <ul>
+      <li>用户配合时不是放松，而是<strong>抓住窗口期做有深度的干预</strong>（Interpretation, Confrontation）</li>
+      <li>用户抵触时不是继续推进，而是<strong>退回基础操作修复关系</strong>（Reflection, Restatement）</li>
+    </ul>
+    <p style="margin-top:8px">这和 Motivational Interviewing 的 "roll with resistance" 原则完全一致，也和 Hill's Helping Skills Model 的 challenge/support 平衡对应。</p>
+
+    <h3>二级信号: 情绪 + 强度</h3>
+    <p>在确定 Challenging/Supportive 大方向后，情绪类型 Et 和强度 It 影响具体选哪个策略:</p>
+    <ul>
+      <li>高强度 Fear + Cooperative &rarr; 可能选 "Invite to Take New Perspectives"（不适合 Confrontation）</li>
+      <li>低强度 Sadness + Resistant &rarr; 可能选 "Minimal Encouragement"（不需要完整的 Reflection）</li>
+    </ul>
+
+    <h3>Resistance Detection</h3>
+    <p>论文还有一个独立的 Resistance Detection 布尔判断，检测用户是否在当前轮出现了<strong>偏离治疗方向</strong>的行为（例如转移话题、否认问题、攻击咨询师）。这与 Cooperative/Resistant 态度标签形成双层检测。</p>
+  </div>
+
+  <!-- Therapy Selection -->
+  <div class="card">
+    <h2>Therapy Selection: 跨 Session 疗法切换</h2>
+    <p>这是 Cross-Session Loop 的核心，解决的是 "什么时候该换疗法" 的问题。</p>
+
+    <h3>工作流程</h3>
+    <ol>
+      <li><strong>Initial Selection</strong>: 首次 session 前，根据用户 intake profile（主诉、基本信息）用 LLM 选择初始疗法</li>
+      <li><strong>Session 执行</strong>: 用 Intra-Session Loop 完成 6 轮以上对话</li>
+      <li><strong>Post-Session Evaluation</strong>: Therapy Evaluator 对整个 session 打分，评估维度:
+        <ul>
+          <li>治疗效果（用户情绪是否有改善?）</li>
+          <li>用户参与度（是否主动配合技术?）</li>
+          <li>技术整合度（疗法的具体技术是否被有效使用?）</li>
+        </ul>
+      </li>
+      <li><strong>Decision</strong>: Therapy Selector 解读评分 + 对话历史，做出三种决策之一:
+        <ul>
+          <li>维持当前疗法</li>
+          <li>微调技术细节（同一疗法框架内换技术）</li>
+          <li>完全切换到新疗法</li>
+        </ul>
+      </li>
+    </ol>
+
+    <h3>论文举例</h3>
+    <div style="padding:14px;background:#fafaf9;border-radius:10px;border:1px solid var(--border);margin-top:8px">
+      <div style="font-size:13px;color:#44403c;line-height:1.7">
+        "如果评估结果显示用户对 CBT 的参与度不足，尽管疗效中等，Therapy Selector 可能推理认为转向<strong>以来访者为中心的方法</strong>（Client-Centered Approach）更合适" -- 因为参与度低意味着当前疗法的结构化要求超出了用户的承受能力。
+      </div>
+    </div>
+
+    <h3>支持的疗法模态</h3>
+    <p>论文未给出封闭列表，由 LLM 自主选择。已明确提到的包括:</p>
+    <ul>
+      <li>Cognitive Behavioral Therapy (CBT)</li>
+      <li>Client-Centered Therapy</li>
+      <li>Motivational Interviewing</li>
+      <li>其他（由 LLM 根据专业知识决定）</li>
+    </ul>
+  </div>
+
+  <!-- Therapeutic Phase -->
+  <div class="card">
+    <h2>Therapeutic Phase: 三阶段模型</h2>
+    <p>TheraMind 不只看当前轮，还追踪整个 session 所处的阶段，作为 response 生成的额外条件。</p>
+
+    <div class="phase-timeline">
+      <div class="phase-block phase-engagement">
+        <div class="phase-label" style="color:var(--teal)">Engagement</div>
+        <div class="phase-sessions">Session 1-2</div>
+        <div class="phase-desc">建立关系<br>了解问题<br>形成信任</div>
+      </div>
+      <div class="phase-block phase-exploration">
+        <div class="phase-label" style="color:var(--blue)">Exploration</div>
+        <div class="phase-sessions">Session 3-4</div>
+        <div class="phase-desc">深入探索<br>认知重构<br>挖掘模式</div>
+      </div>
+      <div class="phase-block phase-integration">
+        <div class="phase-label" style="color:var(--purple)">Integration</div>
+        <div class="phase-sessions">Session 5-6</div>
+        <div class="phase-desc">整合资源<br>行动规划<br>巩固成果</div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px;font-size:13.5px">Phase Analyzer 会根据当前疗法 Tk 和已有对话历史 Ht-1 判断阶段。这意味着同一个 response strategy（比如 Interpretation）在 Engagement 阶段和 Integration 阶段的生成内容会有不同的深度和方向。</p>
+  </div>
+
+  <!-- 评估指标和结果 -->
+  <div class="card">
+    <h2>评估指标与结果</h2>
+
+    <h3>数据集</h3>
+    <p><strong>CPsyCounR</strong>: 3,134 份匿名中文心理咨询报告，采样 100 个 case（10 个心理问题类别 &times; 10），每个 case 模拟 6 轮 session 对话。</p>
+    <p style="margin-top:4px;font-size:13px;color:var(--text-secondary)">类别: 恋爱 / 家庭 / 情绪 / 青少年 / 社交 / 压力 / 成瘾 / 焦虑 / 自我成长 / 罕见</p>
+
+    <h3>评估维度 (4-point scale, 0-3)</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px">
+      <div>
+        <div class="section-label">Single-Session 指标</div>
+        <ul>
+          <li><strong>T.Alliance</strong>: 治疗联盟（目标/任务/关系）</li>
+          <li><strong>Interaction</strong>: 临床深度 + 认知挑战</li>
+        </ul>
+      </div>
+      <div>
+        <div class="section-label">Multi-Session 指标</div>
+        <ul>
+          <li><strong>Coherence</strong>: 引用和延续历史对话</li>
+          <li><strong>Flexibility</strong>: 策略是否有调整</li>
+          <li><strong>Empathy</strong>: 情绪发展追踪</li>
+          <li><strong>T.Attunement</strong>: 干预与阶段匹配度</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>主实验结果</h3>
+    <div style="overflow-x:auto">
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>Model</th>
+          <th>T.Alli</th>
+          <th>Inter</th>
+          <th>Single Avg</th>
+          <th class="col-divider">Coh</th>
+          <th>Flex</th>
+          <th>Emp</th>
+          <th>T.Attun</th>
+          <th>Multi Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="model-highlight">
+          <td><strong>TheraMind</strong></td>
+          <td class="best">2.210</td>
+          <td class="best">2.505</td>
+          <td class="best">2.358</td>
+          <td class="col-divider best">2.860</td>
+          <td class="best">2.290</td>
+          <td class="best">2.980</td>
+          <td class="best">2.890</td>
+          <td class="best">2.755</td>
+        </tr>
+        <tr>
+          <td>Interactive Agents</td>
+          <td>1.424</td>
+          <td>2.373</td>
+          <td>1.899</td>
+          <td class="col-divider">2.390</td>
+          <td>2.060</td>
+          <td>2.570</td>
+          <td>2.320</td>
+          <td>2.335</td>
+        </tr>
+        <tr>
+          <td>DeepSeek-V3 (backbone)</td>
+          <td>1.978</td>
+          <td>1.712</td>
+          <td>1.845</td>
+          <td class="col-divider">2.160</td>
+          <td>2.100</td>
+          <td>2.590</td>
+          <td>2.470</td>
+          <td>2.330</td>
+        </tr>
+        <tr>
+          <td>PsyDTLLM</td>
+          <td>0.963</td>
+          <td>0.526</td>
+          <td>0.745</td>
+          <td class="col-divider">1.660</td>
+          <td>1.760</td>
+          <td>2.240</td>
+          <td>2.090</td>
+          <td>1.938</td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div style="margin-top:16px;padding:14px;background:var(--blue-light);border-radius:10px;border:1px solid rgba(37,99,235,0.2)">
+      <div style="font-size:13px;font-weight:600;color:var(--blue);margin-bottom:4px">关键发现</div>
+      <div style="font-size:13px;color:#1e40af;line-height:1.6">
+        &bull; Multi-session 指标增幅远大于 single-session，说明 <strong>Dual-Loop 的价值主要体现在纵向连续性</strong><br>
+        &bull; Empathy 2.980/3.0 接近天花板，说明情绪感知 + strategy selection 的组合非常有效<br>
+        &bull; Therapeutic Alliance 差距最大（2.210 vs 1.424），说明 memory + phase 追踪对联盟建设影响显著
+      </div>
+    </div>
+
+    <h3>Ablation Study: 各模块贡献</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:8px">去掉某模块 vs 完整模型的人类偏好胜率（胜率越高 = 该模块越重要）</p>
+
+    <div class="ablation-bar-container">
+      <div class="ablation-row">
+        <div class="ablation-label">Memory 记忆</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:75%;background:linear-gradient(90deg,var(--blue),#3b82f6)">75.0%</div>
+        </div>
+      </div>
+      <div class="ablation-row">
+        <div class="ablation-label">Stage 阶段</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:72.73%;background:linear-gradient(90deg,var(--purple),#8b5cf6)">72.7%</div>
+        </div>
+      </div>
+      <div class="ablation-row">
+        <div class="ablation-label">Response Strategy</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:68.42%;background:linear-gradient(90deg,var(--teal),#14b8a6)">68.4%</div>
+        </div>
+      </div>
+      <div class="ablation-row">
+        <div class="ablation-label">Therapy Selection</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:66.67%;background:linear-gradient(90deg,var(--amber),#f59e0b)">66.7%</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:8px">Memory 贡献最大 (75%)，但四个模块差距不大（66.7%-75.0%），说明是<strong>系统效应</strong>而非某个杀手模块。</p>
+  </div>
+
+  <!-- 行为分析 -->
+  <div class="card">
+    <h2>行为分析: TheraMind 实际怎么工作</h2>
+
+    <h3>识别到的情绪分布</h3>
+    <div class="emo-grid">
+      <div class="emo-item">
+        <div class="emo-pct" style="color:#dc2626">33.7%</div>
+        <div class="emo-label">Fear 恐惧</div>
+      </div>
+      <div class="emo-item">
+        <div class="emo-pct" style="color:#2563eb">24.6%</div>
+        <div class="emo-label">Sadness 悲伤</div>
+      </div>
+      <div class="emo-item">
+        <div class="emo-pct" style="color:#16a34a">21.7%</div>
+        <div class="emo-label">Trust 信任</div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:8px">Trust 占 21.7% 是积极信号，说明用户在 session 中逐渐建立了信任。剩余 ~20% 分布在 Anger, Surprise, Disgust 等。</p>
+
+    <h3>最常用的 Response Strategy</h3>
+    <div class="ablation-bar-container" style="margin-top:12px">
+      <div class="ablation-row">
+        <div class="ablation-label">Reflection of Feelings</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:65%;background:linear-gradient(90deg,#16a34a,#22c55e)">32.5%</div>
+        </div>
+      </div>
+      <div class="ablation-row">
+        <div class="ablation-label">New Perspectives</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:34%;background:linear-gradient(90deg,#dc2626,#ef4444)">16.9%</div>
+        </div>
+      </div>
+      <div class="ablation-row">
+        <div class="ablation-label">Explore New Actions</div>
+        <div class="ablation-bar-bg">
+          <div class="ablation-bar" style="width:32%;background:linear-gradient(90deg,#d97706,#f59e0b)">15.8%</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-top:8px">Reflection of Feelings (Supportive) 占比最高，说明模拟 case 中大量用户处于 Resistant 状态。这与真实心理咨询的比例一致: 来访者初期以防御为主。</p>
+  </div>
+
+  <!-- 内部模块验证 -->
+  <div class="card">
+    <h2>人工验证: 模块准确性</h2>
+    <p>论文对内部模块做了专家验证 (Cohen's &kappa; = 0.676):</p>
+
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px">
+      <div style="text-align:center;padding:16px;background:var(--green-light);border-radius:12px;border:1px solid rgba(22,163,74,0.2)">
+        <div class="highlight-number" style="color:var(--green)">95.6%</div>
+        <div style="font-size:13px;font-weight:600;margin-top:4px">Emotion Recognition</div>
+        <div style="font-size:12px;color:var(--text-secondary)">情绪识别准确率</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--blue-light);border-radius:12px;border:1px solid rgba(37,99,235,0.2)">
+        <div class="highlight-number" style="color:var(--blue)">94.1%</div>
+        <div style="font-size:13px;font-weight:600;margin-top:4px">Memory Invoke</div>
+        <div style="font-size:12px;color:var(--text-secondary)">记忆调用准确率</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--amber-light);border-radius:12px;border:1px solid rgba(217,119,6,0.2)">
+        <div class="highlight-number" style="color:var(--amber)">85.3%</div>
+        <div style="font-size:13px;font-weight:600;margin-top:4px">Response Strategy</div>
+        <div style="font-size:12px;color:var(--text-secondary)">策略选择准确率</div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px;font-size:13.5px">Response Strategy 85.3% 是最低的，这也是最难的判断。14.7% 的 "错误" 中有多少是专家间的分歧而非真正错误，论文未细分。</p>
+  </div>
+
+  <!-- 对 moodcoco 的价值 -->
+  <div class="card insight">
+    <h2>对 moodcoco 的价值</h2>
+
+    <h3>1. Response Strategy 机制可直接借鉴</h3>
+    <p>TheraMind 的 12 策略分类 + Cooperative/Resistant 二分法，可以直接迁移到 moodcoco 的 voice agent response 生成环节。具体做法:</p>
+    <ul>
+      <li>在 fast path 做 Reaction Classification（情绪 + 态度），延迟 &lt; 200ms</li>
+      <li>态度判断结果决定 strategy 大方向（Supportive/Challenging）</li>
+      <li>Strategy 名 + guidance 注入 slow path 的 response 生成 prompt</li>
+    </ul>
+
+    <h3>2. "态度" 比 "情绪" 更重要的洞察</h3>
+    <p>TheraMind 把用户态度 (Cooperative/Resistant) 作为<strong>一级分流信号</strong>，而情绪类型是二级信号。这对 moodcoco 的启发: 不要只看用户说了什么情绪，更要看用户对"被帮助"这件事的态度。一个生气但愿意谈的人和一个生气且抗拒的人需要完全不同的 response。</p>
+
+    <h3>3. Cross-Session 疗效评估可简化迁移</h3>
+    <p>moodcoco 不需要完整的疗法切换（产品不做正式心理治疗），但"评估上一次对话的效果，调整下次策略"这个模式非常有价值。可以:</p>
+    <ul>
+      <li>每次 session 结束时 LLM 打一个简单的 effectiveness 分数</li>
+      <li>下次 session 开始时根据分数调整 response 的深度和方向</li>
+    </ul>
+
+    <h3>4. Ablation 数据的启示</h3>
+    <p>Memory 贡献最大 (75%)，Strategy Selection 是 68.4%。这说明<strong>跨 session 记忆是最高优先级</strong>，策略选择是第二优先级。moodcoco 应先做好 memory，再精细化 strategy。</p>
+
+    <h3>5. 12 策略列表是可靠的参考</h3>
+    <p>这 12 个策略不是作者发明的，而是基于 Hill's Helping Skills Model（临床心理学经典框架）。moodcoco 可以直接使用这个列表作为 response strategy 的分类体系，不需要从零设计。</p>
+  </div>
+
+  <!-- 局限性 -->
+  <div class="card limitation">
+    <h2>局限性</h2>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px">
+      <div>
+        <h3>方法论层面</h3>
+        <ul>
+          <li><strong>模拟测试</strong>: 全部评估基于 LLM 扮演患者，无真实用户验证</li>
+          <li><strong>单语种</strong>: 仅中文 CPsyCounR 数据集，跨语言泛化未知</li>
+          <li><strong>疗法选择无约束</strong>: LLM 自由选择疗法，缺乏临床合理性检验</li>
+          <li><strong>Attitude 二分法过简</strong>: Cooperative/Resistant 的二值分类忽略了中间状态（矛盾、犹豫、被动配合等）</li>
+        </ul>
+      </div>
+      <div>
+        <h3>工程层面</h3>
+        <ul>
+          <li><strong>延迟</strong>: 每轮需串行调用 5 个 LLM 模块，推理延迟高</li>
+          <li><strong>成本</strong>: DeepSeek-V3 作为 backbone，每轮 5 次调用 &times; 6 session 对话成本可观</li>
+          <li><strong>无语音支持</strong>: 纯文本对话，未考虑语音场景的实时性约束</li>
+          <li><strong>Memory 无上限管理</strong>: 论文未提及长期使用后记忆的压缩或淘汰策略</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;padding:14px;background:rgba(255,255,255,0.6);border-radius:10px;border:1px solid rgba(0,0,0,0.08)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">对 moodcoco 迁移的风险提示</div>
+      <div style="font-size:13px;color:#44403c;line-height:1.6">
+        &bull; 5 模块串行不适合 voice agent 的实时场景，需要并行化或选择性跳过<br>
+        &bull; Attitude 判断在语音场景可以利用 prosody/tone 信号增强，但论文无此基础<br>
+        &bull; Strategy guidance 的 30 字限制在 voice 场景可能不够/太多，需要实测
+      </div>
+    </div>
+  </div>
+
+  <!-- 论文元信息 -->
+  <div class="card" style="background:#fafaf9">
+    <h2>论文信息</h2>
+    <div style="font-size:13.5px;color:#44403c;line-height:2">
+      <strong>Title</strong>: TheraMind: A Strategic and Adaptive Agent for Longitudinal Psychological Counseling<br>
+      <strong>Authors</strong>: He Hu, Chiyuan Ma, Qianning Wang, Lin Liu, Yucheng Zhou, Laizhong Cui, Fei Ma, Qi Tian<br>
+      <strong>Affiliations</strong>: Shenzhen University, Guangdong Lab of AI, University of Macau, CUHK-SZ, AUT, South China Normal University<br>
+      <strong>arXiv</strong>: <a href="https://arxiv.org/abs/2510.25758" style="color:var(--blue)">2510.25758</a> (2025.10, rev. 2026.03)<br>
+      <strong>Code</strong>: <a href="https://github.com/Emo-gml/TheraMind" style="color:var(--blue)">github.com/Emo-gml/TheraMind</a><br>
+      <strong>Backbone</strong>: DeepSeek-V3 | <strong>Evaluator</strong>: Gemini-2.5-Flash<br>
+      <strong>Dataset</strong>: CPsyCounR (3,134 cases, 100 sampled, 6 sessions each)
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

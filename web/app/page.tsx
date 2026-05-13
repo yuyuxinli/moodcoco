@@ -5,7 +5,6 @@ import ChatColumn from "@/components/ChatColumn";
 import ControlBar from "@/components/ControlBar";
 import ManualInput from "@/components/ManualInput";
 import {
-  autoConversation,
   cocoChat,
   listPersonas,
   personaChat,
@@ -81,14 +80,32 @@ export default function Home() {
     setMode("auto-running");
     startTimer();
     try {
-      const resp = await autoConversation(
-        selectedPersona,
-        turnBudget,
-        "persona",
-        SESSION_ID,
-      );
-      setHistory(resp.history);
-      if (resp.error) setError(resp.error);
+      let runningHistory = history;
+      for (let i = 0; i < turnBudget; i += 1) {
+        const lastCocoMsg =
+          [...runningHistory].reverse().find((h) => h.role === "coco")?.text ??
+          null;
+        const personaResp = await personaChat(
+          selectedPersona,
+          runningHistory,
+          lastCocoMsg,
+        );
+        const personaItem: ChatHistoryItem = {
+          role: "persona",
+          text: personaResp.text,
+        };
+        runningHistory = [...runningHistory, personaItem];
+        setHistory(runningHistory);
+
+        const cocoResp = await cocoChat(personaResp.text, SESSION_ID);
+        const cocoItem: ChatHistoryItem = {
+          role: "coco",
+          text: cocoResp.reply_text,
+          tool_calls: cocoResp.tool_calls,
+        };
+        runningHistory = [...runningHistory, cocoItem];
+        setHistory(runningHistory);
+      }
       // 自动对话完，轮到 persona 再说（下一轮）
       setNextSpeaker("persona");
     } catch (e) {

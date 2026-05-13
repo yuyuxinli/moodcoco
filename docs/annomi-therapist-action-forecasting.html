@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AnnoMI &middot; Therapist Action Forecasting 解读</title>
+  <style>
+    :root {
+      --ink: #1c1c1e;
+      --muted: #6b7280;
+      --bg: #fafaf9;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #0071e3;
+      --accent-light: #e8f4fd;
+      --green: #34c759;
+      --green-bg: #f0fdf4;
+      --orange: #f59e0b;
+      --orange-bg: #fffbeb;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --teal: #14b8a6;
+      --teal-bg: #f0fdfa;
+      --blue: #3b82f6;
+      --blue-bg: #eff6ff;
+      --warm: #78716c;
+      --warm-bg: #f5f5f4;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px 24px 64px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header { margin-bottom: 40px; }
+    .page-header h1 { font-size: 1.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .page-header .source-link {
+      display: inline-block; margin-top: 8px; font-size: 13px;
+      color: var(--accent); text-decoration: none;
+      border-bottom: 1px solid var(--accent-light);
+    }
+    .page-header .source-link:hover { border-bottom-color: var(--accent); }
+
+    /* TLDR */
+    .tldr {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--accent);
+      margin-bottom: 40px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .tldr-label {
+      font-weight: 700; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 1.15em; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-weight: 600; font-size: 14px; margin-bottom: 12px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;
+    }
+
+    /* Flow diagram */
+    .flow-container {
+      display: flex; align-items: stretch; gap: 0;
+      overflow-x: auto; padding: 8px 0;
+    }
+    .flow-step {
+      flex: 1; min-width: 160px; text-align: center; position: relative;
+    }
+    .flow-box {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 16px 12px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      min-height: 100px;
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+    }
+    .flow-box .icon { font-size: 28px; margin-bottom: 8px; }
+    .flow-box .label { font-weight: 600; font-size: 14px; }
+    .flow-box .desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+    .flow-arrow {
+      display: flex; align-items: center; justify-content: center;
+      min-width: 40px; color: var(--muted); font-size: 20px; flex-shrink: 0;
+    }
+
+    /* Label hierarchy */
+    .label-tree {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .label-tree { grid-template-columns: 1fr; }
+    }
+    .label-branch {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+    }
+    .branch-header {
+      font-weight: 700; font-size: 15px; margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .branch-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sub-labels { list-style: none; padding-left: 18px; }
+    .sub-labels li {
+      position: relative; padding: 4px 0 4px 14px; font-size: 14px; color: var(--ink);
+    }
+    .sub-labels li::before {
+      content: '';
+      position: absolute; left: 0; top: 12px;
+      width: 8px; height: 2px; border-radius: 1px;
+    }
+    .sub-labels li .sub-desc { color: var(--muted); font-size: 13px; }
+
+    /* Color coding for branches */
+    .branch-reflection .branch-dot { background: var(--blue); }
+    .branch-reflection .branch-header { color: var(--blue); }
+    .branch-reflection .sub-labels li::before { background: var(--blue); }
+
+    .branch-question .branch-dot { background: var(--green); }
+    .branch-question .branch-header { color: #15803d; }
+    .branch-question .sub-labels li::before { background: var(--green); }
+
+    .branch-input .branch-dot { background: var(--purple); }
+    .branch-input .branch-header { color: var(--purple); }
+    .branch-input .sub-labels li::before { background: var(--purple); }
+
+    .branch-client .branch-dot { background: var(--orange); }
+    .branch-client .branch-header { color: #b45309; }
+    .branch-client .sub-labels li::before { background: var(--orange); }
+
+    /* Comparison table */
+    .compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .compare-grid { grid-template-columns: 1fr; }
+    }
+    .compare-card {
+      border-radius: 10px; padding: 20px; box-shadow: var(--shadow);
+    }
+    .compare-card.high {
+      background: var(--green-bg); border: 1px solid #bbf7d0;
+    }
+    .compare-card.low {
+      background: var(--red-bg); border: 1px solid #fecaca;
+    }
+    .compare-card h4 {
+      font-size: 14px; margin-bottom: 10px;
+    }
+    .compare-card.high h4 { color: #15803d; }
+    .compare-card.low h4 { color: #b91c1c; }
+    .compare-card ul {
+      list-style: none; padding: 0;
+    }
+    .compare-card li {
+      font-size: 14px; padding: 3px 0; padding-left: 16px; position: relative;
+    }
+    .compare-card.high li::before {
+      content: '+'; position: absolute; left: 0; font-weight: 700; color: #16a34a;
+    }
+    .compare-card.low li::before {
+      content: '-'; position: absolute; left: 0; font-weight: 700; color: #dc2626;
+    }
+
+    /* Example dialogue */
+    .dialogue {
+      background: var(--card); border-radius: 10px; padding: 0;
+      box-shadow: var(--shadow); overflow: hidden;
+    }
+    .dialogue-header {
+      background: #f8f8f7; padding: 14px 20px; border-bottom: 1px solid var(--border);
+      font-weight: 600; font-size: 14px; color: var(--muted);
+    }
+    .dialogue-body { padding: 4px 0; }
+    .utt {
+      display: grid; grid-template-columns: 72px 1fr auto; gap: 0;
+      padding: 10px 20px; border-bottom: 1px solid #f5f5f4;
+      font-size: 14px; align-items: baseline;
+    }
+    .utt:last-child { border-bottom: none; }
+    .utt-role {
+      font-weight: 600; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .utt-role.therapist { color: var(--accent); }
+    .utt-role.client { color: var(--warm); }
+    .utt-text { line-height: 1.6; }
+    .utt-label {
+      font-size: 11px; padding: 2px 8px; border-radius: 4px;
+      font-weight: 600; white-space: nowrap; align-self: center; margin-left: 12px;
+    }
+    .lbl-reflection { background: var(--blue-bg); color: var(--blue); }
+    .lbl-question { background: var(--green-bg); color: #15803d; }
+    .lbl-input { background: var(--purple-bg); color: var(--purple); }
+    .lbl-other { background: var(--warm-bg); color: var(--warm); }
+    .lbl-change { background: #fef9c3; color: #a16207; }
+    .lbl-sustain { background: var(--red-bg); color: var(--red); }
+    .lbl-neutral { background: #f1f5f9; color: #64748b; }
+
+    /* Mapping table */
+    .mapping-table {
+      width: 100%; border-collapse: collapse; font-size: 14px;
+    }
+    .mapping-table th {
+      text-align: left; padding: 10px 14px; font-size: 12px;
+      text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+      background: #f8f8f7; border-bottom: 2px solid var(--border);
+    }
+    .mapping-table td {
+      padding: 10px 14px; border-bottom: 1px solid #f0f0f0;
+      vertical-align: top;
+    }
+    .mapping-table tr:last-child td { border-bottom: none; }
+    .mapping-table .arrow-cell { text-align: center; color: var(--muted); font-size: 16px; }
+    .mapping-table code {
+      background: #f1f5f9; padding: 2px 6px; border-radius: 4px;
+      font-size: 13px; font-family: 'SF Mono', 'Menlo', monospace;
+    }
+
+    /* Limitation chips */
+    .limit-list { list-style: none; padding: 0; }
+    .limit-list li {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px; margin-bottom: 8px;
+      font-size: 14px; display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: var(--shadow);
+    }
+    .limit-icon {
+      flex-shrink: 0; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--orange-bg); color: var(--orange);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; margin-top: 2px;
+    }
+
+    /* Dataset stats bar */
+    .stats-row {
+      display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+    }
+    .stat-chip {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 18px; box-shadow: var(--shadow);
+      text-align: center; flex: 1; min-width: 120px;
+    }
+    .stat-chip .stat-num {
+      font-size: 1.6em; font-weight: 700; color: var(--accent);
+      letter-spacing: -0.02em;
+    }
+    .stat-chip .stat-label {
+      font-size: 12px; color: var(--muted); margin-top: 2px;
+    }
+
+    /* CSV columns */
+    .csv-cols {
+      display: flex; gap: 16px; flex-wrap: wrap;
+    }
+    .csv-card {
+      flex: 1; min-width: 280px;
+      background: var(--card); border-radius: 10px; padding: 16px 20px;
+      box-shadow: var(--shadow); border: 1px solid var(--border);
+    }
+    .csv-card h4 {
+      font-size: 14px; font-weight: 700; margin-bottom: 10px;
+      font-family: 'SF Mono', 'Menlo', monospace;
+    }
+    .csv-card ul { list-style: none; padding: 0; }
+    .csv-card li {
+      font-size: 13px; padding: 2px 0; font-family: 'SF Mono', 'Menlo', monospace;
+      color: #374151;
+    }
+    .csv-card li span.col-extra { color: var(--purple); font-weight: 600; }
+
+    /* Footer */
+    .page-footer {
+      margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border);
+      font-size: 12px; color: var(--muted); text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <h1>AnnoMI &middot; Therapist Action Forecasting</h1>
+  <div class="tagline">133 段 expert-annotated 动机性访谈对话 &middot; 治疗师行为预测基准</div>
+  <a class="source-link" href="https://github.com/uccollab/AnnoMI" target="_blank">github.com/uccollab/AnnoMI</a>
+</div>
+
+<!-- 30-second TLDR -->
+<div class="tldr">
+  <div class="tldr-label">30 秒概览</div>
+  AnnoMI 是第一个针对<strong>动机性访谈（Motivational Interviewing）</strong>做 utterance 级行为标注的开放数据集。
+  133 段对话被 10 位专家标注了治疗师的每一句话属于 reflection / question / therapist_input / other，
+  以及来访者的每一句话属于 change talk / sustain talk / neutral。
+  配套论文提出 <strong>Therapist Action Forecasting</strong> 任务：给定对话上下文，预测治疗师下一步应该采取什么行为。
+  对 moodcoco 的价值在于：它为我们的 Skill 路由提供了一套<strong>经过临床验证的行为分类法</strong>，
+  可以直接映射到 listen / untangle / psychoeducation / face-decision 等 Skill。
+</div>
+
+<!-- Stats -->
+<div class="section">
+  <div class="stats-row">
+    <div class="stat-chip">
+      <div class="stat-num">133</div>
+      <div class="stat-label">段对话 transcripts</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">10</div>
+      <div class="stat-label">位标注专家</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">4</div>
+      <div class="stat-label">治疗师行为类别</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">3</div>
+      <div class="stat-label">来访者话语类型</div>
+    </div>
+    <div class="stat-chip">
+      <div class="stat-num">2</div>
+      <div class="stat-label">质量等级 H / L</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pipeline flow -->
+<div class="section">
+  <h2 class="section-title">数据集构建流程</h2>
+  <div class="flow-container">
+    <div class="flow-step">
+      <div class="flow-box">
+        <div class="icon" style="font-size:22px;">&#127909;</div>
+        <div class="label">MI 示范视频</div>
+        <div class="desc">YouTube 上的高质量 &amp; 低质量 MI 训练视频</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10132;</div>
+    <div class="flow-step">
+      <div class="flow-box">
+        <div class="icon" style="font-size:22px;">&#128196;</div>
+        <div class="label">逐句转录</div>
+        <div class="desc">每句标记说话人 + 时间戳，保留上下文顺序</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10132;</div>
+    <div class="flow-step">
+      <div class="flow-box">
+        <div class="icon" style="font-size:22px;">&#128270;</div>
+        <div class="label">专家标注</div>
+        <div class="desc">10 位标注者对每句话标注 therapist behaviour 或 client talk type</div>
+      </div>
+    </div>
+    <div class="flow-arrow">&#10132;</div>
+    <div class="flow-step">
+      <div class="flow-box">
+        <div class="icon" style="font-size:22px;">&#128202;</div>
+        <div class="label">结构化 CSV</div>
+        <div class="desc">simple 版 + full 版<br/>含元数据、标注、子类型</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSV format -->
+<div class="section">
+  <h2 class="section-title">数据格式</h2>
+  <div class="csv-cols">
+    <div class="csv-card">
+      <h4>AnnoMI-simple.csv</h4>
+      <ul>
+        <li>transcript_id</li>
+        <li>mi_quality</li>
+        <li>video_title / video_url</li>
+        <li>topic</li>
+        <li>utterance_id</li>
+        <li>interlocutor</li>
+        <li>timestamp</li>
+        <li>utterance_text</li>
+        <li>main_therapist_behaviour</li>
+        <li>client_talk_type</li>
+      </ul>
+    </div>
+    <div class="csv-card">
+      <h4>AnnoMI-full.csv</h4>
+      <ul>
+        <li>... simple 全部字段 +</li>
+        <li><span class="col-extra">annotator_id</span></li>
+        <li><span class="col-extra">therapist_input_exists</span></li>
+        <li><span class="col-extra">therapist_input_subtype</span></li>
+        <li><span class="col-extra">reflection_exists</span></li>
+        <li><span class="col-extra">reflection_subtype</span></li>
+        <li><span class="col-extra">question_exists</span></li>
+        <li><span class="col-extra">question_subtype</span></li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Label hierarchy -->
+<div class="section">
+  <h2 class="section-title">标签体系层级</h2>
+  <div class="label-tree">
+
+    <div class="label-branch branch-reflection">
+      <div class="branch-header">
+        <span class="branch-dot"></span> Reflection 反映
+      </div>
+      <ul class="sub-labels">
+        <li>
+          <strong>Simple</strong>
+          <div class="sub-desc">重复或轻微改述来访者的话，不增加新含义</div>
+        </li>
+        <li>
+          <strong>Complex</strong>
+          <div class="sub-desc">深层改述、推断隐含情绪、赋予新视角</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="label-branch branch-question">
+      <div class="branch-header">
+        <span class="branch-dot"></span> Question 提问
+      </div>
+      <ul class="sub-labels">
+        <li>
+          <strong>Open</strong>
+          <div class="sub-desc">开放式提问，引导来访者自由探索</div>
+        </li>
+        <li>
+          <strong>Closed</strong>
+          <div class="sub-desc">封闭式提问，确认事实或二选一</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="label-branch branch-input">
+      <div class="branch-header">
+        <span class="branch-dot"></span> Therapist Input 治疗师输入
+      </div>
+      <ul class="sub-labels">
+        <li>
+          <strong>Information</strong>
+          <div class="sub-desc">提供客观知识或心理教育</div>
+        </li>
+        <li>
+          <strong>Advice</strong>
+          <div class="sub-desc">给出建议或行动方向</div>
+        </li>
+        <li>
+          <strong>Negotiation</strong>
+          <div class="sub-desc">协商目标或计划</div>
+        </li>
+        <li>
+          <strong>Options</strong>
+          <div class="sub-desc">列出可选方案供来访者选择</div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="label-branch branch-client">
+      <div class="branch-header">
+        <span class="branch-dot"></span> Client Talk Type 来访者话语
+      </div>
+      <ul class="sub-labels">
+        <li>
+          <strong>Change Talk</strong>
+          <div class="sub-desc">朝向改变的语言：愿望、能力、理由、需要、承诺</div>
+        </li>
+        <li>
+          <strong>Sustain Talk</strong>
+          <div class="sub-desc">维持现状的语言：为不改变辩护</div>
+        </li>
+        <li>
+          <strong>Neutral</strong>
+          <div class="sub-desc">既不朝向改变也不维持现状</div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="card-title">Other</div>
+    <div style="font-size:14px; color: var(--muted);">
+      不属于以上三类的治疗师话语，例如寒暄、过渡语、确认收到等。不含子类型。
+    </div>
+  </div>
+</div>
+
+<!-- High vs Low quality -->
+<div class="section">
+  <h2 class="section-title">高质量 vs 低质量 MI 对话差异</h2>
+  <div class="compare-grid">
+    <div class="compare-card high">
+      <h4>High-Quality MI</h4>
+      <ul>
+        <li>更多 complex reflection，深入共情</li>
+        <li>更多 open question，引导自主探索</li>
+        <li>advice 以 negotiation / options 形式出现，尊重自主权</li>
+        <li>来访者产出更多 change talk</li>
+        <li>治疗师 : 来访者 说话比例约 1:1 或更低</li>
+        <li>遵循 MI Spirit：合作、唤起、尊重自主</li>
+      </ul>
+    </div>
+    <div class="compare-card low">
+      <h4>Low-Quality MI</h4>
+      <ul>
+        <li>以 simple reflection 为主，缺乏深度</li>
+        <li>更多 closed question，限制探索空间</li>
+        <li>直接给 advice 而非提供 options</li>
+        <li>来访者维持更多 sustain talk</li>
+        <li>治疗师说得比来访者多</li>
+        <li>偏向指导式而非合作式</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Example dialogue -->
+<div class="section">
+  <h2 class="section-title">标注对话示例（构造）</h2>
+  <div class="dialogue">
+    <div class="dialogue-header">Topic: 减少饮酒 &middot; High-Quality MI</div>
+    <div class="dialogue-body">
+      <div class="utt">
+        <span class="utt-role therapist">Therapist</span>
+        <span class="utt-text">听起来你一方面觉得喝酒帮你放松，另一方面又担心对健康的影响。</span>
+        <span class="utt-label lbl-reflection">complex reflection</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role client">Client</span>
+        <span class="utt-text">对，其实上次体检医生说我肝指标偏高，有点害怕。</span>
+        <span class="utt-label lbl-change">change talk</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role therapist">Therapist</span>
+        <span class="utt-text">那个体检结果让你有些担心。如果情况继续下去，你觉得会怎样？</span>
+        <span class="utt-label lbl-question">open question</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role client">Client</span>
+        <span class="utt-text">可能会更糟吧，但说实话，下班那杯酒真的是我一天最放松的时刻。</span>
+        <span class="utt-label lbl-sustain">sustain talk</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role therapist">Therapist</span>
+        <span class="utt-text">有些人在类似情况下会尝试几种不同的方式来放松——运动、正念、或者减少到每周两次。你想了解一下吗？</span>
+        <span class="utt-label lbl-input">input: options</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role client">Client</span>
+        <span class="utt-text">运动倒是可以试试，我以前跑步的时候心情确实不错。</span>
+        <span class="utt-label lbl-change">change talk</span>
+      </div>
+      <div class="utt">
+        <span class="utt-role therapist">Therapist</span>
+        <span class="utt-text">你记得跑步带来的那种好感觉。</span>
+        <span class="utt-label lbl-reflection">simple reflection</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Mapping table -->
+<div class="section">
+  <h2 class="section-title">AnnoMI &rarr; moodcoco Skill 映射</h2>
+  <div class="card" style="padding:0; overflow:hidden;">
+    <table class="mapping-table">
+      <thead>
+        <tr>
+          <th style="width:35%;">AnnoMI 标签</th>
+          <th style="width:5%;">&nbsp;</th>
+          <th style="width:30%;">moodcoco Skill</th>
+          <th style="width:30%;">说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>reflection: simple</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>listen</code> / <code>validation</code></td>
+          <td>重复来访者的话，表达「我听到了」</td>
+        </tr>
+        <tr>
+          <td><code>reflection: complex</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>listen</code> (slow deeper)</td>
+          <td>深层改述，走 slow path 做更深的共情</td>
+        </tr>
+        <tr>
+          <td><code>question: open</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>untangle</code></td>
+          <td>开放式提问帮来访者理清思路</td>
+        </tr>
+        <tr>
+          <td><code>question: closed</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>untangle</code> (clarify)</td>
+          <td>封闭式确认，用于澄清关键事实</td>
+        </tr>
+        <tr>
+          <td><code>therapist_input: info</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>psychoeducation</code></td>
+          <td>心理教育，提供客观知识</td>
+        </tr>
+        <tr>
+          <td><code>therapist_input: advice</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>face-decision</code></td>
+          <td>给出方向建议（需谨慎，尊重自主权）</td>
+        </tr>
+        <tr>
+          <td><code>therapist_input: options</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>face-decision</code></td>
+          <td>列出选项供来访者自行决定</td>
+        </tr>
+        <tr>
+          <td><code>therapist_input: negotiation</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td><code>face-decision</code></td>
+          <td>协商目标和计划</td>
+        </tr>
+        <tr>
+          <td><code>other</code></td>
+          <td class="arrow-cell">&rarr;</td>
+          <td>-</td>
+          <td>寒暄、过渡语，无需映射到 Skill</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Client talk signal -->
+<div class="section">
+  <h2 class="section-title">Client Talk Type 对路由的意义</h2>
+  <div class="card">
+    <div style="font-size: 14px; line-height: 1.8;">
+      <p style="margin-bottom: 12px;">AnnoMI 对来访者话语的三分类，为 Skill 路由提供了<strong>信号输入</strong>：</p>
+      <table class="mapping-table" style="margin: 0 -24px; width: calc(100% + 48px);">
+        <tbody>
+          <tr>
+            <td style="width: 30%;"><code>change talk</code></td>
+            <td style="width: 70%;">来访者已有改变动机 &rarr; 路由可倾向 <code>face-decision</code>，帮助落地行动</td>
+          </tr>
+          <tr>
+            <td><code>sustain talk</code></td>
+            <td>来访者在抵抗 &rarr; 路由应回到 <code>listen</code> + <code>untangle</code>，不要硬推</td>
+          </tr>
+          <tr>
+            <td><code>neutral</code></td>
+            <td>来访者中性 &rarr; 继续探索，用 open question 激发</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Limitations -->
+<div class="section">
+  <h2 class="section-title">局限性</h2>
+  <ul class="limit-list">
+    <li>
+      <span class="limit-icon">1</span>
+      <span><strong>仅覆盖 MI 场景</strong> &mdash; 动机性访谈只是心理咨询的一个分支。不涵盖 CBT、ACT、psychodynamic 等其他流派的治疗师行为。</span>
+    </li>
+    <li>
+      <span class="limit-icon">2</span>
+      <span><strong>无 crisis 标注</strong> &mdash; 数据集不包含自杀/自伤/危机干预场景。moodcoco 的 <code>crisis</code> Skill 无法从该数据集获得训练信号。</span>
+    </li>
+    <li>
+      <span class="limit-icon">3</span>
+      <span><strong>无 calm-body 映射</strong> &mdash; MI 对话不涉及身体导向的放松技术（呼吸练习、正念扫描等），因此 <code>calm-body</code> Skill 在此没有对标。</span>
+    </li>
+    <li>
+      <span class="limit-icon">4</span>
+      <span><strong>face-decision 覆盖有限</strong> &mdash; MI 中的 advice/options/negotiation 更偏向行为改变计划，不完全等同于 moodcoco 中更广泛的决策辅助场景。</span>
+    </li>
+    <li>
+      <span class="limit-icon">5</span>
+      <span><strong>仅英文对话</strong> &mdash; 所有对话均为英文，文化适配和中文语境下的表现未经验证。</span>
+    </li>
+    <li>
+      <span class="limit-icon">6</span>
+      <span><strong>示范性对话 vs 真实咨询</strong> &mdash; 数据来自 YouTube 训练视频而非真实临床录音，可能存在「表演」偏差。</span>
+    </li>
+  </ul>
+</div>
+
+<div class="page-footer">
+  moodcoco docs &middot; AnnoMI 解读 &middot; 2026-05
+</div>
+
+</body>
+</html>

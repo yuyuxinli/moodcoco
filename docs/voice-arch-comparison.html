@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voice + Fast-Slow 框架：业内方案全维度对比</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #f5f6fa;
+    color: #2d3436;
+    line-height: 1.6;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1600px; margin: 0 auto; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: #636e72;
+  }
+  .header .date {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 14px;
+    background: #dfe6e9;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #636e72;
+  }
+
+  /* Solution cards row */
+  .solutions-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 12px;
+    margin-bottom: 48px;
+  }
+  .sol-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border-top: 4px solid #ddd;
+    transition: transform 0.2s;
+  }
+  .sol-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.1); }
+  .sol-card.ours { border-top-color: #e17055; background: #fff9f7; }
+  .sol-card .sol-icon { font-size: 28px; margin-bottom: 6px; }
+  .sol-card .sol-name { font-size: 14px; font-weight: 700; color: #2d3436; }
+  .sol-card .sol-source { font-size: 11px; color: #b2bec3; margin-top: 2px; }
+  .sol-card .sol-tag {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag-paper { background: #ffeaa7; color: #6c5ce7; }
+  .tag-oss { background: #dfe6e9; color: #00b894; }
+  .tag-internal { background: #fab1a0; color: #d63031; }
+  .tag-tutorial { background: #c7ecee; color: #0984e3; }
+  .tag-demo { background: #e8daef; color: #8e44ad; }
+
+  /* Color legend for solutions */
+  .s0 { border-top-color: #0984e3; }
+  .s1 { border-top-color: #e17055; }
+  .s2 { border-top-color: #00b894; }
+  .s3 { border-top-color: #6c5ce7; }
+  .s4 { border-top-color: #fdcb6e; }
+  .s5 { border-top-color: #e84393; }
+  .s6 { border-top-color: #636e72; }
+
+  /* Main comparison table */
+  .table-wrap {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    overflow-x: auto;
+    margin-bottom: 48px;
+  }
+  .table-wrap h2 {
+    padding: 24px 28px 0;
+    font-size: 20px;
+    color: #1a1a2e;
+  }
+  .table-wrap .table-desc {
+    padding: 4px 28px 20px;
+    font-size: 13px;
+    color: #b2bec3;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead th {
+    position: sticky;
+    top: 0;
+    background: #f8f9fb;
+    padding: 14px 12px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+    color: #636e72;
+    border-bottom: 2px solid #eee;
+    white-space: nowrap;
+  }
+  thead th:first-child {
+    text-align: left;
+    padding-left: 28px;
+    min-width: 180px;
+  }
+  thead th.ours-col { color: #e17055; background: #fff5f2; }
+  tbody tr { border-bottom: 1px solid #f0f0f0; }
+  tbody tr:hover { background: #fafbfd; }
+  tbody td {
+    padding: 14px 12px;
+    text-align: center;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  tbody td:first-child {
+    text-align: left;
+    padding-left: 28px;
+    font-weight: 600;
+    color: #2d3436;
+    white-space: nowrap;
+  }
+  tbody td.ours-col { background: #fff9f7; }
+  .dim-label { font-size: 13px; }
+  .dim-num {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    border-radius: 50%;
+    background: #dfe6e9;
+    color: #636e72;
+    font-size: 11px;
+    font-weight: 700;
+    text-align: center;
+    margin-right: 6px;
+  }
+
+  /* Cell rating badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-best { background: #00b894; color: #fff; }
+  .badge-good { background: #55efc4; color: #00695c; }
+  .badge-mid { background: #ffeaa7; color: #856404; }
+  .badge-weak { background: #fab1a0; color: #c0392b; }
+  .badge-none { background: #f0f0f0; color: #b2bec3; }
+  .cell-detail {
+    display: block;
+    font-size: 11px;
+    color: #636e72;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  /* Gap analysis section */
+  .gap-section { margin-bottom: 48px; }
+  .gap-section h2 {
+    font-size: 22px;
+    color: #1a1a2e;
+    margin-bottom: 24px;
+  }
+  .gap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 16px;
+  }
+  .gap-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    border-left: 5px solid #ddd;
+    transition: transform 0.2s;
+  }
+  .gap-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
+  .gap-card.critical { border-left-color: #d63031; }
+  .gap-card.moderate { border-left-color: #fdcb6e; }
+  .gap-card.strength { border-left-color: #00b894; }
+  .gap-card .gap-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .gap-card .gap-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2d3436;
+  }
+  .gap-card .gap-level {
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .level-critical { background: #ffeef0; color: #d63031; }
+  .level-moderate { background: #fff8e1; color: #e17055; }
+  .level-strength { background: #e8f8f5; color: #00b894; }
+  .gap-card .gap-body { font-size: 13px; color: #636e72; line-height: 1.7; }
+  .gap-card .gap-body strong { color: #2d3436; }
+  .gap-card .gap-ref {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #eee;
+    font-size: 12px;
+    color: #0984e3;
+    font-weight: 600;
+  }
+
+  /* Radar / score visual */
+  .radar-section {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    padding: 32px;
+    margin-bottom: 48px;
+  }
+  .radar-section h2 {
+    font-size: 20px;
+    color: #1a1a2e;
+    margin-bottom: 24px;
+  }
+  .score-bars { display: flex; flex-direction: column; gap: 14px; }
+  .score-row {
+    display: grid;
+    grid-template-columns: 160px 1fr 50px;
+    align-items: center;
+    gap: 12px;
+  }
+  .score-label { font-size: 13px; font-weight: 600; color: #2d3436; text-align: right; }
+  .bar-track {
+    height: 28px;
+    background: #f0f0f0;
+    border-radius: 14px;
+    overflow: hidden;
+    position: relative;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    transition: width 1s ease;
+  }
+  .bar-ours { background: linear-gradient(90deg, #e17055, #fab1a0); }
+  .bar-best {
+    position: absolute;
+    top: 0; height: 100%;
+    border-right: 3px dashed rgba(0,0,0,0.25);
+  }
+  .score-val { font-size: 14px; font-weight: 700; text-align: center; }
+
+  /* Dimension bar legend */
+  .bar-legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+    font-size: 12px;
+    color: #636e72;
+  }
+  .bar-legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-box {
+    display: inline-block;
+    width: 16px; height: 10px;
+    border-radius: 3px;
+  }
+
+  /* Priority roadmap */
+  .roadmap {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    padding: 32px;
+    margin-bottom: 48px;
+  }
+  .roadmap h2 { font-size: 20px; color: #1a1a2e; margin-bottom: 24px; }
+  .roadmap-timeline {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+  .roadmap-timeline::before {
+    content: '';
+    position: absolute;
+    top: 28px;
+    left: 0; right: 0;
+    height: 3px;
+    background: #dfe6e9;
+    z-index: 0;
+  }
+  .rm-phase {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    padding: 0 12px;
+  }
+  .rm-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: #dfe6e9;
+    margin: 20px auto 16px;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #dfe6e9;
+  }
+  .rm-phase.active .rm-dot { background: #e17055; box-shadow: 0 0 0 2px #e17055; }
+  .rm-phase.done .rm-dot { background: #00b894; box-shadow: 0 0 0 2px #00b894; }
+  .rm-title {
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #2d3436;
+    margin-bottom: 8px;
+  }
+  .rm-items {
+    background: #f8f9fb;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 12px;
+    color: #636e72;
+    line-height: 1.8;
+  }
+  .rm-items .item-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  .it-critical { background: #ffeef0; color: #d63031; }
+  .it-moderate { background: #fff8e1; color: #e17055; }
+  .it-nice { background: #e8f8f5; color: #00b894; }
+
+  @media (max-width: 1200px) {
+    .solutions-row { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 900px) {
+    .solutions-row { grid-template-columns: repeat(2, 1fr); }
+    .gap-grid { grid-template-columns: 1fr; }
+    .roadmap-timeline { flex-direction: column; }
+    .roadmap-timeline::before { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <h1>Voice + Fast-Slow 框架：业内方案全维度对比</h1>
+  <div class="subtitle">moodcoco 现有架构 vs 6 个业内方案，12 个关键维度拆解</div>
+  <div class="date">2026-05-13 · 基于 7 份技术调研文档整合</div>
+</div>
+
+<!-- Solution Cards -->
+<div class="solutions-row">
+  <div class="sol-card s0">
+    <div class="sol-icon">🔍</div>
+    <div class="sol-name">VoiceAgentRAG</div>
+    <div class="sol-source">Salesforce Research</div>
+    <div class="sol-tag tag-paper">论文</div>
+  </div>
+  <div class="sol-card ours s1">
+    <div class="sol-icon">🎯</div>
+    <div class="sol-name">moodcoco</div>
+    <div class="sol-source">现有方案</div>
+    <div class="sol-tag tag-internal">内部</div>
+  </div>
+  <div class="sol-card s2">
+    <div class="sol-icon">🔄</div>
+    <div class="sol-name">DuplexCascade</div>
+    <div class="sol-source">SB Intuitions</div>
+    <div class="sol-tag tag-oss">开源</div>
+  </div>
+  <div class="sol-card s3">
+    <div class="sol-icon">⚡</div>
+    <div class="sol-name">LTS-VoiceAgent</div>
+    <div class="sol-source">美团 + 中科院</div>
+    <div class="sol-tag tag-paper">论文</div>
+  </div>
+  <div class="sol-card s4">
+    <div class="sol-icon">🏢</div>
+    <div class="sol-name">Enterprise VA</div>
+    <div class="sol-source">Salesforce 教程</div>
+    <div class="sol-tag tag-tutorial">教程</div>
+  </div>
+  <div class="sol-card s5">
+    <div class="sol-icon">🎙️</div>
+    <div class="sol-name">Stimm</div>
+    <div class="sol-source">stimm-ai</div>
+    <div class="sol-tag tag-oss">开源</div>
+  </div>
+  <div class="sol-card s6">
+    <div class="sol-icon">🧩</div>
+    <div class="sol-name">Iris / HF Toolkit</div>
+    <div class="sol-source">Cloudflare + HF</div>
+    <div class="sol-tag tag-demo">Demo</div>
+  </div>
+</div>
+
+<!-- Main Comparison Table -->
+<div class="table-wrap">
+  <h2>12 维度全景对比</h2>
+  <div class="table-desc">绿色 = 业内最强 · 黄色 = 可用 · 红色 = 薄弱 · 灰色 = 未涉及</div>
+  <table>
+    <thead>
+      <tr>
+        <th>维度</th>
+        <th>VoiceAgentRAG</th>
+        <th class="ours-col">moodcoco</th>
+        <th>DuplexCascade</th>
+        <th>LTS-VA</th>
+        <th>Enterprise VA</th>
+        <th>Stimm</th>
+        <th>Iris/HF</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- 1 -->
+      <tr>
+        <td><span class="dim-num">1</span> Fast/Slow 并行</td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">Event Bus 完全解耦<br>独立进程，互不阻塞</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">共享 Python 对象<br>同进程直接 mutation</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">单 LLM + control tokens<br>无显式分离</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">Thinker/Speaker 异步<br>DistilBERT 触发解耦</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">纯流水线 overlap<br>无 Fast/Slow 分离</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">LiveKit data channel<br>Supervisor 可独立部署</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">无并行设计</span>
+        </td>
+      </tr>
+      <!-- 2 -->
+      <tr>
+        <td><span class="dim-num">2</span> TTFS / 首音延迟</td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">cache hit &lt;1ms 检索<br>整体 TTFA 未报</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">~200ms Fast loop<br>取决于 Doubao Lite 速度</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">0.6s 微轮次<br>聚焦自然度非速度</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">338ms TTFS<br>比串行快 150-350x</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">~600ms TTFA<br>pipeline overlap 降 60%</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">Fast 先说<br>Supervisor 后补</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">投机生成<br>无确切数据</span>
+        </td>
+      </tr>
+      <!-- 3 -->
+      <tr>
+        <td><span class="dim-num">3</span> 语义缓存 / 预取</td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">316x 加速，75-86% 命中<br>LLM 预测后续话题预取</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-weak">缺失</span>
+          <span class="cell-detail">无缓存<br>每轮重新检索</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">纯对话<br>不涉及检索</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">纯推理</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">无缓存</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">Supervisor 调工具</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">无</span>
+        </td>
+      </tr>
+      <!-- 4 -->
+      <tr>
+        <td><span class="dim-num">4</span> 轮次 / 打断处理</td>
+        <td>
+          <span class="badge badge-weak">薄弱</span>
+          <span class="cell-detail">半双工<br>无打断机制</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-weak">薄弱</span>
+          <span class="cell-detail">keyword fallback 已弃用<br>无语义打断</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">7 种 control token<br>区分打断/回声/沉思<br>准确率 0.858</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">Thought Rollback<br>打断率仅 5-10%</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">基础 stop<br>检测说话就停</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">priority=interrupt<br>BeforeSpeak 否决权</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">ABORT & retry</span>
+        </td>
+      </tr>
+      <!-- 5 -->
+      <tr>
+        <td><span class="dim-num">5</span> 全双工能力</td>
+        <td>
+          <span class="badge badge-weak">半双工</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-weak">半双工</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">真全双工，无 VAD<br>0.6s 微轮次循环</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">部分</span>
+          <span class="cell-detail">ASR partial 触发并行</span>
+        </td>
+        <td>
+          <span class="badge badge-weak">半双工</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">部分</span>
+          <span class="cell-detail">data channel 并行</span>
+        </td>
+        <td>
+          <span class="badge badge-weak">半双工</span>
+        </td>
+      </tr>
+      <!-- 6 -->
+      <tr>
+        <td><span class="dim-num">6</span> Fast↔Slow 通信</td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">单向 Slow→Cache→Fast<br>Event 订阅模式</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">直接写 deps 对象<br>无类型约束</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">结构化 JSON schema<br>corrected_text + plan</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">StimmProtocol<br>5 下行 + 4 上行<br>强类型 JSON 消息</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+      </tr>
+      <!-- 7 -->
+      <tr>
+        <td><span class="dim-num">7</span> Slow→Fast 注入</td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">文档级缓存预填充</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">3 种 mutation tool<br>inject / skill / retrieval</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">JSON state snapshot<br>注入 Speaker prompt</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">5 种 steering 类型<br>inject / override / mode<br>action / interrupt</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+      </tr>
+      <!-- 8 -->
+      <tr>
+        <td><span class="dim-num">8</span> 记忆 / 上下文</td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">TTL=300s LRU<br>无长期记忆</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">MEMORY.md 长期记忆<br>carryover[-3:] 跨轮<br>SLOW_GUIDANCE.md</span>
+        </td>
+        <td>
+          <span class="badge badge-weak">薄弱</span>
+          <span class="cell-detail">隐式 token window</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">Thinker plan 保持<br>无显式长期记忆</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">对话历史 + 动态 prompt</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">Durable Objects<br>5 条滑动窗口</span>
+        </td>
+        <td>
+          <span class="badge badge-weak">薄弱</span>
+          <span class="cell-detail">无</span>
+        </td>
+      </tr>
+      <!-- 9 -->
+      <tr>
+        <td><span class="dim-num">9</span> RAG / 知识检索</td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">FAISS 向量搜索<br>+ 语义缓存 316x 加速<br>+ LLM 预测预取</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">Slow skill 选择<br>retrieval block 注入<br>非标准 RAG</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">Function calling<br>同步工具调用</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">可用</span>
+          <span class="cell-detail">Supervisor 调工具<br>ActionResult 返回</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+      </tr>
+      <!-- 10 -->
+      <tr>
+        <td><span class="dim-num">10</span> 情绪 / 技能路由</td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+          <span class="cell-detail">纯知识 QA</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">情绪检测 → 6 种 skill<br>crisis / calm / decision<br>untangle / relationship / listen</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">部分</span>
+          <span class="cell-detail">&lt;user is thinking&gt;<br>识别沉思</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">部分</span>
+          <span class="cell-detail">语义触发区分<br>沉思与完成</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">潜力</span>
+          <span class="cell-detail">BeforeSpeak + relay<br>可做安全过滤</span>
+        </td>
+        <td>
+          <span class="badge badge-none">N/A</span>
+        </td>
+      </tr>
+      <!-- 11 -->
+      <tr>
+        <td><span class="dim-num">11</span> 发言前安全过滤</td>
+        <td>
+          <span class="badge badge-none">无</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-weak">缺失</span>
+          <span class="cell-detail">无 pre-speech 过滤</span>
+        </td>
+        <td>
+          <span class="badge badge-none">无</span>
+        </td>
+        <td>
+          <span class="badge badge-none">无</span>
+        </td>
+        <td>
+          <span class="badge badge-none">无</span>
+        </td>
+        <td>
+          <span class="badge badge-best">最佳</span>
+          <span class="cell-detail">BeforeSpeakMessage<br>TTS 前 Supervisor 否决</span>
+        </td>
+        <td>
+          <span class="badge badge-none">无</span>
+        </td>
+      </tr>
+      <!-- 12 -->
+      <tr>
+        <td><span class="dim-num">12</span> 工程化 / 可部署</td>
+        <td>
+          <span class="badge badge-mid">论文级</span>
+        </td>
+        <td class="ours-col">
+          <span class="badge badge-mid">内部使用</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">开源参考实现<br>LoRA 5h 训练</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">论文级</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">9 章教程<br>教学性强</span>
+        </td>
+        <td>
+          <span class="badge badge-mid">早期</span>
+          <span class="cell-detail">43 stars</span>
+        </td>
+        <td>
+          <span class="badge badge-good">优秀</span>
+          <span class="cell-detail">模块化拼装<br>edge 可部署</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Score Bars: moodcoco vs 业内最佳 -->
+<div class="radar-section">
+  <h2>moodcoco 各维度得分 vs 业内最佳</h2>
+  <div class="bar-legend">
+    <span><span class="legend-box" style="background:linear-gradient(90deg, #e17055, #fab1a0);"></span>moodcoco 现有</span>
+    <span><span class="legend-box" style="background:rgba(0,0,0,0.15);"></span>业内最佳（虚线）</span>
+  </div>
+  <div class="score-bars" style="margin-top: 20px;">
+
+    <div class="score-row">
+      <div class="score-label">Fast/Slow 并行</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:55%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#e17055;">5.5</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">TTFS / 首音延迟</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:60%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#e17055;">6.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">语义缓存 / 预取</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:10%;">
+        </div>
+      </div>
+      <div class="score-val" style="color:#d63031;">1.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">轮次 / 打断处理</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:20%;">
+        </div>
+      </div>
+      <div class="score-val" style="color:#d63031;">2.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">全双工能力</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:15%;">
+        </div>
+      </div>
+      <div class="score-val" style="color:#d63031;">1.5</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">Fast↔Slow 通信</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:45%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#e17055;">4.5</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">Slow→Fast 注入</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:70%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#00b894;">7.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">记忆 / 上下文</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:80%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#00b894;">8.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">RAG / 知识检索</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:40%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#e17055;">4.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">情绪 / 技能路由</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:90%;">moodcoco ★</div>
+      </div>
+      <div class="score-val" style="color:#00b894;">9.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">发言前安全过滤</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:10%;">
+        </div>
+      </div>
+      <div class="score-val" style="color:#d63031;">1.0</div>
+    </div>
+
+    <div class="score-row">
+      <div class="score-label">工程化 / 可部署</div>
+      <div class="bar-track">
+        <div class="bar-best" style="width:100%;"></div>
+        <div class="bar-fill bar-ours" style="width:50%;">moodcoco</div>
+      </div>
+      <div class="score-val" style="color:#e17055;">5.0</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Gap Analysis Cards -->
+<div class="gap-section">
+  <h2>差距分析：按优先级排列</h2>
+  <div class="gap-grid">
+
+    <!-- Critical gaps -->
+    <div class="gap-card critical">
+      <div class="gap-header">
+        <div class="gap-title">语义缓存 / 预取 = 零</div>
+        <div class="gap-level level-critical">核心短板</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>每轮重新检索，无任何缓存机制<br>
+        <strong>最佳：</strong>VoiceAgentRAG 实现 316x 检索加速（110ms→0.35ms），75-86% 缓存命中率。Slow 在每轮结束后用 LLM 预测 3-5 个后续话题并预取文档<br>
+        <strong>影响：</strong>检索延迟直接叠加到每轮响应时间上
+      </div>
+      <div class="gap-ref">参考 → VoiceAgentRAG (Salesforce Research, arXiv 2603.02206)</div>
+    </div>
+
+    <div class="gap-card critical">
+      <div class="gap-header">
+        <div class="gap-title">打断处理 = 原始级</div>
+        <div class="gap-level level-critical">核心短板</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>keyword fallback 已弃用，无语义级打断<br>
+        <strong>最佳：</strong>DuplexCascade 用 7 种 control token 语义区分打断/回声/沉思/继续，准确率 0.858。LTS 用 Thought Rollback 保留有效推理<br>
+        <strong>影响：</strong>情绪陪伴场景下用户沉默≠结束说话，误判会打断用户倾诉
+      </div>
+      <div class="gap-ref">参考 → DuplexCascade (SB Intuitions, arXiv 2603.09180) + LTS-VA (arXiv 2601.19952)</div>
+    </div>
+
+    <div class="gap-card critical">
+      <div class="gap-header">
+        <div class="gap-title">发言前安全过滤 = 无</div>
+        <div class="gap-level level-critical">核心短板</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>Fast 生成即发送，无 pre-speech 拦截<br>
+        <strong>最佳：</strong>Stimm 的 BeforeSpeakMessage 让 Supervisor 在 TTS 前拥有否决权，可拦截危险回复<br>
+        <strong>影响：</strong>情绪陪伴场景（尤其 crisis），Fast 可能说出不当内容且无法召回
+      </div>
+      <div class="gap-ref">参考 → Stimm (stimm-ai/stimm, StimmProtocol)</div>
+    </div>
+
+    <div class="gap-card critical">
+      <div class="gap-header">
+        <div class="gap-title">通信协议无类型化</div>
+        <div class="gap-level level-critical">核心短板</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>直接写 Python 对象，无类型约束，不可分布式部署<br>
+        <strong>最佳：</strong>Stimm StimmProtocol 有 5 种下行 + 4 种上行强类型 JSON 消息；LTS 用结构化 JSON schema（corrected_text + key_variables + plan）<br>
+        <strong>影响：</strong>无法独立部署 Slow 到 GPU 服务器，调试困难，扩展性差
+      </div>
+      <div class="gap-ref">参考 → Stimm Protocol + LTS JSON State</div>
+    </div>
+
+    <!-- Moderate gaps -->
+    <div class="gap-card moderate">
+      <div class="gap-header">
+        <div class="gap-title">语义触发 vs 无条件触发</div>
+        <div class="gap-level level-moderate">中等差距</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>Slow 每轮无条件启动，不管用户是闲聊还是深度倾诉<br>
+        <strong>最佳：</strong>LTS 用 DistilBERT（5ms）判断语义完整度 >0.65 才触发 Thinker<br>
+        <strong>影响：</strong>浪费算力，且闲聊轮次 Slow 的 skill 分析无意义
+      </div>
+      <div class="gap-ref">参考 → LTS-VoiceAgent Semantic Trigger</div>
+    </div>
+
+    <div class="gap-card moderate">
+      <div class="gap-header">
+        <div class="gap-title">Thought Rollback = 无</div>
+        <div class="gap-level level-moderate">中等差距</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>用户打断时 Slow 完全丢弃推理结果<br>
+        <strong>最佳：</strong>LTS 在用户改口时保留 Thinker 有效状态，仅回滚无效部分（打断率 5-10% vs PredGen 95-99%）<br>
+        <strong>影响：</strong>打断后 Slow 从零开始，下一轮质量降级
+      </div>
+      <div class="gap-ref">参考 → LTS-VoiceAgent Thought Rollback</div>
+    </div>
+
+    <div class="gap-card moderate">
+      <div class="gap-header">
+        <div class="gap-title">全双工 = 不支持</div>
+        <div class="gap-level level-moderate">中等差距</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>半双工，用户说完→AI 回→用户再说<br>
+        <strong>最佳：</strong>DuplexCascade 真全双工，0.6s 微轮次，LoRA 5h 训练<br>
+        <strong>影响：</strong>情绪陪伴需要"嗯""我在听"等实时回声，半双工做不到
+      </div>
+      <div class="gap-ref">参考 → DuplexCascade Full-Duplex</div>
+    </div>
+
+    <!-- Strengths -->
+    <div class="gap-card strength">
+      <div class="gap-header">
+        <div class="gap-title">情绪识别 + 技能路由</div>
+        <div class="gap-level level-strength">领先优势</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>6 种细粒度 skill 路由（crisis/calm/decision/untangle/relationship/listen），业内无人做到这个粒度<br>
+        <strong>对比：</strong>DuplexCascade 仅识别"沉思"，Stimm 仅有安全过滤潜力，其余无情绪处理
+      </div>
+    </div>
+
+    <div class="gap-card strength">
+      <div class="gap-header">
+        <div class="gap-title">记忆系统</div>
+        <div class="gap-level level-strength">领先优势</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>MEMORY.md 长期记忆 + carryover[-3:] 跨轮 + SLOW_GUIDANCE.md<br>
+        <strong>对比：</strong>VoiceAgentRAG 仅 TTL=300s 短期缓存，DuplexCascade 无显式记忆，Stimm 5 条滑动窗口
+      </div>
+    </div>
+
+    <div class="gap-card strength">
+      <div class="gap-header">
+        <div class="gap-title">Same-turn Mutation</div>
+        <div class="gap-level level-strength">领先优势</div>
+      </div>
+      <div class="gap-body">
+        <strong>现状：</strong>3 种 mutation tool（inject/skill/retrieval），Slow 可在 Fast 同轮次注入<br>
+        <strong>对比：</strong>多数方案仅能跨轮次传递，同轮注入是 moodcoco 的差异点
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Priority Roadmap -->
+<div class="roadmap">
+  <h2>建议改进路线（按业务影响排序）</h2>
+  <div class="roadmap-timeline">
+    <div class="rm-phase active">
+      <div class="rm-dot"></div>
+      <div class="rm-title">P0 · 安全底线</div>
+      <div class="rm-items">
+        <span class="item-tag it-critical">紧急</span> BeforeSpeak 安全拦截<br>
+        <span class="item-tag it-critical">紧急</span> Fast↔Slow 通信协议类型化<br>
+        <span class="cell-detail" style="margin-top:6px; display:block;">直接影响用户安全 + 架构可扩展性</span>
+      </div>
+    </div>
+    <div class="rm-phase active">
+      <div class="rm-dot"></div>
+      <div class="rm-title">P1 · 体验跃升</div>
+      <div class="rm-items">
+        <span class="item-tag it-critical">高</span> 语义级打断识别<br>
+        <span class="item-tag it-critical">高</span> 语义缓存 + 话题预取<br>
+        <span class="item-tag it-moderate">中</span> 语义触发替代无条件启动<br>
+        <span class="cell-detail" style="margin-top:6px; display:block;">检索延迟 110ms→&lt;1ms，打断误判率大幅降低</span>
+      </div>
+    </div>
+    <div class="rm-phase">
+      <div class="rm-dot"></div>
+      <div class="rm-title">P2 · 自然度</div>
+      <div class="rm-items">
+        <span class="item-tag it-moderate">中</span> Thought Rollback 机制<br>
+        <span class="item-tag it-moderate">中</span> Slow 输出结构化 JSON<br>
+        <span class="cell-detail" style="margin-top:6px; display:block;">打断后不丢失推理，注入更精准</span>
+      </div>
+    </div>
+    <div class="rm-phase">
+      <div class="rm-dot"></div>
+      <div class="rm-title">P3 · 前沿探索</div>
+      <div class="rm-items">
+        <span class="item-tag it-nice">探索</span> 全双工 + 回声能力<br>
+        <span class="item-tag it-nice">探索</span> LoRA 微调 control tokens<br>
+        <span class="cell-detail" style="margin-top:6px; display:block;">需训练基础设施，中期目标</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Each solution best-at summary -->
+<div class="table-wrap" style="margin-bottom: 48px;">
+  <h2>每个方案"最值得学"的一个点</h2>
+  <div class="table-desc">从每个方案中提取对 moodcoco 最有价值的单点创新</div>
+  <table>
+    <thead>
+      <tr>
+        <th>方案</th>
+        <th>最值得学的点</th>
+        <th>核心机制</th>
+        <th>对 moodcoco 的价值</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>VoiceAgentRAG</td>
+        <td><span class="badge badge-best">语义缓存 316x</span></td>
+        <td>Slow 用 LLM 预测后续话题 → 预取文档存入 FAISS 缓存 → Fast 命中时 &lt;1ms</td>
+        <td>Slow 每轮结束后预测 3-5 个情绪主题预取 skill context，消除检索延迟</td>
+      </tr>
+      <tr>
+        <td>DuplexCascade</td>
+        <td><span class="badge badge-best">7 种语义打断 token</span></td>
+        <td>LLM 输出 control token 区分打断/回声/沉思/继续，准确率 0.858</td>
+        <td>情绪场景：沉默≠结束，需要区分"用户在想""用户在哭""用户想继续说"</td>
+      </tr>
+      <tr>
+        <td>LTS-VA</td>
+        <td><span class="badge badge-best">Thought Rollback</span></td>
+        <td>用户改口时保留 Thinker 有效推理，仅回滚无效部分</td>
+        <td>Slow 的情绪分析不应因打断全部丢弃，有效部分应保留到下轮</td>
+      </tr>
+      <tr>
+        <td>Enterprise VA</td>
+        <td><span class="badge badge-good">SentenceBuffer</span></td>
+        <td>按句子边界（非固定 token）切分 TTS 输入，避免中途截断</td>
+        <td>中文场景尤其重要："我觉得你可以…" 不应在"可以"后被截断</td>
+      </tr>
+      <tr>
+        <td>Stimm</td>
+        <td><span class="badge badge-best">BeforeSpeakMessage</span></td>
+        <td>TTS 前 Supervisor 有否决权，priority=interrupt 可实时切断</td>
+        <td>crisis 场景的安全底线：Slow 检测到危险内容时必须能拦截 Fast</td>
+      </tr>
+      <tr>
+        <td>Iris</td>
+        <td><span class="badge badge-good">Speculative EOT</span></td>
+        <td>VAD 置信度 30% 时投机生成，命中则 TTFT 提前</td>
+        <td>可与语义触发结合：低置信度时让 Fast 先输出回声，高置信度再出实质回复</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+</body>
+</html>

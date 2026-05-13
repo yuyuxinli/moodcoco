@@ -6,6 +6,10 @@ import type {
   PersonaChatResp,
   Speaker,
 } from "./types";
+import type {
+  VoiceTokenRequest,
+  VoiceTokenResponse,
+} from "./voice-types";
 
 const BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
@@ -61,4 +65,17 @@ export function autoConversation(
 
 export function resetSession(): Promise<{ status: string }> {
   return request<{ status: string }>("/api/reset", { method: "POST" });
+}
+
+/**
+ * POST /api/voice/token — fetch a LiveKit room access JWT.
+ * Contract authored in F2.md §6.1; F9 backend conforms to this signature.
+ */
+export function fetchVoiceToken(
+  req: VoiceTokenRequest,
+): Promise<VoiceTokenResponse> {
+  return request<VoiceTokenResponse>("/api/voice/token", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }

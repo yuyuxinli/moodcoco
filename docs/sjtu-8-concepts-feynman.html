@@ -1,0 +1,1383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>8 个知识点讲懂交大代码如何工作</title>
+  <style>
+    :root {
+      --paper: #fbfaf4;
+      --ink: #17201d;
+      --muted: #5f6c67;
+      --line: #d6ded9;
+      --panel: #fffefa;
+      --code: #dff0e6;
+      --model: #e8defa;
+      --human: #ffe5dd;
+      --rule: #fff0c4;
+      --blue: #dceafa;
+      --green: #3c9867;
+      --purple: #7356b6;
+      --red: #bd4a3e;
+      --yellow: #ac7620;
+      --shadow: 0 24px 70px rgba(31, 45, 40, .13);
+      --radius: 8px;
+      --max: 1200px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(23,32,29,.045) 1px, transparent 1px),
+        linear-gradient(rgba(23,32,29,.035) 1px, transparent 1px),
+        var(--paper);
+      background-size: 34px 34px;
+      font-family: ui-serif, "Songti SC", "Noto Serif CJK SC", Georgia, serif;
+      line-height: 1.65;
+    }
+
+    a { color: inherit; }
+
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      border-bottom: 1px solid rgba(23,32,29,.14);
+      background: rgba(251,250,244,.92);
+      backdrop-filter: blur(14px);
+    }
+
+    .top-inner {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+      min-height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font: 800 15px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--ink);
+      background: linear-gradient(135deg, var(--rule), var(--code));
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+
+    nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 0;
+      font: 700 14px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--muted);
+      padding: 9px 10px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    nav a:hover {
+      color: var(--ink);
+      background: rgba(255,255,255,.7);
+      border-color: var(--line);
+    }
+
+    main, footer {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      min-height: calc(100vh - 62px);
+      padding: 64px 0 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(360px, .98fr);
+      gap: 42px;
+      align-items: center;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      min-height: 34px;
+      padding: 6px 11px;
+      border: 1px solid var(--ink);
+      background: var(--rule);
+      box-shadow: 4px 4px 0 var(--ink);
+      font: 850 13px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      margin-bottom: 18px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1 {
+      margin-bottom: 22px;
+      font-size: clamp(42px, 7vw, 86px);
+      line-height: .99;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 780px;
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.78;
+      color: #384541;
+    }
+
+    .hero-board {
+      border: 2px solid var(--ink);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .board-head {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 15px;
+      border-bottom: 2px solid var(--ink);
+      background: #eef3ef;
+      font: 850 14px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid var(--ink);
+      background: var(--human);
+    }
+
+    .dot:nth-child(2) { background: var(--rule); }
+    .dot:nth-child(3) { background: var(--code); margin-right: 7px; }
+
+    .board-body { padding: 22px; }
+
+    .naive-flow {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .plain-box {
+      min-height: 112px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      background: var(--blue);
+      font: 850 18px/1.35 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .big-arrow {
+      text-align: center;
+      font-size: 44px;
+      color: var(--muted);
+    }
+
+    .reveal {
+      border: 2px dashed #95a39d;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fbfbf7;
+    }
+
+    .reveal-title {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font: 850 13px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      text-transform: uppercase;
+    }
+
+    .tiny-stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .tiny-row {
+      display: grid;
+      grid-template-columns: 74px 1fr;
+      gap: 8px;
+      align-items: center;
+      font: 750 13px/1.35 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .who {
+      padding: 5px 7px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      text-align: center;
+      background: var(--panel);
+      white-space: nowrap;
+    }
+
+    .who.human { background: var(--human); }
+    .who.code { background: var(--code); }
+    .who.model { background: var(--model); }
+    .who.rule { background: var(--rule); }
+
+    section {
+      padding: 76px 0;
+      border-top: 1px solid rgba(23,32,29,.13);
+    }
+
+    .kicker {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font: 850 13px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      max-width: 920px;
+      margin-bottom: 16px;
+      font-size: clamp(32px, 4.5vw, 58px);
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    .section-lead {
+      max-width: 860px;
+      margin-bottom: 34px;
+      color: #3c4844;
+      font-size: 20px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .legend .who {
+      font: 850 13px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+      padding: 8px 10px;
+    }
+
+    .concept-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .concept {
+      min-height: 236px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px;
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 5px 5px 0 rgba(23,32,29,.08);
+    }
+
+    .concept .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .index {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--ink);
+      background: var(--rule);
+      box-shadow: 3px 3px 0 var(--ink);
+      font: 900 16px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .concept h3 {
+      margin-bottom: 10px;
+      font-size: 24px;
+      line-height: 1.15;
+    }
+
+    .concept p {
+      margin-bottom: 14px;
+      color: var(--muted);
+      font: 500 15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .analogy {
+      padding: 12px;
+      border-left: 4px solid var(--ink);
+      background: #f6f1e6;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .concept.human { background: var(--human); }
+    .concept.code { background: var(--code); }
+    .concept.model { background: var(--model); }
+    .concept.rule { background: var(--rule); }
+    .concept.blue { background: var(--blue); }
+
+    .build {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .steps {
+      display: grid;
+      gap: 10px;
+    }
+
+    .step-card {
+      display: grid;
+      grid-template-columns: 46px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.78);
+    }
+
+    .step-card h3 {
+      margin-bottom: 4px;
+      font-size: 20px;
+    }
+
+    .step-card p {
+      margin: 0;
+      color: var(--muted);
+      font: 500 15px/1.5 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .machine {
+      position: sticky;
+      top: 84px;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .machine-title {
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--ink);
+      background: #eef3ef;
+      font: 900 15px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .assembly {
+      padding: 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .assembly-row {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .assembly-label {
+      padding: 8px;
+      border: 1px solid var(--ink);
+      border-radius: 999px;
+      text-align: center;
+      font: 850 13px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .assembly-text {
+      min-height: 46px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfbf7;
+      font: 650 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .connector {
+      width: 2px;
+      height: 18px;
+      background: var(--ink);
+      margin-left: 48px;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .compare-box {
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+
+    .compare-head {
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--ink);
+      font: 900 16px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .compare-head.code { background: var(--code); }
+    .compare-head.model { background: var(--model); }
+
+    .compare-body {
+      padding: 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .task {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfbf7;
+      font: 650 15px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .prompt-visual {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .packet {
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .packet-head {
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--ink);
+      background: var(--rule);
+      font: 900 16px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .packet-body {
+      padding: 18px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .ingredient {
+      padding: 12px;
+      border: 1px solid var(--ink);
+      border-radius: 6px;
+      font: 700 15px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .ingredient.human { background: var(--human); }
+    .ingredient.code { background: var(--code); }
+    .ingredient.rule { background: var(--rule); }
+
+    .reply {
+      padding: 20px;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--model);
+      font-size: 22px;
+      line-height: 1.55;
+      box-shadow: 6px 6px 0 rgba(23,32,29,.12);
+    }
+
+    .final-chain {
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .chain-row {
+      display: grid;
+      grid-template-columns: 86px 150px 1fr;
+      border-bottom: 1px solid var(--ink);
+      min-height: 78px;
+    }
+
+    .chain-row:last-child { border-bottom: 0; }
+
+    .chain-num, .chain-who, .chain-desc {
+      padding: 14px;
+      display: flex;
+      align-items: center;
+    }
+
+    .chain-num {
+      justify-content: center;
+      border-right: 1px solid var(--ink);
+      background: #f5f1e8;
+      font: 900 18px/1 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .chain-who {
+      border-right: 1px solid var(--ink);
+      font: 900 14px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .chain-desc {
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .note-box {
+      margin-top: 28px;
+      padding: 20px;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--rule);
+      box-shadow: 5px 5px 0 var(--ink);
+      font-size: 20px;
+      line-height: 1.65;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .source-card {
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+      box-shadow: 6px 6px 0 rgba(23,32,29,.1);
+    }
+
+    .source-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 2px solid var(--ink);
+      background: var(--code);
+      font: 900 16px/1.25 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .source-head.rule { background: var(--rule); }
+    .source-head.model { background: var(--model); }
+    .source-file {
+      color: #35413d;
+      font: 700 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: nowrap;
+    }
+
+    .source-body {
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .source-body p {
+      margin: 0;
+      color: var(--muted);
+      font: 600 15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    pre.code {
+      margin: 0;
+      padding: 14px;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #f7f7f1;
+      color: #22302c;
+      font: 650 13px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .key-table {
+      margin-top: 22px;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .key-row {
+      display: grid;
+      grid-template-columns: 180px 1fr 1fr;
+      border-bottom: 1px solid var(--ink);
+    }
+
+    .key-row:last-child { border-bottom: 0; }
+
+    .key-cell {
+      padding: 14px;
+      border-right: 1px solid var(--ink);
+      font: 650 15px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .key-cell:last-child { border-right: 0; }
+
+    .key-cell.head {
+      background: #eef3ef;
+      font-weight: 900;
+    }
+
+    .architecture {
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .arch-head {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      border-bottom: 2px solid var(--ink);
+      font: 900 14px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .arch-head div {
+      padding: 14px;
+      text-align: center;
+      border-right: 1px solid var(--ink);
+    }
+
+    .arch-head div:last-child { border-right: 0; }
+    .arch-head .human { background: var(--human); }
+    .arch-head .rule { background: var(--rule); }
+    .arch-head .code { background: var(--code); }
+    .arch-head .model { background: var(--model); }
+
+    .arch-body {
+      padding: 22px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .arch-flow {
+      display: grid;
+      grid-template-columns: 1fr 52px 1fr 52px 1fr 52px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .arch-side {
+      display: grid;
+      grid-template-columns: 1fr 52px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .arch-node {
+      min-height: 92px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding: 14px;
+      border: 1px solid var(--ink);
+      border-radius: 8px;
+      background: #fbfbf7;
+      font: 650 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .arch-node strong {
+      font: 900 18px/1.2 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .arch-node.human { background: var(--human); }
+    .arch-node.rule { background: var(--rule); }
+    .arch-node.code { background: var(--code); }
+    .arch-node.model { background: var(--model); }
+    .arch-node.eval { background: var(--blue); }
+
+    .arch-arrow {
+      align-self: center;
+      justify-self: center;
+      color: var(--muted);
+      font-size: 32px;
+      line-height: 1;
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    .arch-note {
+      padding: 16px;
+      border-top: 1px solid var(--ink);
+      background: #f6f1e6;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .arch-note b {
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    footer {
+      padding: 40px 0 72px;
+      border-top: 1px solid rgba(23,32,29,.13);
+      color: var(--muted);
+      font: 600 14px/1.6 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+    }
+
+    @media (max-width: 1040px) {
+      .hero, .build, .comparison, .prompt-visual {
+        grid-template-columns: 1fr;
+      }
+      .machine { position: static; }
+      .concept-grid { grid-template-columns: repeat(2, 1fr); }
+      .source-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .top-inner {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 12px 0;
+      }
+      nav { width: 100%; }
+      .hero { padding-top: 42px; }
+      .naive-flow {
+        grid-template-columns: 1fr;
+      }
+      .big-arrow { transform: rotate(90deg); }
+      .concept-grid { grid-template-columns: 1fr; }
+      .chain-row {
+        grid-template-columns: 60px 1fr;
+      }
+      .chain-who {
+        border-right: 0;
+      }
+      .chain-desc {
+        grid-column: 1 / -1;
+        border-top: 1px solid var(--ink);
+      }
+      .key-row {
+        grid-template-columns: 1fr;
+      }
+      .key-cell {
+        border-right: 0;
+        border-bottom: 1px solid var(--ink);
+      }
+      .key-cell:last-child { border-bottom: 0; }
+      .assembly-row {
+        grid-template-columns: 1fr;
+      }
+      .arch-head {
+        grid-template-columns: 1fr;
+      }
+      .arch-head div {
+        border-right: 0;
+        border-bottom: 1px solid var(--ink);
+      }
+      .arch-head div:last-child { border-bottom: 0; }
+      .arch-flow,
+      .arch-side {
+        grid-template-columns: 1fr;
+      }
+      .arch-arrow {
+        transform: rotate(90deg);
+      }
+      .connector {
+        margin: 0 auto;
+      }
+      section { padding: 56px 0; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand"><span class="brand-mark"></span>8 个知识点讲懂工作机制</div>
+      <nav aria-label="页面导航">
+        <a href="#start">从一问一答开始</a>
+        <a href="#eight">8 个零件</a>
+        <a href="#assemble">怎么拼起来</a>
+        <a href="#who">谁在决策</a>
+        <a href="#source">源码拆解</a>
+        <a href="#prompt">提示词包</a>
+        <a href="#chain">完整链路</a>
+        <a href="#architecture">总流程图</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="start">
+      <div>
+        <div class="tag">费曼式：先讲最小模型</div>
+        <h1>先别看模块。先看这 8 个零件。</h1>
+        <p class="lead">你现在已经懂了最表层：用户输入一句话，AI 回一句话。真正卡住的地方是：这中间被偷偷塞进了 8 个知识点。我们不跳步，一个一个加。</p>
+      </div>
+
+      <div class="hero-board">
+        <div class="board-head"><span class="dot"></span><span class="dot"></span><span class="dot"></span>你看到的 vs 系统实际做的</div>
+        <div class="board-body">
+          <div class="naive-flow">
+            <div class="plain-box">用户输入一句话</div>
+            <div class="big-arrow">→</div>
+            <div class="plain-box">AI 回一句话</div>
+          </div>
+          <div class="reveal">
+            <div class="reveal-title">把中间放大以后</div>
+            <div class="tiny-stack">
+              <div class="tiny-row"><span class="who human">用户</span><span>说出一句自然语言</span></div>
+              <div class="tiny-row"><span class="who code">代码</span><span>先做分诊：这句话像哪类情况</span></div>
+              <div class="tiny-row"><span class="who code">代码</span><span>选 skill / mode / action</span></div>
+              <div class="tiny-row"><span class="who rule">规则包</span><span>把上交同学写好的规则塞进去</span></div>
+              <div class="tiny-row"><span class="who model">大模型</span><span>按这些限制写出最终回复</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="eight">
+      <div class="kicker">Part 1</div>
+      <h2>这不是 1 个知识点，是 8 个零件。</h2>
+      <p class="section-lead">把它想成一台机器。每个零件都很简单，但它们拼起来以后，才会变成你看到的“AI 回复”。</p>
+
+      <div class="legend" aria-label="角色图例">
+        <span class="who human">人输入</span>
+        <span class="who code">代码判断</span>
+        <span class="who rule">规则材料</span>
+        <span class="who model">大模型写作</span>
+      </div>
+
+      <div class="concept-grid">
+        <article class="concept human">
+          <div>
+            <div class="topline"><span class="index">1</span><span class="who human">用户</span></div>
+            <h3>用户输入</h3>
+            <p>就是用户在 ChatBox 里打的那句话。它通常很自然、很乱、很口语。</p>
+          </div>
+          <div class="analogy">像一个人走进前台说：“我现在很乱，不知道怎么办。”</div>
+        </article>
+
+        <article class="concept code">
+          <div>
+            <div class="topline"><span class="index">2</span><span class="who code">代码</span></div>
+            <h3>代码</h3>
+            <p>代码不是 AI。它不负责温柔地聊天，只负责按固定流程检查信号。</p>
+          </div>
+          <div class="analogy">像前台分诊员：不治疗，只先判断该去哪一队。</div>
+        </article>
+
+        <article class="concept code">
+          <div>
+            <div class="topline"><span class="index">3</span><span class="who code">代码</span></div>
+            <h3>判断情况</h3>
+            <p>不是深刻理解人生，而是先分类：危机？恐慌？自责？混乱？决策纠结？</p>
+          </div>
+          <div class="analogy">像看症状标签：发烧、胸闷、外伤，先分清轻重缓急。</div>
+        </article>
+
+        <article class="concept rule">
+          <div>
+            <div class="topline"><span class="index">4</span><span class="who rule">规则</span></div>
+            <h3>skill</h3>
+            <p>skill 是“应对方式”。比如先听、先稳身体、先处理风险、先理线头。</p>
+          </div>
+          <div class="analogy">像科室：急诊、呼吸调整、倾听、拆问题、看选择。</div>
+        </article>
+
+        <article class="concept blue">
+          <div>
+            <div class="topline"><span class="index">5</span><span class="who code">代码</span></div>
+            <h3>mode</h3>
+            <p>mode 是“这一轮要说多深”。fast 轻一点，slow 才深入一点。</p>
+          </div>
+          <div class="analogy">像老师讲题：先给提示，还是展开完整推导。</div>
+        </article>
+
+        <article class="concept blue">
+          <div>
+            <div class="topline"><span class="index">6</span><span class="who code">代码</span></div>
+            <h3>action</h3>
+            <p>action 是“这一轮具体做什么”。正常回应、问一个缩窄问题、检查安全、修复错位。</p>
+          </div>
+          <div class="analogy">像下一步动作：问一句、先停下、转急救、重新确认。</div>
+        </article>
+
+        <article class="concept rule">
+          <div>
+            <div class="topline"><span class="index">7</span><span class="who rule">规则包</span></div>
+            <h3>拼提示词</h3>
+            <p>大模型不只看到用户原话。代码会把用户话、路由结果、skill 规则一起打包。</p>
+          </div>
+          <div class="analogy">像把病历、分诊结果、注意事项放进一个文件夹。</div>
+        </article>
+
+        <article class="concept model">
+          <div>
+            <div class="topline"><span class="index">8</span><span class="who model">大模型</span></div>
+            <h3>最终回复</h3>
+            <p>大模型负责把前面选好的方向，写成用户能读懂的一句话或一段话。</p>
+          </div>
+          <div class="analogy">像会表达的人，拿着工单写出最终对话。</div>
+        </article>
+      </div>
+    </section>
+
+    <section id="assemble">
+      <div class="kicker">Part 2</div>
+      <h2>现在把 8 个零件一层层拼起来。</h2>
+      <p class="section-lead">你可以先只看左边的步骤。右边是同一个例子如何一步步从“用户一句话”变成“AI 回复”。</p>
+
+      <div class="build">
+        <div class="steps">
+          <div class="step-card">
+            <span class="index">1</span>
+            <div><h3>用户先说一句话</h3><p>这是唯一真正来自普通用户的输入。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">2</span>
+            <div><h3>代码像分诊台一样检查</h3><p>它先看有没有高优先级信号，比如风险或高唤醒。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">3</span>
+            <div><h3>代码选 skill</h3><p>如果用户说“脑子很乱”，通常不是先做决定，而是先 untangle。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">4</span>
+            <div><h3>代码选 mode</h3><p>第一轮通常 fast：短一点、轻一点，不要马上长篇分析。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">5</span>
+            <div><h3>代码选 action</h3><p>如果信号混在一起，就先 narrowing-question，只问一个缩窄问题。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">6</span>
+            <div><h3>代码打包提示词</h3><p>把用户原话、路由决定、上交同学写好的 skill 规则一起给大模型。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">7</span>
+            <div><h3>大模型写回复</h3><p>它不是自由发挥，而是在这些限制下写自然语言。</p></div>
+          </div>
+          <div class="step-card">
+            <span class="index">8</span>
+            <div><h3>用户看到 AI 回复</h3><p>用户只看到最后一句，但看不到中间这些判断。</p></div>
+          </div>
+        </div>
+
+        <div class="machine" aria-label="示例拼装过程">
+          <div class="machine-title">同一个例子：一步步拼装</div>
+          <div class="assembly">
+            <div class="assembly-row">
+              <div class="assembly-label" style="background: var(--human);">用户话</div>
+              <div class="assembly-text">“我现在脑子很乱，也不知道该不该继续这段关系。”</div>
+            </div>
+            <div class="connector"></div>
+            <div class="assembly-row">
+              <div class="assembly-label" style="background: var(--code);">代码检查</div>
+              <div class="assembly-text">没有明显危机；没有明显恐慌；有“脑子很乱”；也有“该不该”。</div>
+            </div>
+            <div class="connector"></div>
+            <div class="assembly-row">
+              <div class="assembly-label" style="background: var(--rule);">skill</div>
+              <div class="assembly-text">优先 untangle，因为问题还混在一起，不适合直接 face-decision。</div>
+            </div>
+            <div class="connector"></div>
+            <div class="assembly-row">
+              <div class="assembly-label" style="background: var(--blue);">mode/action</div>
+              <div class="assembly-text">fast + narrowing-question：轻一点，只问一个缩窄问题。</div>
+            </div>
+            <div class="connector"></div>
+            <div class="assembly-row">
+              <div class="assembly-label" style="background: var(--model);">最终回复</div>
+              <div class="assembly-text">“我先不急着帮你做决定。我们先抓一根线：现在更卡你的是事情太乱，还是已经在两个选择之间拉扯？”</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="who">
+      <div class="kicker">Part 3</div>
+      <h2>最关键的问题：谁在做决策？</h2>
+      <p class="section-lead">这件事一定要讲清楚：在这个评估代码里，路由主要是代码在做；大模型主要是在路由结果出来后负责写回复。</p>
+
+      <div class="comparison">
+        <div class="compare-box">
+          <div class="compare-head code">代码负责：像分诊台</div>
+          <div class="compare-body">
+            <div class="task">检查用户话里有没有风险、高唤醒、自责、混乱、决策纠结。</div>
+            <div class="task">按照优先级选 skill，比如 crisis 高于 calm-body，高于 listen。</div>
+            <div class="task">决定 mode：这一轮 fast 还是 slow。</div>
+            <div class="task">决定 action：正常回应、缩窄问题、安全复核、修复错位。</div>
+          </div>
+        </div>
+
+        <div class="compare-box">
+          <div class="compare-head model">大模型负责：像表达者</div>
+          <div class="compare-body">
+            <div class="task">读代码打包好的提示词。</div>
+            <div class="task">遵守被选中的 skill 规则。</div>
+            <div class="task">把“应该怎么做”写成自然、能被用户接受的话。</div>
+            <div class="task">它写最终回复，但不应该自己随便换路线。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-box">
+        费曼版一句话：代码决定“这轮该往哪儿走”，大模型决定“这句话怎么说出来”。
+      </div>
+    </section>
+
+    <section id="source">
+      <div class="kicker">Part 3.5</div>
+      <h2>源码拆解：这里说的“代码”到底是什么？</h2>
+      <p class="section-lead">这里的“代码”主要指 `expert-eval/runner.py`。它不是聊天 UI，也不是大模型本身。它像一个评测运行器：读规则、读用户输入、做路由、拼提示词、调用 MiniMax。</p>
+
+      <div class="source-grid">
+        <article class="source-card">
+          <div class="source-head">
+            <span>1. 信号表：代码先看关键词</span>
+            <span class="source-file">runner.py · SIGNAL_LIBRARY</span>
+          </div>
+          <div class="source-body">
+            <p>源码里有一张“信号表”。它把用户话里的词，先粗分成危机、高唤醒、自责、混乱、决策等类别。</p>
+            <pre class="code">SIGNAL_LIBRARY = {
+  "crisis": ["不想活", "想死", "自杀", "做傻事", "家暴"],
+  "calm-body": ["心慌", "发抖", "喘不过气", "脑子空白"],
+  "validation": ["是不是我太差", "都是我的错", "我真没用"],
+  "untangle": ["我脑子很乱", "讲不清", "搅在一起"],
+  "face-decision": ["不知道怎么选", "要不要", "该不该"]
+}</pre>
+            <p>费曼版：这不是“理解全部人生”，而是先贴标签。像急诊台先问：流血吗？胸痛吗？能呼吸吗？</p>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <div class="source-head">
+            <span>2. 路由结果：代码输出一张小工单</span>
+            <span class="source-file">runner.py · RouteDecision</span>
+          </div>
+          <div class="source-body">
+            <p>判断完以后，代码不会直接写回复。它先产出一张“本轮该怎么做”的小工单。</p>
+            <pre class="code">RouteDecision(
+  skill="untangle",
+  mode="fast",
+  action="narrowing-question",
+  reason="问题混杂，先理线头",
+  recheck_safety=False
+)</pre>
+            <p>费曼版：医生还没开口安慰你，前台先在单子上写：去哪个科、急不急、下一步做什么。</p>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <div class="source-head">
+            <span>3. 判断顺序：代码不是平等比较</span>
+            <span class="source-file">runner.py · decide()</span>
+          </div>
+          <div class="source-body">
+            <p>路由最关键的是顺序。危机永远先看，然后才是高唤醒，再往后才是普通陪伴 skill。</p>
+            <pre class="code">def decide(user_text, state):
+  signals = collect_matched_signals(user_text)
+
+  if crisis_lock_active:
+    return skill="crisis", action="safety-recheck"
+  if crisis_match:
+    return skill="crisis"
+  if calm_body_lock_active:
+    return skill="calm-body"
+  if calm_match:
+    return skill="calm-body"
+  if feedback_override:
+    return action="repair-then-reroute"
+  if validation + untangle + decision 重叠:
+    return action="narrowing-question"
+  ...</pre>
+            <p>费曼版：不是“哪个词看起来多就选谁”，而是先问“哪个问题最不能漏”。</p>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <div class="source-head rule">
+            <span>4. skill 文案：上交同学写的规则在哪里</span>
+            <span class="source-file">skills/*/SKILL.md</span>
+          </div>
+          <div class="source-body">
+            <p>每个 skill 都是一份规则说明。比如什么时候用、目标是什么、禁忌是什么、可以怎么说。</p>
+            <pre class="code">skills/
+  listen/SKILL.md
+  validation/SKILL.md
+  untangle/SKILL.md
+  face-decision/SKILL.md
+  calm-body/SKILL.md
+  crisis/SKILL.md
+  base-communication/SKILL.md</pre>
+            <p>费曼版：skill 不是一段神奇代码，而是“这类情况应该怎么处理”的操作手册。</p>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <div class="source-head rule">
+            <span>5. 提示词拼装：把规则装进大模型输入</span>
+            <span class="source-file">runner.py · build_system_prompt()</span>
+          </div>
+          <div class="source-body">
+            <p>这一步把常驻 skill、当前 skill、路由原因、mode、action、上下文记忆都拼成 system prompt。</p>
+            <pre class="code">base_skill = load_skill_text("base-communication")
+routed_skill = load_skill_text(route.skill)
+
+prompt = f"""
+当前主 skill 是 {route.skill}
+当前 mode 是 {route.mode}
+当前 action 是 {route.action}
+当前路由原因：{route.reason}
+
+=== ALWAYS ON ===
+{base_skill}
+
+=== CURRENT PRIMARY SKILL ===
+{routed_skill}
+"""</pre>
+            <p>费曼版：不是大模型自己去翻所有规则，而是代码把“本轮该看的那几页”夹好递过去。</p>
+          </div>
+        </article>
+
+        <article class="source-card">
+          <div class="source-head model">
+            <span>6. 大模型调用：最后才轮到模型写话</span>
+            <span class="source-file">runner.py · minimax_chat()</span>
+          </div>
+          <div class="source-body">
+            <p>模型配置在代码里。这里用的是 MiniMax 接口，模型名、温度、输出上限会影响表达，但不等于路由规则。</p>
+            <pre class="code">DEFAULT_CONFIG = {
+  "model": "MiniMax-M2.5",
+  "temperature": 0.7,
+  "max_tokens": 1600
+}
+
+payload = {
+  "model": config["model"],
+  "messages": messages,
+  "temperature": config["temperature"],
+  "max_tokens": config["max_tokens"]
+}</pre>
+            <p>费曼版：模型像“写作者”。它的文笔会受模型和温度影响，但它拿到的任务单更决定它该写什么方向。</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="key-table" aria-label="大模型关键与非关键内容">
+        <div class="key-row">
+          <div class="key-cell head">对象</div>
+          <div class="key-cell head">关键内容</div>
+          <div class="key-cell head">相对不关键，或不是第一优先级</div>
+        </div>
+        <div class="key-row">
+          <div class="key-cell">代码</div>
+          <div class="key-cell">信号表、优先级顺序、状态锁定、handoff、mode/action 判断。</div>
+          <div class="key-cell">具体文件有多长、函数名字是否漂亮，不是产品排查的第一入口。</div>
+        </div>
+        <div class="key-row">
+          <div class="key-cell">规则</div>
+          <div class="key-cell">skill 的触发条件、目标、禁忌、话术边界。</div>
+          <div class="key-cell">话术是否很文学化不是最关键，先看边界是否清楚。</div>
+        </div>
+        <div class="key-row">
+          <div class="key-cell">大模型</div>
+          <div class="key-cell">它看到的 prompt 是否包含正确路由、正确 skill、正确限制；最终回复是否遵守。</div>
+          <div class="key-cell">模型名和温度会影响质量，但如果路由错了，换模型通常救不回来。</div>
+        </div>
+        <div class="key-row">
+          <div class="key-cell">评估</div>
+          <div class="key-cell">有没有覆盖真实失败场景；有没有检查 route_fit、pacing、safety。</div>
+          <div class="key-cell">只看“回复好不好听”不够，因为真正的问题可能在路由层。</div>
+        </div>
+      </div>
+
+      <div class="note-box">
+        一句话：这套系统不是“一个大模型在自由思考”。它更像“代码分诊 + 规则手册 + 大模型表达 + 评估复盘”的组合。
+      </div>
+    </section>
+
+    <section id="prompt">
+      <div class="kicker">Part 4</div>
+      <h2>“拼提示词”到底是什么意思？</h2>
+      <p class="section-lead">这一步特别容易听起来玄。其实它就是把几张纸放进同一个文件夹，然后交给大模型。</p>
+
+      <div class="prompt-visual">
+        <div class="packet">
+          <div class="packet-head">交给大模型的提示词包</div>
+          <div class="packet-body">
+            <div class="ingredient human">用户原话：我现在脑子很乱，也不知道该不该继续这段关系。</div>
+            <div class="ingredient code">代码决定：skill = untangle，mode = fast，action = narrowing-question。</div>
+            <div class="ingredient rule">上交规则：一次只问一个问题；不要直接做决定；先理线头。</div>
+            <div class="ingredient rule">边界提醒：不要补关系设定，不要长篇分析，不要替用户下结论。</div>
+          </div>
+        </div>
+
+        <div>
+          <div class="reply">
+            大模型看到这个包以后，才写出最后回复：<br><br>
+            “我先不急着帮你做决定。我们先抓一根线：现在更卡你的是事情太乱，还是已经在两个选择之间拉扯？”
+          </div>
+          <div class="note-box">
+            所以：用户看到的是一句自然回复；系统内部其实先给大模型发了一份“带规则的任务单”。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="chain">
+      <div class="kicker">Part 5</div>
+      <h2>最后，把完整链路放在一张表里。</h2>
+      <p class="section-lead">这张表就是你后面诊断产品问题的地图。哪里坏了，就回到哪一层看。</p>
+
+      <div class="final-chain">
+        <div class="chain-row">
+          <div class="chain-num">1</div>
+          <div class="chain-who" style="background: var(--human);">用户</div>
+          <div class="chain-desc">输入一句自然语言。它可能很短、很乱、带情绪，也可能同时包含多个信号。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">2</div>
+          <div class="chain-who" style="background: var(--rule);">上交同学</div>
+          <div class="chain-desc">预先写好了规则：有哪些 skill、优先级是什么、每个 skill 应该怎么说、不能怎么说。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">3</div>
+          <div class="chain-who" style="background: var(--code);">代码</div>
+          <div class="chain-desc">读取用户输入，检查信号，先做“这句话属于什么情况”的初步分类。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">4</div>
+          <div class="chain-who" style="background: var(--code);">代码</div>
+          <div class="chain-desc">根据优先级选出 skill / mode / action。这一步是路由的核心。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">5</div>
+          <div class="chain-who" style="background: var(--rule);">规则包</div>
+          <div class="chain-desc">把用户原话、路由结果、skill 文案、边界限制拼成提示词。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">6</div>
+          <div class="chain-who" style="background: var(--model);">大模型</div>
+          <div class="chain-desc">根据提示词生成最终回复。它负责表达，但方向已经被前面约束。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">7</div>
+          <div class="chain-who" style="background: var(--human);">用户</div>
+          <div class="chain-desc">只看到最终 AI 回复，看不到中间的判断、路由、提示词拼装。</div>
+        </div>
+        <div class="chain-row">
+          <div class="chain-num">8</div>
+          <div class="chain-who" style="background: var(--blue);">评估</div>
+          <div class="chain-desc">再检查刚才有没有选对 skill、节奏是否合适、安全有没有漏、用户是否愿意继续。</div>
+        </div>
+      </div>
+
+      <div class="note-box">
+        以后你看到一个坏回复，不要直接问“AI 怎么这么笨”。先问：是用户输入没有被正确分类？是代码路由错了？是 skill 规则写得不清？是提示词拼装错？还是大模型表达没跟上？
+      </div>
+    </section>
+
+    <section id="architecture">
+      <div class="kicker">Part 6</div>
+      <h2>总流程图：把整套机制放在一张图里。</h2>
+      <p class="section-lead">这张图只看整体，不看细节。你可以把它当成之后排查问题的总地图。</p>
+
+      <div class="architecture" aria-label="交大代码工作机制总流程图">
+        <div class="arch-head">
+          <div class="human">人：输入与看到结果</div>
+          <div class="rule">上交同学：预先写规则</div>
+          <div class="code">代码：做路由决策</div>
+          <div class="model">大模型：写最终回复</div>
+        </div>
+
+        <div class="arch-body">
+          <div class="arch-flow">
+            <div class="arch-node human">
+              <strong>用户输入</strong>
+              “我现在脑子很乱，也不知道该不该继续。”
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node code">
+              <strong>代码分诊</strong>
+              检查危机、高唤醒、自责、混乱、决策纠结。
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node code">
+              <strong>路由结果</strong>
+              选出 skill / mode / action。
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node model">
+              <strong>大模型回复</strong>
+              按规则写出用户能读懂的话。
+            </div>
+          </div>
+
+          <div class="arch-side">
+            <div class="arch-node rule">
+              <strong>规则来源</strong>
+              skills、AGENTS.md、bundle.json。
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node code">
+              <strong>进入提示词包</strong>
+              用户原话 + 路由结果 + skill 文案 + 边界限制。
+            </div>
+          </div>
+
+          <div class="arch-side">
+            <div class="arch-node eval">
+              <strong>评估案例</strong>
+              built-in cases 和 free-chat 记录。
+            </div>
+            <div class="arch-arrow">→</div>
+            <div class="arch-node eval">
+              <strong>回看表现</strong>
+              route_fit、pacing、safety、usefulness 等指标。
+            </div>
+          </div>
+        </div>
+
+        <div class="arch-note">
+          <b>一句话看懂：</b>上交同学先写“规则书”；用户说一句话；代码按规则做分诊和路由；代码把材料打包给大模型；大模型写出最终回复；评估系统再检查这次有没有走对。
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    文件：docs/sjtu-8-concepts-feynman.html。建议先看这份，再看 docs/sjtu-mechanism-visual.html。
+  </footer>
+</body>
+</html>

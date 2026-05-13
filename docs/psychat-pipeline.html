@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PsyChat 五模块流水线解读</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --indigo: #4f46e5;
+    --indigo-light: #e0e7ff;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    font-size: 18px;
+    font-weight: 650;
+    margin-bottom: 16px;
+    letter-spacing: -0.3px;
+  }
+  .card h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .card p, .card li {
+    font-size: 14.5px;
+    color: #44403c;
+  }
+  .card ul { padding-left: 20px; }
+  .card li { margin-bottom: 4px; }
+
+  /* 30-second TLDR */
+  .tldr {
+    background: linear-gradient(135deg, #fefce8 0%, #fff7ed 100%);
+    border: 1px solid #fde68a;
+  }
+  .tldr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .tldr-item {
+    background: rgba(255,255,255,0.7);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .tldr-item .num {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .tldr-item .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+  }
+
+  /* Pipeline diagram */
+  .pipeline {
+    display: flex;
+    gap: 0;
+    margin: 20px 0 16px;
+    position: relative;
+    align-items: stretch;
+  }
+  .pipeline::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--blue), var(--purple), var(--teal), var(--amber), var(--green));
+    z-index: 0;
+    transform: translateY(-50%);
+  }
+  .pipe-stage {
+    flex: 1;
+    position: relative;
+    z-index: 1;
+    text-align: center;
+  }
+  .pipe-box {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 14px 8px;
+    margin: 0 4px;
+    box-shadow: var(--shadow-md);
+    border: 2px solid;
+    min-height: 130px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .pipe-stage:nth-child(1) .pipe-box { border-color: var(--blue); }
+  .pipe-stage:nth-child(2) .pipe-box { border-color: var(--purple); }
+  .pipe-stage:nth-child(3) .pipe-box { border-color: var(--teal); }
+  .pipe-stage:nth-child(4) .pipe-box { border-color: var(--amber); }
+  .pipe-stage:nth-child(5) .pipe-box { border-color: var(--green); }
+
+  .pipe-num {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+  .pipe-stage:nth-child(1) .pipe-num { color: var(--blue); }
+  .pipe-stage:nth-child(2) .pipe-num { color: var(--purple); }
+  .pipe-stage:nth-child(3) .pipe-num { color: var(--teal); }
+  .pipe-stage:nth-child(4) .pipe-num { color: var(--amber); }
+  .pipe-stage:nth-child(5) .pipe-num { color: var(--green); }
+
+  .pipe-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .pipe-io {
+    font-size: 10.5px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+  .pipe-io strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .pipe-arrow {
+    position: absolute;
+    right: -10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: var(--text-secondary);
+    z-index: 2;
+  }
+
+  /* Module detail cards */
+  .module-card {
+    border-left: 4px solid;
+  }
+  .module-card.m1 { border-left-color: var(--blue); }
+  .module-card.m2 { border-left-color: var(--purple); }
+  .module-card.m3 { border-left-color: var(--teal); }
+  .module-card.m4 { border-left-color: var(--amber); }
+  .module-card.m5 { border-left-color: var(--green); }
+
+  .module-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .module-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+  }
+  .m1 .module-badge { background: var(--blue-light); color: var(--blue); }
+  .m2 .module-badge { background: var(--purple-light); color: var(--purple); }
+  .m3 .module-badge { background: var(--teal-light); color: var(--teal); }
+  .m4 .module-badge { background: var(--amber-light); color: var(--amber); }
+  .m5 .module-badge { background: var(--green-light); color: var(--green); }
+
+  .io-box {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 12px 0;
+  }
+  .io-item {
+    background: var(--bg);
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+  }
+  .io-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .io-content {
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .tech-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+    background: var(--slate-light);
+    color: var(--slate);
+    margin-right: 4px;
+    margin-bottom: 4px;
+  }
+
+  /* Behavior taxonomy */
+  .taxonomy {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 14px;
+  }
+  @media (max-width: 640px) {
+    .taxonomy { grid-template-columns: 1fr; }
+  }
+  .tax-group {
+    border-radius: 12px;
+    padding: 18px;
+    border: 1px solid var(--border);
+  }
+  .tax-positive { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border-color: #bbf7d0; }
+  .tax-negative { background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%); border-color: #fecaca; }
+  .tax-support { background: linear-gradient(135deg, #eff6ff 0%, #eef2ff 100%); border-color: #bfdbfe; }
+  .tax-challenge { background: linear-gradient(135deg, #faf5ff 0%, #fdf4ff 100%); border-color: #e9d5ff; }
+
+  .tax-group h4 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tax-count {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .tax-positive .tax-count { background: #dcfce7; color: var(--green); }
+  .tax-negative .tax-count { background: #fee2e2; color: var(--red); }
+  .tax-support .tax-count { background: var(--blue-light); color: var(--blue); }
+  .tax-challenge .tax-count { background: var(--purple-light); color: var(--purple); }
+
+  .tax-item {
+    font-size: 13px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+    display: flex;
+    gap: 8px;
+  }
+  .tax-item:last-child { border-bottom: none; }
+  .tax-name {
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 90px;
+  }
+  .tax-def {
+    color: var(--text-secondary);
+    font-size: 12px;
+  }
+
+  /* Results table */
+  .results-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+    margin-top: 12px;
+  }
+  .results-table th {
+    background: #f5f5f4;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+  }
+  .results-table th:first-child { border-radius: 8px 0 0 0; }
+  .results-table th:last-child { border-radius: 0 8px 0 0; }
+  .results-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:last-child td:first-child { border-radius: 0 0 0 8px; }
+  .results-table tr:last-child td:last-child { border-radius: 0 0 8px 0; }
+  .results-table .highlight {
+    font-weight: 700;
+    color: var(--green);
+  }
+
+  /* Bar chart */
+  .bar-chart { margin: 16px 0 8px; }
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    gap: 10px;
+  }
+  .bar-label {
+    width: 140px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .bar-track {
+    flex: 1;
+    height: 28px;
+    background: #f5f5f4;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    transition: width 0.6s ease;
+    min-width: 50px;
+  }
+  .bar-value {
+    font-size: 12px;
+    color: var(--text-secondary);
+    width: 50px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Mapping table for moodcoco */
+  .mapping-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13.5px;
+    margin-top: 12px;
+  }
+  .mapping-table th {
+    background: #f5f5f4;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-secondary);
+  }
+  .mapping-table th:first-child { border-radius: 8px 0 0 0; }
+  .mapping-table th:last-child { border-radius: 0 8px 0 0; }
+  .mapping-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    font-size: 13px;
+  }
+  .mapping-table tr:last-child td { border-bottom: none; }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-weight: 500;
+    margin: 1px 2px;
+  }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-teal { background: var(--teal-light); color: var(--teal); }
+  .tag-amber { background: var(--amber-light); color: var(--amber); }
+  .tag-green { background: var(--green-light); color: var(--green); }
+  .tag-red { background: var(--red-light); color: var(--red); }
+  .tag-pink { background: var(--pink-light); color: var(--pink); }
+  .tag-slate { background: var(--slate-light); color: var(--slate); }
+
+  .callout {
+    background: var(--indigo-light);
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+  .callout strong { color: var(--indigo); }
+
+  .note {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .pipeline { flex-direction: column; gap: 10px; }
+    .pipeline::before { display: none; }
+    .pipe-arrow { display: none; }
+    .pipe-box { min-height: auto; }
+    .io-box { grid-template-columns: 1fr; }
+    .bar-label { width: 100px; font-size: 11px; }
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>PsyChat 五模块流水线解读</h1>
+    <p class="subtitle">PsyChat: A Client-Centric Dialogue System for Mental Health Support</p>
+    <div class="meta">
+      <span>Qiu, Li, Ma, Lan</span>
+      <span>arXiv 2312.04262</span>
+      <span>CSCWD 2024</span>
+      <span>2024-03 v2</span>
+    </div>
+  </div>
+
+  <!-- 30 秒版本 -->
+  <div class="card tldr">
+    <h2>30 秒版本</h2>
+    <p>现有心理对话系统只关注咨询师策略，忽略来访者行为。PsyChat 用五模块流水线先识别来访者在做什么（11 种行为），再选策略（12 种），再生成 10 条候选回复并排序选最优。核心观点：<strong>不先理解来访者，策略选择就是盲的。</strong></p>
+    <div class="tldr-grid">
+      <div class="tldr-item">
+        <div class="num">5</div>
+        <div class="label">流水线模块</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">11</div>
+        <div class="label">来访者行为类别</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">12</div>
+        <div class="label">咨询师策略类别</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">85.97%</div>
+        <div class="label">行为识别准确率</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">80.15%</div>
+        <div class="label">策略选择准确率</div>
+      </div>
+      <div class="tldr-item">
+        <div class="num">27.6</div>
+        <div class="label">ROUGE-L (vs 12.4 baseline)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 五模块流水线架构图 -->
+  <div class="card">
+    <h2>五模块流水线架构</h2>
+    <p style="margin-bottom:16px;">用户每发一条消息，依次经过五个模块。前两步是分析，第三步组装 prompt，第四步批量生成，第五步精选最优。</p>
+
+    <div class="pipeline">
+      <div class="pipe-stage">
+        <div class="pipe-box">
+          <div class="pipe-num">M1</div>
+          <div class="pipe-title">来访者行为<br>识别</div>
+          <div class="pipe-io"><strong>In:</strong> 对话上下文 + 当前话语<br><strong>Out:</strong> 行为标签</div>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-box">
+          <div class="pipe-num">M2</div>
+          <div class="pipe-title">咨询师策略<br>选择</div>
+          <div class="pipe-io"><strong>In:</strong> 对话上下文 + 行为标签<br><strong>Out:</strong> 策略标签</div>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-box">
+          <div class="pipe-num">M3</div>
+          <div class="pipe-title">输入<br>组装器</div>
+          <div class="pipe-io"><strong>In:</strong> 上下文 + 标签 + 示例<br><strong>Out:</strong> Instruction prompt</div>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-box">
+          <div class="pipe-num">M4</div>
+          <div class="pipe-title">回复<br>生成器</div>
+          <div class="pipe-io"><strong>In:</strong> Instruction prompt<br><strong>Out:</strong> 10 条候选回复</div>
+        </div>
+        <span class="pipe-arrow">&rarr;</span>
+      </div>
+      <div class="pipe-stage">
+        <div class="pipe-box">
+          <div class="pipe-num">M5</div>
+          <div class="pipe-title">回复<br>筛选器</div>
+          <div class="pipe-io"><strong>In:</strong> 10 条候选 + 上下文<br><strong>Out:</strong> 最优回复</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>关键设计决策：</strong>M1 和 M2 独立于 LLM 生成环节。即使换掉底层 LLM（M4），行为理解和策略选择能力不受影响。这让系统可以在小模型上保持专业判断。
+    </div>
+  </div>
+
+  <!-- M1: 来访者行为识别 -->
+  <div class="section-title">各模块详解</div>
+
+  <div class="card module-card m1">
+    <div class="module-header">
+      <span class="module-badge">M1</span>
+      <h2 style="margin-bottom:0">来访者行为识别 Client Behavior Recognition</h2>
+    </div>
+
+    <p>识别来访者当前话语属于哪种行为模式。这是 PsyChat 最核心的创新点：<strong>先看来访者在做什么，才能决定咨询师该做什么。</strong></p>
+
+    <div class="io-box">
+      <div class="io-item">
+        <div class="io-label">输入</div>
+        <div class="io-content">对话历史 [SEP] 当前来访者话语</div>
+      </div>
+      <div class="io-item">
+        <div class="io-label">输出</div>
+        <div class="io-content">11 个行为类别之一</div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>技术方案</strong></p>
+    <div>
+      <span class="tech-tag">Chinese RoBERTa-large</span>
+      <span class="tech-tag">全连接分类层</span>
+      <span class="tech-tag">85.97% Accuracy</span>
+    </div>
+
+    <p class="note">分类器在 18,824 条训练样本上训练，来自 Xinling 真实咨询数据集。行为分类法来自 Li et al. (2023) "Understanding Client Reactions in Online Mental Health Counseling"。</p>
+
+    <h3 style="margin-top:18px">来访者 11 种行为分类</h3>
+    <div class="taxonomy">
+      <div class="tax-group tax-positive">
+        <h4>积极反应 <span class="tax-count">5 类</span></h4>
+        <div class="tax-item"><span class="tax-name">确认 Confirming</span><span class="tax-def">理解/同意咨询师的表述</span></div>
+        <div class="tax-item"><span class="tax-name">提供信息 Giving Info</span><span class="tax-def">提供咨询师要求的信息</span></div>
+        <div class="tax-item"><span class="tax-name">合理请求 Request</span><span class="tax-def">寻求澄清、理解或建议</span></div>
+        <div class="tax-item"><span class="tax-name">延伸 Extending</span><span class="tax-def">同意并深入分析、反思自身认知/行为</span></div>
+        <div class="tax-item"><span class="tax-name">重新建构 Reformulating</span><span class="tax-def">内省咨询师干预后提出自己的观点或行为模式</span></div>
+      </div>
+      <div class="tax-group tax-negative">
+        <h4>消极反应 <span class="tax-count">6 类</span></h4>
+        <div class="tax-item"><span class="tax-name">困惑 Confusion</span><span class="tax-def">表示不理解或无法回答</span></div>
+        <div class="tax-item"><span class="tax-name">防御 Defending</span><span class="tax-def">坚持原有观点，美化/辩护自己</span></div>
+        <div class="tax-item"><span class="tax-name">自责/绝望 Self-criticism</span><span class="tax-def">自我批评、绝望、表示无法改变</span></div>
+        <div class="tax-item"><span class="tax-name">转移话题 Changing Topics</span><span class="tax-def">从当前问题转向其他话题</span></div>
+        <div class="tax-item"><span class="tax-name">焦点脱离 Disconnection</span><span class="tax-def">脱离讨论焦点，关注自己的兴趣</span></div>
+        <div class="tax-item"><span class="tax-name">讽刺回答 Sarcastic</span><span class="tax-def">表达不满，质疑或嘲讽咨询师的干预</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- M2: 咨询师策略选择 -->
+  <div class="card module-card m2">
+    <div class="module-header">
+      <span class="module-badge">M2</span>
+      <h2 style="margin-bottom:0">咨询师策略选择 Counselor Strategy Selection</h2>
+    </div>
+
+    <p>不使用传统分类器，而用<strong>稠密检索</strong>找到训练集中最相似的对话上下文，然后直接取该样本的策略标签。好处：不需要为策略训练单独的分类器，策略集合可以随数据集扩展。</p>
+
+    <div class="io-box">
+      <div class="io-item">
+        <div class="io-label">输入</div>
+        <div class="io-content">对话上下文 + 来访者行为标签</div>
+      </div>
+      <div class="io-item">
+        <div class="io-label">输出</div>
+        <div class="io-content">12 个策略类别之一 + 匹配的示例对话</div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>技术方案</strong></p>
+    <div>
+      <span class="tech-tag">BAAI/bge-large-zh-v1.5</span>
+      <span class="tech-tag">欧氏距离检索</span>
+      <span class="tech-tag">80.15% Accuracy</span>
+    </div>
+
+    <p class="note">检索库由训练集所有对话构建。推理时找到最相似的历史会话，取其策略标签作为本轮策略。副产品：匹配到的示例对话会传给 M3 做 few-shot demonstration。</p>
+
+    <h3 style="margin-top:18px">咨询师 12 种策略分类</h3>
+    <div class="taxonomy">
+      <div class="tax-group tax-support">
+        <h4>支持性策略 <span class="tax-count">8 种</span></h4>
+        <div class="tax-item"><span class="tax-name">重述 Restatement</span><span class="tax-def">反馈来访者话语的内容和含义</span></div>
+        <div class="tax-item"><span class="tax-name">情感反映 Reflection</span><span class="tax-def">明确反映来访者的情绪状态</span></div>
+        <div class="tax-item"><span class="tax-name">自我暴露 Self-disclosure</span><span class="tax-def">分享咨询师的个人经历/感受</span></div>
+        <div class="tax-item"><span class="tax-name">探索主观 Subj. Inquiry</span><span class="tax-def">探索来访者的想法、感受和推理</span></div>
+        <div class="tax-item"><span class="tax-name">探索客观 Obj. Inquiry</span><span class="tax-def">询问具体事实和基本信息</span></div>
+        <div class="tax-item"><span class="tax-name">肯定鼓励 Affirmation</span><span class="tax-def">肯定优点、正常化情绪、提供支持</span></div>
+        <div class="tax-item"><span class="tax-name">简短鼓励 Min. Encouragement</span><span class="tax-def">简短回应以鼓励继续倾诉</span></div>
+        <div class="tax-item"><span class="tax-name">直接回答 Answer</span><span class="tax-def">直接回应来访者对话题的提问</span></div>
+      </div>
+      <div class="tax-group tax-challenge">
+        <h4>挑战性策略 <span class="tax-count">4 种</span></h4>
+        <div class="tax-item"><span class="tax-name">解释 Interpretation</span><span class="tax-def">从超越来访者当前认知的角度提供新含义</span></div>
+        <div class="tax-item"><span class="tax-name">对质 Confrontation</span><span class="tax-def">指出不适应性信念、不一致或矛盾</span></div>
+        <div class="tax-item"><span class="tax-name">探索新行动 New Actions</span><span class="tax-def">引导来访者思考新行动或行为替代方案</span></div>
+        <div class="tax-item"><span class="tax-name">探索新视角 New Perspectives</span><span class="tax-def">邀请来访者从不同角度理解经历</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- M3: 输入组装器 -->
+  <div class="card module-card m3">
+    <div class="module-header">
+      <span class="module-badge">M3</span>
+      <h2 style="margin-bottom:0">输入组装器 Input Packer</h2>
+    </div>
+
+    <p>将前两个模块的输出 + 检索到的示例对话 + 原始对话历史，打包成一条结构化的 instruction-following prompt。</p>
+
+    <div class="io-box">
+      <div class="io-item">
+        <div class="io-label">输入</div>
+        <div class="io-content">行为标签 + 策略标签 + 对话历史 + 检索示例</div>
+      </div>
+      <div class="io-item">
+        <div class="io-label">输出</div>
+        <div class="io-content">格式化的 Instruction Prompt</div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0"><strong>Prompt 结构</strong></p>
+    <div style="background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; font-family: 'SF Mono', 'Menlo', monospace; font-size: 12px; line-height: 1.7;">
+      <div style="color:var(--purple);font-weight:600;">// 1. 角色定义</div>
+      <div>你是一名专业心理咨询师，正在为来访者提供支持...</div>
+      <div style="color:var(--purple);font-weight:600;margin-top:8px;">// 2. 示例对话（from M2 retrieval）</div>
+      <div>Demonstration: 来访者说"..."  策略: [情感反映]  回复: "..."</div>
+      <div style="color:var(--purple);font-weight:600;margin-top:8px;">// 3. 当前对话历史</div>
+      <div>来访者行为: [防御]  |  建议策略: [解释]</div>
+      <div>对话: 来访者: "..." / 咨询师: "..." / 来访者: "..."</div>
+      <div style="color:var(--purple);font-weight:600;margin-top:8px;">// 4. 生成指令</div>
+      <div>请根据以上信息生成咨询师的回复。</div>
+    </div>
+
+    <p class="note">关键设计：示例对话来自 M2 的检索结果，不是随机选取。这保证了 few-shot demonstration 与当前场景高度相似。</p>
+  </div>
+
+  <!-- M4: 回复生成器 -->
+  <div class="card module-card m4">
+    <div class="module-header">
+      <span class="module-badge">M4</span>
+      <h2 style="margin-bottom:0">回复生成器 Response Generator</h2>
+    </div>
+
+    <p>基于组装好的 prompt，一次性生成 <strong>10 条候选回复</strong>，供 M5 筛选。</p>
+
+    <div class="io-box">
+      <div class="io-item">
+        <div class="io-label">输入</div>
+        <div class="io-content">M3 组装的 Instruction Prompt</div>
+      </div>
+      <div class="io-item">
+        <div class="io-label">输出</div>
+        <div class="io-content">10 条候选咨询回复</div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>技术方案</strong></p>
+    <div style="margin-bottom:10px">
+      <span class="tech-tag">ChatGLM2-6B</span>
+      <span class="tech-tag">LoRA 微调</span>
+      <span class="tech-tag">8192 token 上下文</span>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>两阶段训练</strong></p>
+    <div class="io-box">
+      <div class="io-item" style="border-left: 3px solid var(--amber);">
+        <div class="io-label">Stage 1 预热</div>
+        <div class="io-content">
+          <strong>SmileChat 数据集</strong><br>
+          310,087 条合成多轮对话<br>
+          让模型学会"心理咨询对话"的基本模式
+        </div>
+      </div>
+      <div class="io-item" style="border-left: 3px solid var(--green);">
+        <div class="io-label">Stage 2 精调</div>
+        <div class="io-content">
+          <strong>Xinling 真实咨询数据</strong><br>
+          15,850 条真实咨询师对话<br>
+          在真实数据上对齐专业质量
+        </div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>LoRA 超参</strong></p>
+    <div>
+      <span class="tech-tag">Rank: 16</span>
+      <span class="tech-tag">Alpha: 64</span>
+      <span class="tech-tag">Dropout: 0.1</span>
+      <span class="tech-tag">Epochs: 2</span>
+      <span class="tech-tag">LR: 1e-4</span>
+      <span class="tech-tag">Batch: 1</span>
+      <span class="tech-tag">所有线性层</span>
+    </div>
+  </div>
+
+  <!-- M5: 回复筛选器 -->
+  <div class="card module-card m5">
+    <div class="module-header">
+      <span class="module-badge">M5</span>
+      <h2 style="margin-bottom:0">回复筛选器 Response Selection</h2>
+    </div>
+
+    <p>从 10 条候选中选出最优。<strong>解耦生成与质控</strong>：生成模型只管数量，筛选模型只管质量。</p>
+
+    <div class="io-box">
+      <div class="io-item">
+        <div class="io-label">输入</div>
+        <div class="io-content">对话历史 + 10 条候选回复</div>
+      </div>
+      <div class="io-item">
+        <div class="io-label">输出</div>
+        <div class="io-content">得分最高的 1 条回复</div>
+      </div>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>技术方案</strong></p>
+    <div style="margin-bottom:10px">
+      <span class="tech-tag">Cross-Encoder</span>
+      <span class="tech-tag">对话历史 + 候选回复 → 向量 → 线性层 → 得分</span>
+    </div>
+
+    <p style="margin:10px 0 6px"><strong>训练方式</strong></p>
+    <ul>
+      <li>正样本：ground truth 回复（1 条）</li>
+      <li>负样本：其余 9 条候选（1:9 比例）</li>
+      <li>损失函数：Cross-entropy loss</li>
+      <li><strong>Recall@1/10 = 81.84%</strong></li>
+    </ul>
+  </div>
+
+  <!-- 实验结果 -->
+  <div class="card">
+    <h2>实验结果</h2>
+
+    <h3>自动评估指标</h3>
+    <p style="margin-bottom:12px;">Baseline = ChatGLM2-6B 原始模型，Fine-tuned = 完整 PsyChat 流水线。</p>
+
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>指标</th>
+          <th>Baseline</th>
+          <th>PsyChat</th>
+          <th>提升</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Perplexity &darr;</td>
+          <td>3.39</td>
+          <td class="highlight">1.26</td>
+          <td style="color:var(--green)">-62.8%</td>
+        </tr>
+        <tr>
+          <td>BLEU-1</td>
+          <td>9.1</td>
+          <td class="highlight">24.1</td>
+          <td style="color:var(--green)">+164.8%</td>
+        </tr>
+        <tr>
+          <td>BLEU-2</td>
+          <td>4.1</td>
+          <td class="highlight">11.6</td>
+          <td style="color:var(--green)">+182.9%</td>
+        </tr>
+        <tr>
+          <td>BLEU-3</td>
+          <td>1.5</td>
+          <td class="highlight">5.3</td>
+          <td style="color:var(--green)">+253.3%</td>
+        </tr>
+        <tr>
+          <td>METEOR</td>
+          <td>16.8</td>
+          <td class="highlight">22.9</td>
+          <td style="color:var(--green)">+36.3%</td>
+        </tr>
+        <tr>
+          <td>ROUGE-L</td>
+          <td>12.4</td>
+          <td class="highlight">27.6</td>
+          <td style="color:var(--green)">+122.6%</td>
+        </tr>
+        <tr>
+          <td>Distinct-1</td>
+          <td>62.1</td>
+          <td class="highlight">86.6</td>
+          <td style="color:var(--green)">+39.5%</td>
+        </tr>
+        <tr>
+          <td>Distinct-2</td>
+          <td>87.8</td>
+          <td class="highlight">97.2</td>
+          <td style="color:var(--green)">+10.7%</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:24px">核心模块准确率</h3>
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">行为识别 (M1)</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:85.97%;background:var(--blue);">85.97%</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">策略选择 (M2)</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:80.15%;background:var(--purple);">80.15%</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">回复筛选 (M5)</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:81.84%;background:var(--green);">81.84%</div>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:24px">人类评估</h3>
+    <p style="margin-bottom:12px;">3 名专业咨询师（均有 2 年以上执业经验）对 100 个样本盲评，在 ground truth / PsyChat / baseline 三者中选择最佳回复。</p>
+
+    <div class="bar-chart">
+      <div class="bar-row">
+        <span class="bar-label">Ground Truth</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:50%;background:var(--slate);">50 次</div>
+        </div>
+        <span class="bar-value">50/100</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">PsyChat</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:42%;background:var(--green);">42 次</div>
+        </div>
+        <span class="bar-value">42/100</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">Baseline</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:8%;background:var(--red);min-width:50px;">8 次</div>
+        </div>
+        <span class="bar-value">8/100</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <strong>关键发现：</strong>PsyChat (42 次) 与人类咨询师 ground truth (50 次) 被选为最佳的次数接近，t 检验 p=0.04，差异不显著。两者对 baseline (8 次) 均有极显著优势 (p=0.00)。专业咨询师认为 PsyChat 的回复质量接近真实咨询记录。
+    </div>
+  </div>
+
+  <!-- 与 moodcoco 的对应关系 -->
+  <div class="card" style="border: 2px solid var(--indigo); border-left: 4px solid var(--indigo);">
+    <h2 style="color:var(--indigo)">与 moodcoco fast/slow 架构的对应关系</h2>
+
+    <p style="margin-bottom:16px;">PsyChat 的五模块流水线与 moodcoco 的 Speaker (Fast) + Thinker (Slow) 双 agent 架构有直接的映射关系。</p>
+
+    <table class="mapping-table">
+      <thead>
+        <tr>
+          <th>PsyChat 模块</th>
+          <th>moodcoco 对应</th>
+          <th>对应方式</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-blue">M1</span> 来访者行为识别</td>
+          <td><span class="tag tag-purple">Slow / Thinker</span></td>
+          <td>Thinker 读 Skill 后做用户状态分析，cross-turn 写入 slow_guidance，功能等同于行为识别</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-purple">M2</span> 策略选择</td>
+          <td><span class="tag tag-purple">Slow / Thinker</span></td>
+          <td>Thinker 选择 skill_bundle + dynamic_inject，决定本轮采用哪些策略和技术框架</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-teal">M3</span> 输入组装器</td>
+          <td><span class="tag tag-green">cross-turn 注入</span></td>
+          <td>Thinker 产出通过 FastThinkDeps 的 slow_guidance / skill_bundle / retrieval_block / dynamic_inject 四个字段注入 Speaker</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-amber">M4</span> 回复生成器</td>
+          <td><span class="tag tag-blue">Fast / Speaker</span></td>
+          <td>Speaker 基于 Thinker 注入的指导生成最终用户可见回复，通过 UI tool 推送</td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-green">M5</span> 回复筛选器</td>
+          <td><span class="tag tag-slate">当前无直接对应</span></td>
+          <td>moodcoco 暂无"生成多条 &rarr; 选最优"机制。可在 Thinker 增加 critic 环节，或用 best-of-N sampling</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 style="margin-top:20px">PsyChat 可借鉴的思路</h3>
+    <ul style="margin-top:8px;">
+      <li><strong>显式行为分类再选策略</strong> &mdash; moodcoco 的 Thinker 目前用自然语言分析用户状态，可以考虑引入结构化的行为标签（特别是消极反应的 6 类），让策略选择更精确</li>
+      <li><strong>检索增强策略选择</strong> &mdash; 用 embedding 检索相似历史对话来辅助策略选择，比纯靠 LLM 推理更稳定，与 moodcoco 规划中的 RAG 方向一致</li>
+      <li><strong>生成-筛选解耦</strong> &mdash; M5 的 cross-encoder 筛选机制可以作为 quality gate 引入 Thinker 的 critic 环节</li>
+      <li><strong>来访者消极反应检测</strong> &mdash; 防御、转移话题、焦点脱离等消极行为的识别对 safety 模块有直接价值</li>
+    </ul>
+
+    <h3 style="margin-top:20px">架构差异</h3>
+    <ul style="margin-top:8px;">
+      <li><strong>同步 vs 异步</strong> &mdash; PsyChat 五模块串行执行（文本场景），moodcoco 是 cross-turn 异步（语音场景要求即时响应）</li>
+      <li><strong>专用分类器 vs 通用 LLM</strong> &mdash; PsyChat 用专用 RoBERTa 做行为分类，moodcoco 依赖通用 LLM 的 prompt engineering</li>
+      <li><strong>中文专用 vs 多语言</strong> &mdash; PsyChat 基于中文 Xinling 数据集，moodcoco 需要覆盖中文+印尼语</li>
+    </ul>
+  </div>
+
+  <!-- 局限性 -->
+  <div class="card">
+    <h2>局限性</h2>
+    <ul>
+      <li><strong>无消融实验</strong> &mdash; 论文没有报告各模块单独的贡献度。不清楚是行为识别更重要还是策略选择更重要，也不清楚去掉 M5 筛选器后效果下降多少</li>
+      <li><strong>单一 baseline</strong> &mdash; 仅与 ChatGLM2-6B 原始模型对比，没有与 ESConv、MultiESC 等心理对话专用系统对比</li>
+      <li><strong>数据集受限</strong> &mdash; Xinling 数据集为有条件开源的中文咨询数据，规模有限（~22K 条），且行为/策略标注依赖单一来源</li>
+      <li><strong>串行延迟</strong> &mdash; 五模块串行执行，M1 分类 &rarr; M2 检索 &rarr; M3 组装 &rarr; M4 生成 10 条 &rarr; M5 逐条打分，延迟不适用于实时语音场景</li>
+      <li><strong>行为分类静态</strong> &mdash; 11 类行为分类来自固定分类法，无法识别训练数据外的新行为模式</li>
+      <li><strong>无多轮策略演化</strong> &mdash; 每轮独立做行为识别和策略选择，没有跨会话的策略演化或来访者变化追踪</li>
+      <li><strong>评估样本量小</strong> &mdash; 人类评估仅 100 个样本、3 名评估者，统计效力有限</li>
+    </ul>
+  </div>
+
+  <!-- 数据集 -->
+  <div class="card">
+    <h2>数据集概览</h2>
+    <table class="results-table">
+      <thead>
+        <tr>
+          <th>数据集</th>
+          <th>来源</th>
+          <th>训练集</th>
+          <th>验证集</th>
+          <th>测试集</th>
+          <th>用途</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Xinling</strong></td>
+          <td>真实咨询对话（有条件开源）</td>
+          <td>15,850</td>
+          <td>3,150</td>
+          <td>3,072</td>
+          <td>分类训练 + 生成微调</td>
+        </tr>
+        <tr>
+          <td><strong>SmileChat</strong></td>
+          <td>合成多轮对话</td>
+          <td>310,087</td>
+          <td>--</td>
+          <td>--</td>
+          <td>生成器预热</td>
+        </tr>
+        <tr>
+          <td>行为分类子集</td>
+          <td>Xinling 提取</td>
+          <td>18,824</td>
+          <td>3,683</td>
+          <td>3,627</td>
+          <td>M1 分类器训练</td>
+        </tr>
+        <tr>
+          <td>策略分类子集</td>
+          <td>Xinling 提取</td>
+          <td>21,082</td>
+          <td>4,272</td>
+          <td>4,045</td>
+          <td>M2 检索库构建</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <p style="text-align:center; font-size:12px; color:var(--text-secondary); margin-top:40px;">
+    moodcoco 内部参考文档 &middot; 数据来源: arXiv 2312.04262v2 + Li et al. 2023 (ACL Oral) &middot; 2026-05-13
+  </p>
+
+</div>
+</body>
+</html>

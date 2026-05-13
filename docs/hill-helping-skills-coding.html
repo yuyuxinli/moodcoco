@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hill Helping Skills Coding & ChatPsychiatrist 评估体系</title>
+<style>
+  :root {
+    --bg: #fafaf9; --card: #ffffff; --border: #e7e5e4;
+    --text: #1c1917; --text-sec: #78716c; --text-light: #a8a29e;
+    --explore: #2563eb; --explore-bg: #eff6ff; --explore-border: #bfdbfe;
+    --insight: #9333ea; --insight-bg: #faf5ff; --insight-border: #d8b4fe;
+    --action: #16a34a; --action-bg: #f0fdf4; --action-border: #86efac;
+    --danger: #dc2626; --danger-bg: #fef2f2; --danger-border: #fecaca;
+    --correct: #16a34a; --correct-bg: #f0fdf4; --correct-border: #bbf7d0;
+    --warm: #ea580c; --warm-bg: #fff7ed;
+    --accent: #0d9488; --accent-bg: #f0fdfa;
+    --amber: #d97706; --amber-bg: #fffbeb; --amber-border: #fde68a;
+    --pink: #db2777; --pink-bg: #fdf2f8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--text);
+    line-height: 1.8; font-size: 15px;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1060px; margin: 0 auto; }
+
+  /* Hero */
+  .hero { text-align: center; padding: 48px 20px 36px; }
+  .hero .badge { display: inline-block; background: var(--insight-bg); color: var(--insight); font-size: 0.78rem; font-weight: 600; padding: 4px 16px; border-radius: 20px; margin-bottom: 14px; }
+  .hero h1 { font-size: 2.1rem; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .hero .subtitle { font-size: 1.05rem; color: var(--text-sec); max-width: 640px; margin: 0 auto; line-height: 1.7; }
+
+  /* 30s summary */
+  .summary-box {
+    background: linear-gradient(135deg, var(--explore-bg) 0%, var(--insight-bg) 50%, var(--action-bg) 100%);
+    border-radius: 16px; padding: 32px; margin-bottom: 48px;
+    border: 1px solid var(--border);
+  }
+  .summary-box h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; }
+  .summary-points { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .summary-points .sp {
+    background: rgba(255,255,255,0.85); border-radius: 10px; padding: 14px 18px;
+    font-size: 0.9rem; line-height: 1.6;
+  }
+  .summary-points .sp strong { display: block; margin-bottom: 2px; }
+
+  /* Sections */
+  section { margin-bottom: 56px; }
+  section > h2 {
+    font-size: 1.35rem; font-weight: 700; margin-bottom: 6px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  section > h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px;
+    color: #fff; font-size: 0.82rem; font-weight: 700;
+  }
+  section > .lead { color: var(--text-sec); margin-bottom: 24px; font-size: 0.93rem; }
+
+  /* Card */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 28px; margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 4px; }
+  .card .subtitle-sm { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 14px; }
+  .card p { margin-bottom: 10px; }
+
+  /* Stage badges */
+  .stage-badge {
+    display: inline-block; font-size: 0.72rem; font-weight: 700;
+    padding: 2px 10px; border-radius: 12px; letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+  .stage-explore { background: var(--explore-bg); color: var(--explore); border: 1px solid var(--explore-border); }
+  .stage-insight { background: var(--insight-bg); color: var(--insight); border: 1px solid var(--insight-border); }
+  .stage-action { background: var(--action-bg); color: var(--action); border: 1px solid var(--action-border); }
+
+  /* Skill hierarchy visual */
+  .hierarchy {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;
+    margin-bottom: 32px;
+  }
+  .phase-col {
+    border-radius: 14px; padding: 24px; border: 2px solid;
+  }
+  .phase-col.explore { background: var(--explore-bg); border-color: var(--explore-border); }
+  .phase-col.insight { background: var(--insight-bg); border-color: var(--insight-border); }
+  .phase-col.action { background: var(--action-bg); border-color: var(--action-border); }
+  .phase-col h3 {
+    font-size: 1rem; font-weight: 700; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .phase-col.explore h3 { color: var(--explore); }
+  .phase-col.insight h3 { color: var(--insight); }
+  .phase-col.action h3 { color: var(--action); }
+  .phase-col .phase-desc { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 14px; }
+  .skill-item {
+    background: rgba(255,255,255,0.8); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 8px;
+    font-size: 0.88rem; border: 1px solid rgba(0,0,0,0.04);
+  }
+  .skill-item .skill-num {
+    display: inline-block; width: 22px; height: 22px; border-radius: 6px;
+    text-align: center; line-height: 22px; font-size: 0.72rem; font-weight: 700;
+    margin-right: 6px; color: #fff;
+  }
+  .explore .skill-num { background: var(--explore); }
+  .insight .skill-num { background: var(--insight); }
+  .action .skill-num { background: var(--action); }
+  .skill-item .skill-en { font-size: 0.75rem; color: var(--text-sec); margin-left: 4px; }
+
+  /* Skill detail cards */
+  .skill-detail {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 22px 24px; margin-bottom: 14px;
+  }
+  .skill-detail h4 {
+    font-size: 0.95rem; font-weight: 700; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .skill-detail .def { font-size: 0.88rem; color: var(--text-sec); margin-bottom: 12px; border-left: 3px solid var(--border); padding-left: 14px; }
+
+  /* Example boxes */
+  .ex-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ex {
+    border-radius: 8px; padding: 12px 16px; font-size: 0.85rem; line-height: 1.6;
+  }
+  .ex.good { background: var(--correct-bg); border: 1px solid var(--correct-border); }
+  .ex.bad { background: var(--danger-bg); border: 1px solid var(--danger-border); }
+  .ex .ex-label {
+    font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 4px;
+  }
+  .ex.good .ex-label { color: var(--correct); }
+  .ex.bad .ex-label { color: var(--danger); }
+
+  /* Mismatch section */
+  .mismatch-case {
+    background: var(--card); border-radius: 14px; padding: 24px;
+    margin-bottom: 20px; border: 2px solid var(--danger-border);
+    position: relative; overflow: hidden;
+  }
+  .mismatch-case::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--danger);
+  }
+  .mismatch-case.corrected { border-color: var(--correct-border); }
+  .mismatch-case.corrected::before { background: var(--correct); }
+  .mismatch-case h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+  .mismatch-case .context { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 12px; }
+  .dialogue { margin-bottom: 12px; }
+  .dialogue .turn {
+    padding: 10px 14px; border-radius: 10px; margin-bottom: 6px;
+    font-size: 0.88rem; line-height: 1.6;
+  }
+  .dialogue .user-turn {
+    background: #f5f5f4; border: 1px solid #e7e5e4;
+    margin-right: 60px;
+  }
+  .dialogue .bot-turn {
+    margin-left: 60px;
+  }
+  .dialogue .bot-turn.wrong {
+    background: var(--danger-bg); border: 1px solid var(--danger-border);
+  }
+  .dialogue .bot-turn.right {
+    background: var(--correct-bg); border: 1px solid var(--correct-border);
+  }
+  .dialogue .turn-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; margin-bottom: 2px;
+  }
+  .dialogue .bot-turn.wrong .turn-label { color: var(--danger); }
+  .dialogue .bot-turn.right .turn-label { color: var(--correct); }
+  .skill-tag {
+    display: inline-block; font-size: 0.7rem; font-weight: 600;
+    padding: 1px 8px; border-radius: 10px; margin-left: 6px;
+  }
+  .skill-tag.explore-tag { background: var(--explore-bg); color: var(--explore); }
+  .skill-tag.insight-tag { background: var(--insight-bg); color: var(--insight); }
+  .skill-tag.action-tag { background: var(--action-bg); color: var(--action); }
+  .annotation {
+    font-size: 0.82rem; color: var(--text-sec); padding: 10px 14px;
+    background: var(--amber-bg); border: 1px solid var(--amber-border);
+    border-radius: 8px; margin-top: 8px;
+  }
+  .annotation strong { color: var(--amber); }
+
+  /* ChatPsychiatrist 7 dims */
+  .dim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .dim-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 22px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  }
+  .dim-card h4 { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
+  .dim-card .dim-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 6px;
+    background: var(--accent); color: #fff; font-size: 0.72rem; font-weight: 700;
+  }
+  .dim-card .dim-def { font-size: 0.85rem; color: var(--text-sec); margin: 6px 0 10px; line-height: 1.6; }
+  .dim-card .dim-example {
+    font-size: 0.82rem; background: var(--accent-bg); border-radius: 6px;
+    padding: 10px 12px; border: 1px solid #99f6e4; color: var(--text);
+    font-style: italic;
+  }
+  .dim-card .hill-mapping {
+    font-size: 0.78rem; margin-top: 8px; color: var(--text-sec);
+    padding: 6px 10px; background: #f5f5f4; border-radius: 6px;
+  }
+
+  /* Interpretation vs Reflection */
+  .contrast-table {
+    width: 100%; border-collapse: collapse; margin-bottom: 20px;
+    font-size: 0.88rem;
+  }
+  .contrast-table th {
+    padding: 12px 16px; text-align: left; font-weight: 700;
+    border-bottom: 2px solid var(--border); font-size: 0.82rem;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .contrast-table th.col-refl { color: var(--explore); background: var(--explore-bg); }
+  .contrast-table th.col-interp { color: var(--insight); background: var(--insight-bg); }
+  .contrast-table td {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    vertical-align: top; line-height: 1.6;
+  }
+  .contrast-table td:first-child { font-weight: 600; width: 140px; color: var(--text-sec); font-size: 0.82rem; }
+  .contrast-table tr:last-child td { border-bottom: none; }
+
+  /* Flowchart */
+  .flowchart {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0; margin: 24px 0;
+  }
+  .flow-node {
+    border-radius: 12px; padding: 16px 28px; text-align: center;
+    font-size: 0.88rem; font-weight: 600; min-width: 260px;
+    position: relative;
+  }
+  .flow-node.start { background: #f5f5f4; border: 2px solid var(--border); }
+  .flow-node.decision {
+    background: var(--amber-bg); border: 2px solid var(--amber-border);
+    border-radius: 4px; transform: rotate(0deg);
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    padding: 32px 48px; min-width: 300px;
+  }
+  .flow-node.process-explore { background: var(--explore-bg); border: 2px solid var(--explore-border); }
+  .flow-node.process-insight { background: var(--insight-bg); border: 2px solid var(--insight-border); }
+  .flow-node.process-action { background: var(--action-bg); border: 2px solid var(--action-border); }
+  .flow-node.result-ok { background: var(--correct-bg); border: 2px solid var(--correct-border); color: var(--correct); }
+  .flow-node.result-bad { background: var(--danger-bg); border: 2px solid var(--danger-border); color: var(--danger); }
+  .flow-arrow {
+    width: 2px; height: 28px; background: var(--text-light);
+    position: relative;
+  }
+  .flow-arrow::after {
+    content: ''; position: absolute; bottom: -1px; left: -4px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid var(--text-light);
+  }
+  .flow-arrow-label {
+    font-size: 0.72rem; color: var(--text-sec); font-weight: 600;
+    margin: -4px 0; text-align: center;
+  }
+
+  /* Coding flowchart - linear version */
+  .coding-flow {
+    display: flex; flex-direction: column; align-items: center; gap: 0;
+    padding: 20px 0;
+  }
+  .cf-step {
+    background: var(--card); border: 2px solid var(--border);
+    border-radius: 12px; padding: 18px 28px; text-align: center;
+    font-size: 0.9rem; max-width: 480px; width: 100%;
+  }
+  .cf-step strong { display: block; margin-bottom: 4px; }
+  .cf-step.cf-decision {
+    background: var(--amber-bg); border-color: var(--amber-border);
+  }
+  .cf-step.cf-explore { background: var(--explore-bg); border-color: var(--explore-border); }
+  .cf-step.cf-insight { background: var(--insight-bg); border-color: var(--insight-border); }
+  .cf-step.cf-action { background: var(--action-bg); border-color: var(--action-border); }
+  .cf-step.cf-ok { background: var(--correct-bg); border-color: var(--correct-border); }
+  .cf-step.cf-bad { background: var(--danger-bg); border-color: var(--danger-border); }
+  .cf-arrow {
+    width: 2px; height: 24px; background: var(--text-light); position: relative;
+  }
+  .cf-arrow::after {
+    content: ''; position: absolute; bottom: -1px; left: -4px;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 6px solid var(--text-light);
+  }
+  .cf-branch {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+    max-width: 600px; width: 100%;
+  }
+  .cf-branch-label {
+    font-size: 0.75rem; font-weight: 700; color: var(--text-sec);
+    text-align: center; margin: 4px 0;
+  }
+
+  /* moodcoco mapping table */
+  .map-table {
+    width: 100%; border-collapse: collapse; font-size: 0.88rem;
+    background: var(--card); border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .map-table th {
+    padding: 14px 16px; text-align: left; font-weight: 700;
+    background: #f5f5f4; border-bottom: 2px solid var(--border);
+    font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .map-table td {
+    padding: 12px 16px; border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .map-table tr:last-child td { border-bottom: none; }
+  .map-table .mode-name { font-weight: 700; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hierarchy { grid-template-columns: 1fr; }
+    .dim-grid { grid-template-columns: 1fr; }
+    .ex-grid { grid-template-columns: 1fr; }
+    .summary-points { grid-template-columns: 1fr; }
+    .dialogue .user-turn { margin-right: 20px; }
+    .dialogue .bot-turn { margin-left: 20px; }
+    .cf-branch { grid-template-columns: 1fr; }
+  }
+
+  /* Misc */
+  .sep { height: 1px; background: var(--border); margin: 40px 0; }
+  .note { font-size: 0.82rem; color: var(--text-sec); line-height: 1.6; }
+  .highlight { background: #fef9c3; padding: 1px 4px; border-radius: 3px; }
+  a { color: var(--explore); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">Hill Helping Skills + ChatPsychiatrist</div>
+  <h1>咨询技能编码 & 评估体系</h1>
+  <p class="subtitle">Clara E. Hill 的 3 阶段 15 技能分类法，ChatPsychiatrist 的 7 维评估框架，以及 moodcoco 的技能映射。重点：阶段错配检测。</p>
+</div>
+
+<!-- 30s 版本 -->
+<div class="summary-box">
+  <h2>30 秒版本</h2>
+  <div class="summary-points">
+    <div class="sp">
+      <strong>Hill 三阶段</strong>
+      探索(Exploration) &rarr; 洞察(Insight) &rarr; 行动(Action)。每个阶段有匹配的技能集，<b>跳阶段 = 咨询错误</b>。
+    </div>
+    <div class="sp">
+      <strong>15 个编码技能</strong>
+      探索阶段 8 个（倾听、提问、重述、反映...），洞察阶段 4 个（挑战、解释、自我暴露、即时性），行动阶段 3 个（信息提供、直接指导、过程建议）。
+    </div>
+    <div class="sp">
+      <strong>最常见错误</strong>
+      用户还在探索（说不清楚感受），咨询师就用了 Interpretation（"你其实是因为..."）或 Challenge（"但你有没有想过..."）。这叫<b>阶段错配</b>(Stage Mismatch)。
+    </div>
+    <div class="sp">
+      <strong>ChatPsychiatrist 评估</strong>
+      把 Hill 15 技能压缩成 7 个可量化维度，用 GPT-4 judge 自动评分。核心区分：Reflection 是镜子（探索），Interpretation 是透镜（洞察）。
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- Section 1: 3 阶段 × 15 技能层级可视化 -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--explore)">1</span> 3 阶段 × 15 技能层级</h2>
+  <p class="lead">Hill 模型的核心假设：来访者需要先充分探索，才能产生洞察，才能付诸行动。技能必须匹配阶段。</p>
+
+  <div class="hierarchy">
+    <!-- 探索 -->
+    <div class="phase-col explore">
+      <h3><span style="font-size:1.4rem">1</span> 探索 Exploration</h3>
+      <p class="phase-desc">目标：建立关系，帮助来访者讲出故事和感受</p>
+      <div class="skill-item"><span class="skill-num">1</span>专注倾听 <span class="skill-en">Attending</span></div>
+      <div class="skill-item"><span class="skill-num">2</span>开放式提问 <span class="skill-en">Open Question</span></div>
+      <div class="skill-item"><span class="skill-num">3</span>封闭式提问 <span class="skill-en">Closed Question</span></div>
+      <div class="skill-item"><span class="skill-num">4</span>内容重述 <span class="skill-en">Restatement</span></div>
+      <div class="skill-item"><span class="skill-num">5</span>情感反映 <span class="skill-en">Reflection of Feeling</span></div>
+      <div class="skill-item"><span class="skill-num">6</span>最小鼓励 <span class="skill-en">Minimal Encourager</span></div>
+      <div class="skill-item"><span class="skill-num">7</span>肯定-安慰 <span class="skill-en">Approval-Reassurance</span></div>
+      <div class="skill-item"><span class="skill-num">8</span>相似性自我暴露 <span class="skill-en">Self-disclosure (Similarity)</span></div>
+    </div>
+    <!-- 洞察 -->
+    <div class="phase-col insight">
+      <h3><span style="font-size:1.4rem">2</span> 洞察 Insight</h3>
+      <p class="phase-desc">目标：帮助来访者看到新视角、模式和因果</p>
+      <div class="skill-item"><span class="skill-num">9</span>挑战 <span class="skill-en">Challenge</span></div>
+      <div class="skill-item"><span class="skill-num">10</span>解释 <span class="skill-en">Interpretation</span></div>
+      <div class="skill-item"><span class="skill-num">11</span>洞察性自我暴露 <span class="skill-en">Insight Self-disclosure</span></div>
+      <div class="skill-item"><span class="skill-num">12</span>即时性 <span class="skill-en">Immediacy</span></div>
+    </div>
+    <!-- 行动 -->
+    <div class="phase-col action">
+      <h3><span style="font-size:1.4rem">3</span> 行动 Action</h3>
+      <p class="phase-desc">目标：帮助来访者制定计划、做出改变</p>
+      <div class="skill-item"><span class="skill-num">13</span>信息提供 <span class="skill-en">Information</span></div>
+      <div class="skill-item"><span class="skill-num">14</span>直接指导 <span class="skill-en">Direct Guidance</span></div>
+      <div class="skill-item"><span class="skill-num">15</span>过程建议 <span class="skill-en">Process Advisement</span></div>
+    </div>
+  </div>
+
+  <!-- 阶段流转箭头 -->
+  <div style="text-align:center; padding: 10px 0 24px;">
+    <div style="display:inline-flex; align-items: center; gap: 0; font-size: 0.85rem;">
+      <span style="background:var(--explore-bg); color:var(--explore); padding: 8px 20px; border-radius: 8px 0 0 8px; border: 1px solid var(--explore-border); font-weight: 600;">探索</span>
+      <span style="color:var(--text-light); font-size: 1.2rem; padding: 0 4px;">&rarr;</span>
+      <span style="background:var(--insight-bg); color:var(--insight); padding: 8px 20px; border: 1px solid var(--insight-border); font-weight: 600;">洞察</span>
+      <span style="color:var(--text-light); font-size: 1.2rem; padding: 0 4px;">&rarr;</span>
+      <span style="background:var(--action-bg); color:var(--action); padding: 8px 20px; border-radius: 0 8px 8px 0; border: 1px solid var(--action-border); font-weight: 600;">行动</span>
+    </div>
+    <p class="note" style="margin-top: 10px;">阶段可以回退（行动中发现新问题 &rarr; 回到探索），但不能跳过。每次前进必须有充分的前序阶段支撑。</p>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 2: 15 技能卡片详解 -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--accent)">2</span> 15 技能编码卡片</h2>
+  <p class="lead">每个技能的精确定义、正确用法和错误用法。编码时按此对照。</p>
+
+  <!-- 探索阶段技能 -->
+  <h3 style="color:var(--explore); margin-bottom: 14px; font-size: 1.05rem;"><span class="stage-badge stage-explore">探索阶段</span> Skill 1-8</h3>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">1</span> 专注倾听 Attending</h4>
+    <div class="def">通过非语言行为（点头、眼神接触、身体前倾）和沉默传递"我在听"。文字场景中体现为适时停顿、不打断、不急于回应。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>（用户说完长段话后）"......" （短暂沉默后）"嗯，继续说。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>用户刚说两句就打断："我觉得你的问题是..."</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">2</span> 开放式提问 Open Question</h4>
+    <div class="def">邀请来访者自由展开的问题，不限制回答方向。用于拓展叙述、探索感受。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"当时发生了什么？" / "你对这件事有什么感受？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你是不是觉得很生气？"（这是封闭式，限制了方向）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">3</span> 封闭式提问 Closed Question</h4>
+    <div class="def">需要简短回答（是/否/具体事实）的问题。用于确认信息、缩小范围。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"这种感觉是从上周开始的吗？" / "你有跟他谈过吗？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>连续使用多个封闭式提问变成审讯："几点？在哪？谁在？说了什么？"</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">4</span> 内容重述 Restatement</h4>
+    <div class="def">用自己的话复述来访者说的<b>事实内容</b>（不是感受），让对方确认理解是否正确。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>用户："我上周跟老板提了加薪，他说再看看。" &rarr; "所以你提了加薪的请求，但老板还没给明确答复。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你觉得老板在敷衍你。"（加入了推断，变成了 Interpretation）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">5</span> 情感反映 Reflection of Feeling</h4>
+    <div class="def">识别并命名来访者<b>明确表达或暗示的情感</b>。关键：只映射用户已意识到的情感层面，不超出。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>用户："每次他这样说我就特别烦。" &rarr; "听起来他的话让你感到很烦躁和不舒服。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你其实不只是烦，你是恐惧失去这段关系。"（超出用户意识到的 = Interpretation）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">6</span> 最小鼓励 Minimal Encourager</h4>
+    <div class="def">"嗯"、"然后呢"、"我在听"、重复用户最后几个字。功能：保持对话流动，不引入新方向。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"嗯嗯" / "然后呢？" / "继续说" / "对，所以..."</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"嗯，我觉得你应该换个角度看。"（附带了建议 = 混入 Direct Guidance）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">7</span> 肯定-安慰 Approval-Reassurance</h4>
+    <div class="def">提供情感支持、鼓励、正向强化。可以暗含同情。适度使用，过度会使来访者依赖外部认可。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"你能说出来，这本身就需要很大的勇气。" / "你做得比你以为的好很多。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"别担心，一切都会好的！加油！"（空洞安慰，最小化了来访者的困扰）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--explore);">
+    <h4><span class="skill-num" style="background:var(--explore); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">8</span> 相似性自我暴露 Self-disclosure (Similarity)</h4>
+    <div class="def">咨询师分享<b>与来访者相似</b>的经历或感受，增强共鸣和信任。不是为了展示自己。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"我以前换工作的时候也有过类似的焦虑，那种不确定感确实很难受。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"我当年比你更惨，后来我靠自己走出来了。"（比较 + 隐含建议）</div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- 洞察阶段技能 -->
+  <h3 style="color:var(--insight); margin-bottom: 14px; font-size: 1.05rem;"><span class="stage-badge stage-insight">洞察阶段</span> Skill 9-12</h3>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--insight);">
+    <h4><span class="skill-num" style="background:var(--insight); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">9</span> 挑战 Challenge</h4>
+    <div class="def">指出来访者言行中的矛盾、不一致或盲点。必须在充分了解之后使用，否则来访者会感到被攻击。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>（探索充分后）"你说你不在乎他的看法，但每次他说什么你都会特别难过——这两者之间似乎有些不一致？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>（第一轮对话）"你说不在乎，但你明明很在乎啊。"（过早挑战，来访者尚未准备好）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--insight);">
+    <h4><span class="skill-num" style="background:var(--insight); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">10</span> 解释 Interpretation</h4>
+    <div class="def"><b>超出来访者已明确意识到的内容</b>。建立看似孤立的事件之间的连接，指出主题/模式/因果关系，解释防御/阻抗/移情。提供新的意义框架。<br>这是最容易被误用的技能——与 Reflection 的边界是评估重点。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>（多轮探索后）"我注意到你提到的三段关系里，每次对方开始靠近，你就会找理由疏远——也许亲密本身让你感到不安全？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>（用户只说了一句话）"你这是典型的回避型依恋。"（过早标签化，无探索基础）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--insight);">
+    <h4><span class="skill-num" style="background:var(--insight); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">11</span> 洞察性自我暴露 Insight Self-disclosure</h4>
+    <div class="def">咨询师分享自己在类似情境中获得的<b>洞察/领悟</b>（不只是经历），帮助来访者产生新理解。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"我后来意识到，我当时不是怕失败，是怕成功之后人们对我的期望会变高——也许你可以想想，你害怕的到底是哪一层？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"我告诉你我怎么过来的吧..."（变成长篇自述，焦点从来访者转移到咨询师）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--insight);">
+    <h4><span class="skill-num" style="background:var(--insight); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">12</span> 即时性 Immediacy</h4>
+    <div class="def">指向咨询关系本身（"此时此刻，我们之间发生了什么"）。揭示移情、阻抗在咨询关系中的实时呈现。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"我注意到每次我追问细节，你就会转移话题——在我们的对话中也发生了你刚才描述的那种模式，你觉得呢？"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你是不是不信任我？"（直接质疑而非观察性描述）</div>
+    </div>
+  </div>
+
+  <div class="sep"></div>
+
+  <!-- 行动阶段技能 -->
+  <h3 style="color:var(--action); margin-bottom: 14px; font-size: 1.05rem;"><span class="stage-badge stage-action">行动阶段</span> Skill 13-15</h3>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--action);">
+    <h4><span class="skill-num" style="background:var(--action); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">13</span> 信息提供 Information</h4>
+    <div class="def">提供心理学知识、事实、资源、理论。回答直接问题。<b>不包含对来访者应该做什么的指导</b>。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"心理学上有个概念叫'蔡格尼克效应'——未完成的事情会比完成的事情更占据我们的注意力。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你应该去了解一下蔡格尼克效应，然后把事情做个了断。"（混入了 Direct Guidance）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--action);">
+    <h4><span class="skill-num" style="background:var(--action); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">14</span> 直接指导 Direct Guidance</h4>
+    <div class="def">建议、指令、指导来访者应该做什么来改变。可以是会谈内或会谈外的行动建议。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>（充分探索和洞察后）"你可以试试在下次跟他谈话之前，先写下你想说的三个核心点，这样不容易被情绪带跑。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>（第一轮对话）"你就直接去跟他说清楚啊！"（无探索基础的直接建议）</div>
+    </div>
+  </div>
+
+  <div class="skill-detail" style="border-left: 3px solid var(--action);">
+    <h4><span class="skill-num" style="background:var(--action); display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; color:#fff; font-size:0.72rem;">15</span> 过程建议 Process Advisement</h4>
+    <div class="def">关于咨询过程本身的建议（"我们可以试试角色扮演"、"你可以在会谈间记录情绪日记"）。</div>
+    <div class="ex-grid">
+      <div class="ex good"><div class="ex-label">正确</div>"下次遇到这种情况，你可以试试先做三次深呼吸，观察一下身体的反应。"</div>
+      <div class="ex bad"><div class="ex-label">错误</div>"你必须每天写日记，不然不会好的。"（过于绝对，变成施压）</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 3: 阶段错配检测（重点） -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--danger)">3</span> 阶段错配检测</h2>
+  <p class="lead">这是编码系统的核心价值：检测回应的技能类别是否匹配来访者当前所处的阶段。以下是多组对比案例。</p>
+
+  <!-- Case 1 -->
+  <div class="mismatch-case">
+    <h4>Case 1: 探索阶段误用 Interpretation</h4>
+    <div class="context">来访者第一次提到职场困扰，尚未展开叙述。处于 <span class="stage-badge stage-explore">探索</span> 阶段。</div>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        最近工作压力好大，老板总是在大会上点名批评我，我都不知道怎么办了。
+      </div>
+      <div class="turn bot-turn wrong">
+        <div class="turn-label">错误回应 — Interpretation 误用</div>
+        你觉得老板针对你，其实可能是你内心对权威有恐惧，小时候父母可能也是这样对你的。
+        <span class="skill-tag insight-tag">Interpretation #10</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么错：</strong>来访者只说了一句话，咨询师就跳到了童年创伤解释。来访者还没讲清楚"被批评"的具体情境、频率、自己的感受是什么。这是典型的<b>探索阶段误用洞察技能</b>。来访者可能的反应：感到被贴标签、不被理解、关闭自己。
+    </div>
+  </div>
+
+  <div class="mismatch-case corrected">
+    <h4>Case 1 修正版：保持探索</h4>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        最近工作压力好大，老板总是在大会上点名批评我，我都不知道怎么办了。
+      </div>
+      <div class="turn bot-turn right">
+        <div class="turn-label">正确回应 — Reflection + Open Question</div>
+        被当众点名批评，那种感觉一定很不好受。能多说说吗？一般是什么情况下他会这样做？
+        <span class="skill-tag explore-tag">Reflection #5</span>
+        <span class="skill-tag explore-tag">Open Q #2</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么对：</strong>先映射感受（Reflection），再用开放式提问邀请继续探索。不急于解读原因，给来访者空间展开叙述。
+    </div>
+  </div>
+
+  <div class="sep" style="margin: 28px 0;"></div>
+
+  <!-- Case 2 -->
+  <div class="mismatch-case">
+    <h4>Case 2: 探索阶段误用 Challenge</h4>
+    <div class="context">来访者表达对伴侣的不满，情绪激动，尚未充分倾诉。处于 <span class="stage-badge stage-explore">探索</span> 阶段。</div>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        他根本不关心我！每次我跟他说心里话，他就开始玩手机，我真的受不了了。
+      </div>
+      <div class="turn bot-turn wrong">
+        <div class="turn-label">错误回应 — Challenge 误用</div>
+        但你有没有想过，也许他不是不关心，而是不知道怎么回应你？你是不是对"关心"的定义太严格了？
+        <span class="skill-tag insight-tag">Challenge #9</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么错：</strong>来访者正在宣泄情绪，咨询师立刻挑战她的感知（"你的定义太严格"）。这等于在说"你的感受不对"。来访者会感到被否定、不被接纳，可能会防御性关闭或愤怒升级。
+    </div>
+  </div>
+
+  <div class="mismatch-case corrected">
+    <h4>Case 2 修正版：先接住情绪</h4>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        他根本不关心我！每次我跟他说心里话，他就开始玩手机，我真的受不了了。
+      </div>
+      <div class="turn bot-turn right">
+        <div class="turn-label">正确回应 — Reflection + Minimal Encourager</div>
+        你很想跟他连接，但感觉自己被忽视了，这让你非常受伤和生气。你说"每次"——这种情况发生多久了？
+        <span class="skill-tag explore-tag">Reflection #5</span>
+        <span class="skill-tag explore-tag">Open Q #2</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么对：</strong>命名情绪（受伤和生气），使用来访者自己的词汇（"每次"），然后自然地引导进入更详细的探索。Challenge 可以在后续充分探索后再使用。
+    </div>
+  </div>
+
+  <div class="sep" style="margin: 28px 0;"></div>
+
+  <!-- Case 3 -->
+  <div class="mismatch-case">
+    <h4>Case 3: 探索阶段误用 Direct Guidance</h4>
+    <div class="context">来访者初次提到社交焦虑。处于 <span class="stage-badge stage-explore">探索</span> 阶段。</div>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        我特别害怕参加公司聚会，每次去之前都焦虑到想吐。
+      </div>
+      <div class="turn bot-turn wrong">
+        <div class="turn-label">错误回应 — Direct Guidance 误用</div>
+        你可以试试暴露疗法，先从小型聚会开始，逐步增加难度。另外建议你学习一些社交技巧。
+        <span class="skill-tag action-tag">Direct Guidance #14</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么错：</strong>来访者才刚提到症状，咨询师直接给出治疗方案。跳过了探索（焦虑具体是什么样的？什么时候开始的？之前尝试过什么？）和洞察（焦虑背后的核心恐惧是什么？）两个阶段。
+    </div>
+  </div>
+
+  <div class="mismatch-case corrected">
+    <h4>Case 3 修正版：从探索开始</h4>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        我特别害怕参加公司聚会，每次去之前都焦虑到想吐。
+      </div>
+      <div class="turn bot-turn right">
+        <div class="turn-label">正确回应 — Reflection + Open Question</div>
+        焦虑到想吐——那种身体上的反应说明这对你来说不是小事。你能描述一下，聚会中最让你害怕的是什么部分吗？
+        <span class="skill-tag explore-tag">Reflection #5</span>
+        <span class="skill-tag explore-tag">Open Q #2</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么对：</strong>先接住身体层面的感受（不最小化），然后用开放式提问引导来访者探索焦虑的具体内容。等来访者充分描述后，才可能进入洞察和行动阶段。
+    </div>
+  </div>
+
+  <div class="sep" style="margin: 28px 0;"></div>
+
+  <!-- Case 4: 正确的阶段转换 -->
+  <div class="mismatch-case corrected">
+    <h4>Case 4: 正确的阶段转换——从探索到洞察</h4>
+    <div class="context">多轮探索后，来访者已充分描述了三段关系中的类似模式。准备进入 <span class="stage-badge stage-insight">洞察</span>。</div>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者（第 8 轮）</div>
+        对...其实第二段感情也是这样，一开始很好，但对方越来越亲近我就越慌。跟小张那次也是，他开始天天找我，我就开始找各种借口不回消息。
+      </div>
+      <div class="turn bot-turn right">
+        <div class="turn-label">正确回应 — Interpretation（适时的洞察）</div>
+        我注意到你描述的这三段关系有一个共同的模式：当对方的亲密感增加到一个程度，你就会开始退缩。也许不是这些人有什么问题，而是"亲密本身"触发了你的某种不安全感？你觉得呢？
+        <span class="skill-tag insight-tag">Interpretation #10</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么对：</strong>这是在充分探索（来访者自己描述了三个案例）之后的 Interpretation。咨询师建立了跨事件的连接（模式识别），提供了新的意义框架（不是对方的问题，是亲密本身），并且用"你觉得呢？"交给来访者验证，而非强加结论。
+    </div>
+  </div>
+
+  <div class="sep" style="margin: 28px 0;"></div>
+
+  <!-- Case 5: 洞察阶段误用行动 -->
+  <div class="mismatch-case">
+    <h4>Case 5: 洞察阶段误用行动技能</h4>
+    <div class="context">来访者刚开始看到自己的模式，还在消化新理解。处于 <span class="stage-badge stage-insight">洞察</span> 阶段。</div>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        你说得对...我好像确实是害怕亲密。但我不知道为什么，这让我有点难过。
+      </div>
+      <div class="turn bot-turn wrong">
+        <div class="turn-label">错误回应 — Direct Guidance 误用</div>
+        既然知道了原因，你可以试试：1. 每天给伴侣发一条关心的消息；2. 主动约一次面对面的深度对话；3. 写下你害怕亲密的具体场景。
+        <span class="skill-tag action-tag">Direct Guidance #14</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么错：</strong>来访者刚看到自己的模式（"好像确实是"），还带着困惑和难过。她需要的是继续深入理解这个模式——为什么害怕亲密？这个模式是什么时候形成的？——而不是立刻收到行动清单。过早给行动 = 知道了原因但没理解原因。
+    </div>
+  </div>
+
+  <div class="mismatch-case corrected">
+    <h4>Case 5 修正版：继续深化洞察</h4>
+    <div class="dialogue">
+      <div class="turn user-turn">
+        <div class="turn-label">来访者</div>
+        你说得对...我好像确实是害怕亲密。但我不知道为什么，这让我有点难过。
+      </div>
+      <div class="turn bot-turn right">
+        <div class="turn-label">正确回应 — Reflection + Insight Self-disclosure</div>
+        发现自己有这个模式，心里不好受——这种难过本身说明你是真的想要改变。"不知道为什么"这个问题很重要，你愿意往回想想吗？在你更早的经历里，亲密是安全的还是危险的？
+        <span class="skill-tag explore-tag">Reflection #5</span>
+        <span class="skill-tag insight-tag">Interpretation #10</span>
+      </div>
+    </div>
+    <div class="annotation">
+      <strong>为什么对：</strong>先接住情绪（难过），肯定来访者的动力，然后引导她继续深化洞察——追溯模式的来源。从洞察进入更深的洞察，而非过早行动。
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 4: ChatPsychiatrist 7 维评估 -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--accent)">4</span> ChatPsychiatrist 7 维评估</h2>
+  <p class="lead">EmoCareAI/ChatPsychiatrist 将 Hill 的 15 技能压缩为 7 个可量化评估维度。以下为每维度的精确定义、示例、与 Hill 技能的映射。</p>
+
+  <div class="dim-grid">
+    <div class="dim-card">
+      <h4><span class="dim-num">1</span> Information</h4>
+      <div class="dim-def">回应应提供心理学、咨询或心理健康相关的数据、事实、资源、理论。可以是与咨询过程和来访者行为具体相关的信息。回答直接提问，但<b>不包含来访者应该做什么的指导</b>。</div>
+      <div class="dim-example">"心理学上有一个效应叫蔡格尼克效应(Zeigarnic Effect)——未完成的事情会比完成的更占据我们的注意力。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-action">Skill #13</span> Information</div>
+    </div>
+
+    <div class="dim-card">
+      <h4><span class="dim-num">2</span> Direct Guidance</h4>
+      <div class="dim-def">回应应提供建议、指令、指导来访者应该做什么来改变。包括咨询师为来访者或双方建议的行动方向，无论是会谈内还是会谈外。</div>
+      <div class="dim-example">"为了应对你的强迫症状，你可以提前跟你丈夫讨论你的顾虑，设定好边界。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-action">Skill #14</span> Direct Guidance + <span class="stage-badge stage-action">Skill #15</span> Process Advisement</div>
+    </div>
+
+    <div class="dim-card">
+      <h4><span class="dim-num">3</span> Approval & Reassurance</h4>
+      <div class="dim-def">回应应提供情感支持、安慰、鼓励、认可或正向强化。可以暗含同情，或通过最小化来访者的问题来缓解焦虑。</div>
+      <div class="dim-example">"给你一个温暖的拥抱！" / "听到你感觉好了一些，开始从日记和思维表中受益，真是太好了。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-explore">Skill #7</span> Approval-Reassurance</div>
+    </div>
+
+    <div class="dim-card">
+      <h4><span class="dim-num">4</span> Restatement / Reflection / Listening</h4>
+      <div class="dim-def">回应应展示对来访者感受或来访者信息含义的理解。复述或改述来访者的陈述，用自己的话反馈给来访者确认。<b>必须包含对已陈述或隐含情感的指称</b>。可以基于之前的陈述或对整体情况的了解。可以是试探性的或陈述性的。</div>
+      <div class="dim-example">"你觉得自己变得暴力了。" / "看起来你在寻找关系中的平衡，尤其是在深层个人连接方面。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-explore">Skill #1</span> Attending + <span class="stage-badge stage-explore">Skill #4</span> Restatement + <span class="stage-badge stage-explore">Skill #5</span> Reflection + <span class="stage-badge stage-explore">Skill #6</span> Minimal Encourager</div>
+    </div>
+
+    <div class="dim-card">
+      <h4><span class="dim-num">5</span> Interpretation</h4>
+      <div class="dim-def">回应应<b>超出来访者已明确意识到的内容</b>。可以采取多种形式：建立看似孤立的陈述或事件之间的连接；解释防御、感受、阻抗或移情（咨询师与来访者之间的人际关系）；指出来访者行为或人格中的主题、模式或因果关系。通常为旧行为或问题提供替代的意义、原因或解释。</div>
+      <div class="dim-example">"我认为你非常爱你妈妈。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-insight">Skill #10</span> Interpretation + <span class="stage-badge stage-insight">Skill #9</span> Challenge</div>
+    </div>
+
+    <div class="dim-card">
+      <h4><span class="dim-num">6</span> Self-disclosure</h4>
+      <div class="dim-def">回应应分享咨询师自己的个人经历和感受。可以以"我"开头，但注意：不是所有以"我"开头的陈述都是 Self-disclosure——必须具有分享和袒露的性质。</div>
+      <div class="dim-example">"这个问题让我想起了一些类似的回忆。"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-explore">Skill #8</span> Similarity Self-disclosure + <span class="stage-badge stage-insight">Skill #11</span> Insight Self-disclosure</div>
+    </div>
+
+    <div class="dim-card" style="grid-column: 1 / -1;">
+      <h4><span class="dim-num">7</span> Obtain Relevant Information</h4>
+      <div class="dim-def">回应应使用恰当的问题。可以要求澄清感受或探索情况，且不刻意将回答限制为是/否或一两个词的简短回应。</div>
+      <div class="dim-example">"你能举个例子，说明你正在考虑的一个改变是什么，以及为什么它对你来说很有挑战性吗？"</div>
+      <div class="hill-mapping">Hill 映射: <span class="stage-badge stage-explore">Skill #2</span> Open Question + <span class="stage-badge stage-explore">Skill #3</span> Closed Question</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px; border-left: 3px solid var(--accent);">
+    <h3>Hill 15 &rarr; ChatPsychiatrist 7 的压缩逻辑</h3>
+    <div style="font-size: 0.88rem; line-height: 1.8;">
+      <p><b>合并了什么：</b></p>
+      <ul style="padding-left: 20px; margin-bottom: 10px;">
+        <li>Attending + Restatement + Reflection + Minimal Encourager &rarr; 合并为 <b>Dim 4</b>（都属于"展示理解"）</li>
+        <li>Open Question + Closed Question &rarr; 合并为 <b>Dim 7</b>（都属于"获取信息"）</li>
+        <li>Direct Guidance + Process Advisement &rarr; 合并为 <b>Dim 2</b>（都属于"给指导"）</li>
+        <li>Challenge + Interpretation &rarr; 主要在 <b>Dim 5</b>（都属于"超出来访者意识"）</li>
+        <li>Similarity Self-disclosure + Insight Self-disclosure &rarr; 合并为 <b>Dim 6</b></li>
+      </ul>
+      <p><b>丢失了什么：</b></p>
+      <ul style="padding-left: 20px;">
+        <li><b>Immediacy (#12)</b> 没有独立维度——这是因为文本对话中即时性较难识别</li>
+        <li><b>阶段匹配信息</b>——7 维只评"有没有用到"，不评"用的时机对不对"</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 5: Interpretation vs Reflection -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--insight)">5</span> Interpretation vs Reflection 精确区分</h2>
+  <p class="lead">这是编码中最常混淆的边界。核心问题：回应是否<b>超出了来访者已明确意识到的内容</b>？</p>
+
+  <div class="card" style="margin-bottom: 24px;">
+    <table class="contrast-table">
+      <thead>
+        <tr>
+          <th style="background:var(--card); border-bottom-color: var(--border);">维度</th>
+          <th class="col-refl">Reflection（探索）</th>
+          <th class="col-interp">Interpretation（洞察）</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>本质隐喻</td>
+          <td><b>镜子</b> — 映射来访者已表达的</td>
+          <td><b>透镜</b> — 揭示来访者尚未看到的</td>
+        </tr>
+        <tr>
+          <td>信息来源</td>
+          <td>来自来访者<b>当前陈述</b></td>
+          <td>来自咨询师的<b>专业推断</b>，跨事件连接</td>
+        </tr>
+        <tr>
+          <td>超出程度</td>
+          <td>不超出来访者的意识范围</td>
+          <td>明确超出来访者已意识到的</td>
+        </tr>
+        <tr>
+          <td>功能</td>
+          <td>让来访者感到"被理解"</td>
+          <td>让来访者产生"啊，原来如此"</td>
+        </tr>
+        <tr>
+          <td>风险</td>
+          <td>低（最多不精确）</td>
+          <td>高（可能被拒绝、引发防御）</td>
+        </tr>
+        <tr>
+          <td>时机</td>
+          <td>任何时候都安全</td>
+          <td>必须在充分探索之后</td>
+        </tr>
+        <tr>
+          <td>来访者的可能反应</td>
+          <td>"对，就是这样"</td>
+          <td>"我从没这么想过..." 或 "不是！"</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 对比示例 -->
+  <h3 style="font-size: 1rem; margin-bottom: 14px;">逐句对比示例</h3>
+
+  <div class="card" style="margin-bottom: 14px;">
+    <p style="font-size: 0.88rem; margin-bottom: 12px;"><b>来访者：</b>"每次考试前我都睡不着觉，越想睡越清醒，特别烦。"</p>
+    <div class="ex-grid">
+      <div class="ex" style="background:var(--explore-bg); border: 1px solid var(--explore-border);">
+        <div class="ex-label" style="color:var(--explore);">Reflection</div>
+        "考试前失眠让你很烦躁，那种越努力越做不到的感觉一定很挫败。"<br>
+        <span class="note">只映射了用户已说的：失眠 + 烦。"挫败"是对"越想越清醒"的情感层面映射，用户对此有意识。</span>
+      </div>
+      <div class="ex" style="background:var(--insight-bg); border: 1px solid var(--insight-border);">
+        <div class="ex-label" style="color:var(--insight);">Interpretation</div>
+        "也许失眠不只是因为考试本身——可能你对'表现不够好'有很深的恐惧，考试只是触发了它。"<br>
+        <span class="note">超出了用户说的。用户说"考试前失眠"，咨询师推断出更深层的"表现恐惧"，并认为考试只是表面触发器。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 14px;">
+    <p style="font-size: 0.88rem; margin-bottom: 12px;"><b>来访者：</b>"我妈又打电话来催婚了，我直接挂了电话。"</p>
+    <div class="ex-grid">
+      <div class="ex" style="background:var(--explore-bg); border: 1px solid var(--explore-border);">
+        <div class="ex-label" style="color:var(--explore);">Reflection</div>
+        "妈妈催婚让你很抗拒，所以直接挂掉了。"<br>
+        <span class="note">映射行为（挂电话）和可推断的情绪（抗拒）。用户明确知道自己在抗拒。</span>
+      </div>
+      <div class="ex" style="background:var(--insight-bg); border: 1px solid var(--insight-border);">
+        <div class="ex-label" style="color:var(--insight);">Interpretation</div>
+        "你挂掉电话，可能不只是对催婚的反感——也许你在保护自己不去面对一个更深的问题：你对亲密关系本身的不确定。"<br>
+        <span class="note">超出了"催婚 &rarr; 烦"的表面，指出挂电话可能是一种防御行为(defense)，并提出了用户可能没意识到的深层议题。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 14px;">
+    <p style="font-size: 0.88rem; margin-bottom: 12px;"><b>来访者：</b>"我跟小李吵架后就去暴吃了一顿，吃完又特别自责。"</p>
+    <div class="ex-grid">
+      <div class="ex" style="background:var(--explore-bg); border: 1px solid var(--explore-border);">
+        <div class="ex-label" style="color:var(--explore);">Reflection</div>
+        "吵完架心情很差，吃东西暂时缓解了，但之后的自责又加重了不舒服。"<br>
+        <span class="note">按时间线复述事件 + 映射感受。用户完全知道自己在说什么。</span>
+      </div>
+      <div class="ex" style="background:var(--insight-bg); border: 1px solid var(--insight-border);">
+        <div class="ex-label" style="color:var(--insight);">Interpretation</div>
+        "暴吃可能是你处理情绪冲突的一种方式——当你无法直接面对跟小李的冲突时，你把情绪转移到了食物上。这个模式在之前你提到跟父母吵架后也出现过。"<br>
+        <span class="note">识别出跨事件的模式（与小李吵架 / 与父母吵架 &rarr; 都是暴吃），并提出"情绪转移"这一用户未自觉的机制。</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom: 14px;">
+    <p style="font-size: 0.88rem; margin-bottom: 12px;"><b>来访者：</b>"我总觉得同事在背后议论我，虽然没有证据。"</p>
+    <div class="ex-grid">
+      <div class="ex" style="background:var(--explore-bg); border: 1px solid var(--explore-border);">
+        <div class="ex-label" style="color:var(--explore);">Reflection</div>
+        "你有一种被议论的感觉，但同时你也知道没有实际证据支持它，这种矛盾让你不安。"<br>
+        <span class="note">映射了用户自己已意识到的矛盾（有感觉 + 知道没证据）。</span>
+      </div>
+      <div class="ex" style="background:var(--insight-bg); border: 1px solid var(--insight-border);">
+        <div class="ex-label" style="color:var(--insight);">Interpretation</div>
+        "这种'被注视'的感觉，可能跟你内心对自己的评价有关——当你觉得自己不够好的时候，会自动假设别人也这么想你。"<br>
+        <span class="note">超出了用户的叙述，提出一个认知机制（内在自我评价 &rarr; 投射到他人），用户可能从未意识到这一点。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 边界判断决策树 -->
+  <div class="card" style="border-left: 3px solid var(--amber); margin-top: 20px;">
+    <h3 style="color: var(--amber);">快速判断法：这是 Reflection 还是 Interpretation？</h3>
+    <div style="font-size: 0.88rem; line-height: 1.8; margin-top: 10px;">
+      <p>问自己三个问题：</p>
+      <ol style="padding-left: 20px; margin-top: 8px;">
+        <li><b>来访者自己能说出这句话吗？</b><br>
+        能 &rarr; Reflection &nbsp;|&nbsp; 不能/没想到 &rarr; Interpretation</li>
+        <li style="margin-top: 8px;"><b>回应里有没有"跨事件连接"或"深层机制"？</b><br>
+        有（"这个模式"、"可能是因为"、"背后的"）&rarr; Interpretation &nbsp;|&nbsp; 没有 &rarr; Reflection</li>
+        <li style="margin-top: 8px;"><b>来访者听到后最可能的反应是？</b><br>
+        "对，就是这样" &rarr; Reflection &nbsp;|&nbsp; "我从没这么想过" &rarr; Interpretation</li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 6: 编码流程图 -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--warm)">6</span> 编码流程图</h2>
+  <p class="lead">拿到一条咨询师回应后，按以下步骤完成编码。</p>
+
+  <div class="coding-flow">
+    <div class="cf-step">
+      <strong>Step 1: 读取回应</strong>
+      拿到咨询师的一条回应文本
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-step cf-decision">
+      <strong>Step 2: 判断技能类别</strong>
+      这条回应主要在做什么？
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-branch">
+      <div>
+        <div class="cf-branch-label">映射来访者说的？</div>
+        <div class="cf-step cf-explore" style="font-size: 0.82rem; padding: 12px 16px;">
+          <strong>探索技能</strong>
+          倾听 / 提问 / 重述 / 反映 / 鼓励 / 安慰 / 相似性自我暴露
+        </div>
+      </div>
+      <div>
+        <div class="cf-branch-label">超出来访者意识？</div>
+        <div class="cf-step cf-insight" style="font-size: 0.82rem; padding: 12px 16px;">
+          <strong>洞察技能</strong>
+          挑战 / 解释 / 洞察性自我暴露 / 即时性
+        </div>
+      </div>
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-branch">
+      <div>
+        <div class="cf-branch-label">给知识/建议/指导？</div>
+        <div class="cf-step cf-action" style="font-size: 0.82rem; padding: 12px 16px;">
+          <strong>行动技能</strong>
+          信息提供 / 直接指导 / 过程建议
+        </div>
+      </div>
+      <div>
+        <div class="cf-branch-label">指向咨询关系本身？</div>
+        <div class="cf-step cf-insight" style="font-size: 0.82rem; padding: 12px 16px;">
+          <strong>即时性 (Immediacy)</strong>
+          "我们之间正在发生什么"
+        </div>
+      </div>
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-step cf-decision">
+      <strong>Step 3: 判断来访者阶段</strong>
+      来访者当前在探索、洞察还是行动阶段？
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-step" style="font-size: 0.82rem; text-align: left; padding: 16px 20px; max-width: 520px;">
+      <strong>阶段判断标准：</strong><br>
+      <b>探索：</b>来访者还在讲述事件、描述感受、不确定自己怎么了<br>
+      <b>洞察：</b>来访者开始识别模式、理解原因、产生新认识<br>
+      <b>行动：</b>来访者已有清晰理解，准备做出改变
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-step cf-decision">
+      <strong>Step 4: 匹配检查</strong>
+      技能类别 vs 来访者阶段
+    </div>
+    <div class="cf-arrow"></div>
+
+    <div class="cf-branch">
+      <div>
+        <div class="cf-step cf-ok" style="font-size: 0.85rem;">
+          <strong>匹配</strong><br>
+          探索阶段 + 探索技能<br>
+          洞察阶段 + 洞察技能<br>
+          行动阶段 + 行动技能<br>
+          任何阶段 + 探索技能（安全）
+        </div>
+      </div>
+      <div>
+        <div class="cf-step cf-bad" style="font-size: 0.85rem;">
+          <strong>错配</strong><br>
+          探索阶段 + 洞察技能<br>
+          探索阶段 + 行动技能<br>
+          洞察阶段 + 行动技能（过早）
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left: 3px solid var(--warm); margin-top: 16px;">
+    <h3>关键规则</h3>
+    <div style="font-size: 0.88rem; line-height: 1.8; margin-top: 8px;">
+      <ul style="padding-left: 20px;">
+        <li><b>探索技能在任何阶段都安全。</b>即使来访者已进入洞察阶段，偶尔用 Reflection 确认理解仍然合适。</li>
+        <li><b>洞察技能在探索阶段 = 错误。</b>这是最常见的 AI 咨询师 bug：用户刚说一句话就开始 Interpret。</li>
+        <li><b>行动技能在探索/洞察阶段 = 错误。</b>第二常见的 bug：用户还没理解问题就收到建议。</li>
+        <li><b>一条回应可以包含多个技能。</b>编码所有识别到的技能，然后分别检查阶段匹配。</li>
+        <li><b>阶段判断看来访者，不看咨询师。</b>来访者的状态决定阶段，不是咨询师想做什么决定阶段。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================ -->
+<!-- Section 7: moodcoco 映射表 -->
+<!-- ============================================ -->
+<section>
+  <h2><span class="num" style="background:var(--pink)">7</span> moodcoco 技能映射</h2>
+  <p class="lead">moodcoco 的 6 个模式如何对应 Hill 的 15 技能和 ChatPsychiatrist 的 7 维度。</p>
+
+  <table class="map-table">
+    <thead>
+      <tr>
+        <th style="width:130px;">moodcoco 模式</th>
+        <th>Hill 阶段</th>
+        <th>Hill 技能编号</th>
+        <th>ChatPsychiatrist 维度</th>
+        <th>核心功能</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mode-name" style="color:var(--explore);">listen</td>
+        <td><span class="stage-badge stage-explore">探索</span></td>
+        <td>#1 Attending<br>#4 Restatement<br>#6 Minimal Encourager</td>
+        <td>Dim 4 — Restatement/Reflection/Listening</td>
+        <td>让来访者感到被听到，保持对话流动。不引入新方向，不解读。</td>
+      </tr>
+      <tr>
+        <td class="mode-name" style="color:var(--explore);">validation</td>
+        <td><span class="stage-badge stage-explore">探索</span></td>
+        <td>#5 Reflection of Feeling<br>#7 Approval-Reassurance</td>
+        <td>Dim 3 — Approval & Reassurance<br>Dim 4 — Restatement/Reflection/Listening</td>
+        <td>命名情感、提供情感支持。不最小化问题，不空洞安慰。</td>
+      </tr>
+      <tr>
+        <td class="mode-name" style="color:var(--insight);">untangle</td>
+        <td><span class="stage-badge stage-explore">探索</span> &rarr; <span class="stage-badge stage-insight">洞察</span></td>
+        <td>#2 Open Question<br>#9 Challenge<br>#10 Interpretation</td>
+        <td>Dim 5 — Interpretation<br>Dim 7 — Obtain Relevant Information</td>
+        <td>帮助来访者理清混乱。从提问开始（探索），逐步指出模式和矛盾（洞察）。</td>
+      </tr>
+      <tr>
+        <td class="mode-name" style="color:var(--insight);">face-decision</td>
+        <td><span class="stage-badge stage-insight">洞察</span> &rarr; <span class="stage-badge stage-action">行动</span></td>
+        <td>#9 Challenge<br>#12 Immediacy<br>#14 Direct Guidance</td>
+        <td>Dim 2 — Direct Guidance<br>Dim 5 — Interpretation</td>
+        <td>帮助来访者面对选择。先挑战回避行为（洞察），再引导行动方向。</td>
+      </tr>
+      <tr>
+        <td class="mode-name" style="color:var(--action);">calm-body</td>
+        <td><span class="stage-badge stage-action">行动</span></td>
+        <td>#15 Process Advisement</td>
+        <td>Dim 2 — Direct Guidance</td>
+        <td>躯体化应对：呼吸练习、身体扫描等过程性指导。</td>
+      </tr>
+      <tr>
+        <td class="mode-name" style="color:var(--danger);">crisis</td>
+        <td colspan="4" style="color: var(--danger); font-size: 0.88rem;">
+          <b>Hill 不覆盖。</b>危机干预不在 Hill 帮助技能体系范围内。危机模式遵循自杀风险评估协议(Columbia Protocol 等)，优先保障安全，不适用探索-洞察-行动的阶段模型。
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="card" style="margin-top: 20px; border-left: 3px solid var(--pink);">
+    <h3>映射的实际含义</h3>
+    <div style="font-size: 0.88rem; line-height: 1.8; margin-top: 8px;">
+      <ul style="padding-left: 20px;">
+        <li><b>listen + validation 应该占对话的 60%+：</b>大多数来访者大多数时候在探索阶段</li>
+        <li><b>untangle 是最难的模式：</b>需要在探索和洞察之间精确切换。判断标准：来访者是否已经充分表达？</li>
+        <li><b>face-decision 是最危险的模式：</b>如果来访者还没准备好面对选择，过早使用 = 阶段错配</li>
+        <li><b>calm-body 相对安全：</b>身体层面的技巧不需要深度洞察前置，但也不应在来访者需要被倾听时使用</li>
+        <li><b>评估重点：</b>用 ChatPsychiatrist 7 维检查技能覆盖度，用 Hill 阶段匹配检查时机正确性</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<div style="text-align: center; padding: 40px 0 20px; color: var(--text-light); font-size: 0.78rem;">
+  <p>References: Hill, C.E. (2009). <i>Helping Skills: Facilitating Exploration, Insight, and Action.</i> APA.</p>
+  <p>EmoCareAI/ChatPsychiatrist — <a href="https://github.com/EmoCareAI/ChatPsychiatrist" target="_blank">github.com/EmoCareAI/ChatPsychiatrist</a></p>
+  <p style="margin-top: 8px;">moodcoco internal reference &middot; 2026-05-13</p>
+</div>
+
+</div>
+</body>
+</html>

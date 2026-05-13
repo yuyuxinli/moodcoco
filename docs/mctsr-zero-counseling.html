@@ -1,0 +1,1028 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCTSr-Zero &middot; 原则导向的心理咨询对话生成</title>
+  <style>
+    :root {
+      --ink: #1c1c1e;
+      --muted: #6b7280;
+      --bg: #fafaf9;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --accent: #0071e3;
+      --accent-light: #e8f4fd;
+      --green: #34c759;
+      --green-bg: #f0fdf4;
+      --orange: #f59e0b;
+      --orange-bg: #fffbeb;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-bg: #f5f3ff;
+      --teal: #14b8a6;
+      --teal-bg: #f0fdfa;
+      --blue: #3b82f6;
+      --blue-bg: #eff6ff;
+      --warm: #78716c;
+      --warm-bg: #f5f5f4;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-size: 16px;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.7;
+      padding: 32px 24px 64px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header { margin-bottom: 40px; }
+    .page-header h1 { font-size: 1.8em; font-weight: 700; letter-spacing: -0.02em; }
+    .page-header .tagline { color: var(--muted); font-size: 14px; margin-top: 4px; }
+    .page-header .source-link {
+      display: inline-block; margin-top: 8px; font-size: 13px;
+      color: var(--accent); text-decoration: none;
+      border-bottom: 1px solid var(--accent-light);
+    }
+    .page-header .source-link:hover { border-bottom-color: var(--accent); }
+
+    /* TLDR */
+    .tldr {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px 28px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--accent);
+      margin-bottom: 40px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .tldr-label {
+      font-weight: 700; font-size: 12px; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--accent); margin-bottom: 8px;
+    }
+
+    /* Section */
+    .section { margin-bottom: 40px; }
+    .section-title {
+      font-size: 1.15em; font-weight: 700; margin-bottom: 16px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-weight: 700; font-size: 14px; margin-bottom: 8px;
+    }
+    .card p, .card li {
+      font-size: 14px; line-height: 1.7; color: #374151;
+    }
+    .card ul { padding-left: 20px; }
+    .card li { margin-bottom: 4px; }
+
+    /* Tag */
+    .tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px; margin-right: 6px;
+      letter-spacing: 0.03em;
+    }
+    .tag-blue { background: var(--blue-bg); color: var(--blue); }
+    .tag-green { background: var(--green-bg); color: var(--green); }
+    .tag-purple { background: var(--purple-bg); color: var(--purple); }
+    .tag-orange { background: var(--orange-bg); color: var(--orange); }
+    .tag-red { background: var(--red-bg); color: var(--red); }
+    .tag-teal { background: var(--teal-bg); color: var(--teal); }
+    .tag-warm { background: var(--warm-bg); color: var(--warm); }
+
+    /* Comparison diagram */
+    .compare-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 640px) {
+      .compare-container { grid-template-columns: 1fr; }
+    }
+    .compare-box {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .compare-box.old { border-top: 3px solid var(--warm); }
+    .compare-box.new { border-top: 3px solid var(--accent); }
+    .compare-label {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; margin-bottom: 12px;
+    }
+    .compare-box.old .compare-label { color: var(--warm); }
+    .compare-box.new .compare-label { color: var(--accent); }
+
+    /* Architecture diagram */
+    .arch-diagram {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 32px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .arch-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+    .arch-node {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 100px;
+      line-height: 1.3;
+    }
+    .arch-arrow {
+      font-size: 18px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .node-blue { background: var(--blue-bg); color: var(--blue); border: 1px solid #bfdbfe; }
+    .node-green { background: var(--green-bg); color: #15803d; border: 1px solid #bbf7d0; }
+    .node-purple { background: var(--purple-bg); color: var(--purple); border: 1px solid #ddd6fe; }
+    .node-orange { background: var(--orange-bg); color: #b45309; border: 1px solid #fde68a; }
+    .node-teal { background: var(--teal-bg); color: #0f766e; border: 1px solid #99f6e4; }
+    .node-red { background: var(--red-bg); color: var(--red); border: 1px solid #fecaca; }
+    .node-warm { background: var(--warm-bg); color: var(--warm); border: 1px solid #d6d3d1; }
+
+    /* Tree diagram */
+    .tree-container {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 32px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    .tree-svg { width: 100%; max-width: 700px; margin: 0 auto; display: block; }
+
+    /* Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 12px;
+    }
+    .data-table th, .data-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th {
+      font-weight: 700;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: #f9fafb;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table .highlight { font-weight: 700; color: var(--accent); }
+    .data-table .best { background: var(--accent-light); }
+
+    /* Principle grid */
+    .principle-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .principle-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .principle-num {
+      flex-shrink: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* Pipeline */
+    .pipeline {
+      display: flex;
+      gap: 0;
+      margin: 16px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pipeline-step {
+      display: flex;
+      align-items: center;
+    }
+    .pipeline-box {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.4;
+      min-width: 110px;
+    }
+    .pipeline-arrow {
+      font-size: 20px;
+      color: var(--muted);
+      padding: 0 6px;
+    }
+
+    /* Callout */
+    .callout {
+      background: var(--card);
+      border-radius: 10px;
+      padding: 20px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 16px;
+      border-left: 4px solid;
+    }
+    .callout-green { border-color: var(--green); }
+    .callout-orange { border-color: var(--orange); }
+    .callout-red { border-color: var(--red); }
+    .callout-purple { border-color: var(--purple); }
+    .callout-title {
+      font-weight: 700; font-size: 14px; margin-bottom: 6px;
+    }
+    .callout p, .callout li {
+      font-size: 14px; line-height: 1.7; color: #374151;
+    }
+    .callout ul { padding-left: 20px; margin-top: 6px; }
+    .callout li { margin-bottom: 4px; }
+
+    /* Math-like block */
+    .formula-block {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: 'SF Mono', 'Fira Code', Menlo, monospace;
+      font-size: 13px;
+      margin: 12px 0;
+      overflow-x: auto;
+      line-height: 1.8;
+    }
+
+    /* Meta-prompt diagram */
+    .meta-diagram {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .meta-box {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.3;
+      min-width: 80px;
+    }
+    .meta-arrow {
+      font-size: 16px;
+      color: var(--muted);
+    }
+    .meta-label {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    /* Dual-mode box */
+    .dual-mode {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0;
+    }
+    @media (max-width: 640px) {
+      .dual-mode { grid-template-columns: 1fr; }
+    }
+    .mode-box {
+      border-radius: 10px;
+      padding: 20px;
+      border: 2px solid;
+    }
+    .mode-box.refine { border-color: var(--blue); background: var(--blue-bg); }
+    .mode-box.regen { border-color: var(--purple); background: var(--purple-bg); }
+    .mode-title {
+      font-weight: 700;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .mode-box.refine .mode-title { color: var(--blue); }
+    .mode-box.regen .mode-title { color: var(--purple); }
+    .mode-box p {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #374151;
+    }
+
+    /* iteration chart */
+    .bar-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      height: 200px;
+      padding: 20px 0;
+      justify-content: center;
+    }
+    .bar-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .bar-col {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    .bar {
+      width: 20px;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.3s;
+    }
+    .bar-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 600;
+    }
+    .bar-value {
+      font-size: 10px;
+      font-weight: 700;
+      text-align: center;
+    }
+    .chart-legend {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      margin-top: 8px;
+      font-size: 11px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* UCT tree SVG */
+    .uct-tree { margin: 0 auto; display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <h1>MCTSr-Zero: 原则导向的心理咨询对话生成</h1>
+  <div class="tagline">AAAI 2026 &middot; Hao Lu, Yanchi Gu, Haoyuan Huang, Yulin Zhou, Ningxin Zhu, Chen Li &middot; arXiv 2505.23229</div>
+  <a class="source-link" href="https://arxiv.org/abs/2505.23229" target="_blank">arXiv: 2505.23229</a>
+</div>
+
+<!-- 30s TLDR -->
+<div class="tldr">
+  <div class="tldr-label">30 秒版本</div>
+  <strong>问题</strong>：MCTS + LLM 在数学/代码等有客观答案的领域有效，但心理咨询对话没有"正确答案"——好的回应取决于共情、伦理、来访者状态等主观因素。<br>
+  <strong>做法</strong>：MCTSr-Zero 把 MCTS 的搜索目标从"逼近正确答案"改为"符合 16 条咨询原则的对话轨迹"。引入两种探索模式——<em>Refinement</em>（深度改进单条回应）和 <em>Regeneration + Meta-Prompt Adaptation</em>（切换初始策略，广度探索不同咨询风格）。<br>
+  <strong>结果</strong>：用该方法生成 4,000 条合成对话微调的 PsyLLM（90.93 分）超过 Claude 3.7 Sonnet（88.89）和 GPT-4.1（85.65），在 PsyEval 基准上达到 SOTA。<br>
+  <strong>对 moodcoco</strong>：这套流水线可直接复用于合成训练数据——用 MCTSr-Zero 批量生成高质量咨询对话，微调小模型做 fast-path 回复。
+</div>
+
+<!-- Section 1: 传统 MCTS vs MCTSr-Zero -->
+<div class="section">
+  <div class="section-title">核心改造：传统 MCTS vs MCTSr-Zero</div>
+
+  <div class="compare-container">
+    <div class="compare-box old">
+      <div class="compare-label">传统 MCTS (数学/代码)</div>
+      <p style="font-size:14px; margin-bottom:12px;"><strong>搜索目标</strong>：逼近唯一正确答案</p>
+      <ul style="font-size:13px; padding-left:18px; color:#374151;">
+        <li><strong>Selection</strong>：UCT 选最优子节点</li>
+        <li><strong>Expansion</strong>：生成下一步推理</li>
+        <li><strong>Simulation</strong>：rollout 到终态，验证对错</li>
+        <li><strong>Backpropagation</strong>：胜/负信号回传</li>
+      </ul>
+      <div style="margin-top:12px; padding:10px 14px; background:var(--warm-bg); border-radius:6px; font-size:12px; color:var(--warm);">
+        评判标准 = 答案对不对<br>
+        终止条件 = 找到正确答案
+      </div>
+    </div>
+
+    <div class="compare-box new">
+      <div class="compare-label">MCTSr-Zero (心理咨询)</div>
+      <p style="font-size:14px; margin-bottom:12px;"><strong>搜索目标</strong>：符合领域原则的对话轨迹</p>
+      <ul style="font-size:13px; padding-left:18px; color:#374151;">
+        <li><strong>Selection</strong>：UCT 选节点 <em>或</em> 回到根节点触发 Regeneration</li>
+        <li><strong>Expansion</strong>：Refinement（改进）或 Regeneration（换策略重生成）</li>
+        <li><strong>Evaluation</strong>：LLM 按 16 条原则打分（替代 rollout）</li>
+        <li><strong>Backpropagation</strong>：Q 值 + Meta-Prompt 更新</li>
+      </ul>
+      <div style="margin-top:12px; padding:10px 14px; background:var(--accent-light); border-radius:6px; font-size:12px; color:var(--accent);">
+        评判标准 = 16 条咨询原则打分<br>
+        终止条件 = 迭代次数 T
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="border-left: 3px solid var(--accent);">
+    <div class="card-title">关键转变</div>
+    <p>传统 MCTS 的节点代表"推理步骤"，树的叶子节点是"最终答案"。MCTSr-Zero 的节点代表"咨询师的完整回应"，搜索不是在找"正确答案"，而是在<strong>优化回应质量</strong>——让回应越来越贴合共情、伦理、连贯性等原则。没有"正确终态"，只有"更好的轨迹"。</p>
+  </div>
+</div>
+
+<!-- Section 2: 完整架构 -->
+<div class="section">
+  <div class="section-title">MCTSr-Zero 完整工作流</div>
+
+  <div class="arch-diagram">
+    <div style="text-align:center; font-size:13px; color:var(--muted); margin-bottom:16px; font-weight:600;">单轮迭代流程（重复 T 次）</div>
+
+    <div class="arch-flow">
+      <div class="arch-node node-warm">
+        <div>用户查询 P<br><span style="font-size:11px;font-weight:400;">+ Meta-Prompt m</span></div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-blue">
+        <div>Selection<br><span style="font-size:11px;font-weight:400;">UCT 选节点</span></div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-green">
+        <div>Expansion<br><span style="font-size:11px;font-weight:400;">Refine / Regen</span></div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-purple">
+        <div>Principled<br>Self-Evaluation<br><span style="font-size:11px;font-weight:400;">16 原则打分</span></div>
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-orange">
+        <div>Backpropagation<br><span style="font-size:11px;font-weight:400;">Q 值 + m 更新</span></div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:16px;">
+      <div style="display:inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background:var(--warm-bg); border-radius:8px; font-size:12px;">
+        <span style="color:var(--warm);">循环</span>
+        <span class="arch-arrow">&larr;</span>
+        <span style="color:var(--warm);">返回 Selection，直到迭代 T 次完成</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dual mode -->
+  <div class="section-subtitle">Selection 的两种分支</div>
+  <div class="dual-mode">
+    <div class="mode-box refine">
+      <div class="mode-title">Refinement（深度）</div>
+      <p>UCT 选中某个 answer 节点 &rarr; 基于该节点的评估反馈（critique + suggestions），LLM 生成改进版回应作为子节点。<br><br>类似传统 MCTS 的"沿着有前途的分支继续探索"。</p>
+    </div>
+    <div class="mode-box regen">
+      <div class="mode-title">Regeneration（广度）</div>
+      <p>UCT 选中根节点 P &rarr; 触发 Meta-Prompt Adaptation，生成新的候选 meta-prompt，然后用新 prompt 从头生成全新回应。<br><br>这是 MCTSr-Zero 的独创——跳出当前策略空间，换一种咨询风格重新开始。</p>
+    </div>
+  </div>
+</div>
+
+<!-- Section 3: Meta-Prompt Adaptation -->
+<div class="section">
+  <div class="section-title">Meta-Prompt Adaptation 机制</div>
+
+  <div class="meta-diagram">
+    <div style="text-align:center; font-size:13px; color:var(--muted); margin-bottom:20px; font-weight:600;">Meta-Prompt 自适应更新流程</div>
+
+    <div class="meta-row">
+      <div class="meta-box" style="background:var(--warm-bg); color:var(--warm); border:1px solid #d6d3d1;">
+        当前 m<sub>activate</sub>
+      </div>
+      <div class="meta-arrow">+</div>
+      <div class="meta-box" style="background:var(--red-bg); color:var(--red); border:1px solid #fecaca;">
+        反馈 F<sub>n</sub><br><span style="font-size:10px;font-weight:400;">最近评估的 critique</span>
+      </div>
+      <div class="meta-arrow">&rarr;</div>
+      <div class="meta-box" style="background:var(--purple-bg); color:var(--purple); border:1px solid #ddd6fe;">
+        LLM 生成<br>候选 m<sub>cand</sub>
+      </div>
+      <div class="meta-arrow">&rarr;</div>
+      <div class="meta-box" style="background:var(--blue-bg); color:var(--blue); border:1px solid #bfdbfe;">
+        用 m<sub>cand</sub> 生成<br>新回应 A<sub>t+1</sub>
+      </div>
+      <div class="meta-arrow">&rarr;</div>
+      <div class="meta-box" style="background:var(--green-bg); color:#15803d; border:1px solid #bbf7d0;">
+        评估 Q(A<sub>t+1</sub>)
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:16px;">
+      <div style="display:inline-block; padding:12px 20px; background:#f9fafb; border:1px solid var(--border); border-radius:8px;">
+        <div class="formula-block" style="background:transparent; border:none; padding:0; margin:0;">
+m<sub>activate</sub> = m<sub>cand</sub>&nbsp;&nbsp;&nbsp;if Q(A<sub>t+1</sub>) &ge; Q(P)<br>
+m<sub>activate</sub> = m<sub>activate</sub>&nbsp;&nbsp;otherwise（保持不变）
+        </div>
+      </div>
+    </div>
+    <div class="meta-label" style="margin-top:12px;">只有新策略确实产生了更好的回应，才会更新激活的 meta-prompt</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">为什么需要 Meta-Prompt Adaptation？</div>
+    <p>传统 Self-Refine 从单一初始回应出发，反复修改。问题是：如果初始策略就不对（比如用了认知行为疗法，但来访者需要的是情感确认），再怎么 refine 也跳不出这个框。</p>
+    <p style="margin-top:8px;">Meta-Prompt Adaptation 让系统能<strong>切换咨询策略</strong>——比如从"直接给建议"切换到"先共情再引导"，或从"聚焦问题解决"切换到"探索情绪体验"。每次切换都是有条件的：只有新策略产生了更好的回应才会保留。</p>
+  </div>
+</div>
+
+<!-- Section 4: 16 原则 -->
+<div class="section">
+  <div class="section-title">原则导向的搜索目标：16 条咨询原则（Constitution）</div>
+
+  <div class="card" style="border-left:3px solid var(--purple); margin-bottom:20px;">
+    <div class="card-title" style="color:var(--purple);">替代"正确答案"的评判标准</div>
+    <p>传统 MCTS 用"答案是否正确"做 reward。MCTSr-Zero 用 16 条心理咨询原则做 reward——LLM 按每条原则 0-10 打分，综合后作为节点的 Q 值。</p>
+  </div>
+
+  <div class="principle-grid">
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--accent-light);color:var(--accent);">1</div>
+      <div><strong>关注</strong> Concern<br><span style="font-size:12px;color:var(--muted);">对来访者的关心程度</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--green-bg);color:var(--green);">2</div>
+      <div><strong>表达性</strong> Expressiveness<br><span style="font-size:12px;color:var(--muted);">回应的丰富与清晰度</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--purple-bg);color:var(--purple);">3</div>
+      <div><strong>情感共鸣</strong> Resonate Feelings<br><span style="font-size:12px;color:var(--muted);">与来访者情绪的共振</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--orange-bg);color:var(--orange);">4</div>
+      <div><strong>温暖</strong> Warmth<br><span style="font-size:12px;color:var(--muted);">语气的温和与支持感</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--teal-bg);color:var(--teal);">5</div>
+      <div><strong>内在世界调谐</strong> Attuned Inner World<br><span style="font-size:12px;color:var(--muted);">对来访者内心体验的感知</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--blue-bg);color:var(--blue);">6</div>
+      <div><strong>认知理解</strong> Understanding Cognitive<br><span style="font-size:12px;color:var(--muted);">理解来访者的想法和信念</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--red-bg);color:var(--red);">7</div>
+      <div><strong>情感理解</strong> Understanding Feelings<br><span style="font-size:12px;color:var(--muted);">准确识别来访者的情绪</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--warm-bg);color:var(--warm);">8</div>
+      <div><strong>情感接纳</strong> Acceptance Feelings<br><span style="font-size:12px;color:var(--muted);">不评判地接受来访者的感受</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--accent-light);color:var(--accent);">9</div>
+      <div><strong>回应性</strong> Responsiveness<br><span style="font-size:12px;color:var(--muted);">对来访者需求的及时回应</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--green-bg);color:var(--green);">10</div>
+      <div><strong>谬误避免</strong> Fallacy Avoidance<br><span style="font-size:12px;color:var(--muted);">不犯逻辑/心理学谬误</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--purple-bg);color:var(--purple);">11</div>
+      <div><strong>对话逻辑一致性</strong> Dialogical Logical Consistency<br><span style="font-size:12px;color:var(--muted);">上下文不自相矛盾</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--orange-bg);color:var(--orange);">12</div>
+      <div><strong>对话连贯性</strong> Conversational Continuity<br><span style="font-size:12px;color:var(--muted);">话题衔接自然流畅</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--teal-bg);color:var(--teal);">13</div>
+      <div><strong>阻抗处理</strong> Resistance Handling<br><span style="font-size:12px;color:var(--muted);">面对来访者抗拒时的处理</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--blue-bg);color:var(--blue);">14</div>
+      <div><strong>伦理/亲社会引导</strong> Ethics & Prosocial<br><span style="font-size:12px;color:var(--muted);">遵守伦理，正向引导</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--red-bg);color:var(--red);">15</div>
+      <div><strong>总结</strong> Summarizing<br><span style="font-size:12px;color:var(--muted);">适时总结来访者表达</span></div>
+    </div>
+    <div class="principle-item">
+      <div class="principle-num" style="background:var(--warm-bg);color:var(--warm);">16</div>
+      <div><strong>节奏调谐</strong> Dialogue Pacing<br><span style="font-size:12px;color:var(--muted);">推进速度与来访者同步</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 5: 评估函数 -->
+<div class="section">
+  <div class="section-title">Principled Self-Evaluation（评估函数）</div>
+
+  <div class="arch-diagram">
+    <div style="text-align:center; font-size:13px; color:var(--muted); margin-bottom:16px; font-weight:600;">评估过程：替代传统 MCTS 的 rollout simulation</div>
+    <div class="arch-flow">
+      <div class="arch-node node-blue" style="min-width:120px;">
+        咨询师回应 A
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-purple" style="min-width:160px;">
+        LLM 按 16 条原则<br>逐条评分 (0-10)
+      </div>
+      <div class="arch-arrow">&rarr;</div>
+      <div class="arch-node node-green" style="min-width:140px;">
+        输出：<br>critique + score + suggestions
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Q 值聚合公式</div>
+    <div class="formula-block">
+Q(a) = 1/2 &times; ( min(R<sub>a</sub>) + (1/|R<sub>a</sub>|) &times; &Sigma; R<sub>a</sub><sup>i</sup> )
+    </div>
+    <p style="margin-top:8px;"><strong>min(R<sub>a</sub>)</strong>：所有评估中的最低分（木桶效应——一条原则严重违反就拉低总分）<br>
+    <strong>mean(R<sub>a</sub>)</strong>：所有评估的平均分（整体质量）<br>
+    取两者均值，平衡"不能有明显短板"和"整体要好"。</p>
+  </div>
+
+  <div class="card">
+    <div class="card-title">父节点 Q 值更新</div>
+    <div class="formula-block">
+Q'(parent) = 1/2 &times; ( Q(parent) + max<sub>children</sub> Q(child) )<br>
+Q(root)    = (1/N) &times; &Sigma; Q(child<sub>i</sub>)
+    </div>
+    <p style="margin-top:8px;">父节点：自身得分与最好子节点的均值（好的改进能拉升父节点评价）。<br>根节点：所有直接子节点的平均（全局视角）。</p>
+  </div>
+</div>
+
+<!-- Section 6: 训练数据生成流水线 -->
+<div class="section">
+  <div class="section-title">训练数据生成流水线</div>
+
+  <div class="arch-diagram">
+    <div class="pipeline">
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--warm-bg); color:var(--warm); border:1px solid #d6d3d1;">
+          16 类心理困扰场景<br><span style="font-size:10px;font-weight:400;">学业/职业/家庭/恋爱...</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--blue-bg); color:var(--blue); border:1px solid #bfdbfe;">
+          合成案例报告<br><span style="font-size:10px;font-weight:400;">每类 250 个 case</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--purple-bg); color:var(--purple); border:1px solid #ddd6fe;">
+          MCTSr-Zero<br><span style="font-size:10px;font-weight:400;">搜索最优对话轨迹</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--green-bg); color:#15803d; border:1px solid #bbf7d0;">
+          4,000 条对话<br><span style="font-size:10px;font-weight:400;">~20 轮/条</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--orange-bg); color:#b45309; border:1px solid #fde68a;">
+          SFT + SimPO<br><span style="font-size:10px;font-weight:400;">两阶段微调</span>
+        </div>
+        <div class="pipeline-arrow">&rarr;</div>
+      </div>
+      <div class="pipeline-step">
+        <div class="pipeline-box" style="background:var(--accent-light); color:var(--accent); border:1px solid #93c5fd;">
+          PsyLLM
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare-container">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-blue">Step 1</span> 场景 & 案例生成</div>
+      <ul>
+        <li>16 类心理困扰：学业压力、职业焦虑、家庭关系、恋爱问题、自我认同...</li>
+        <li>每类约 250 个合成案例报告</li>
+        <li>总计 4,000 个独立案例</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-purple">Step 2</span> MCTSr-Zero 对话搜索</div>
+      <ul>
+        <li>每个案例运行 MCTSr-Zero 搜索</li>
+        <li>生成多轮咨询对话（平均 ~20 轮）</li>
+        <li>选取搜索树中 Q 值最高的轨迹</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="compare-container">
+    <div class="card">
+      <div class="card-title"><span class="tag tag-green">Step 3</span> SFT 监督微调</div>
+      <ul>
+        <li>4 x NVIDIA A800 GPU</li>
+        <li>2 epochs, lr = 1e-4</li>
+        <li>Batch size 1, AdamW 优化器</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="tag tag-orange">Step 4</span> SimPO 对齐</div>
+      <ul>
+        <li>3 epochs, lr = 5e-7</li>
+        <li>Batch size 1</li>
+        <li>进一步对齐人类偏好</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Section 7: 实验结果 -->
+<div class="section">
+  <div class="section-title">实验结果</div>
+
+  <div class="section-subtitle">PsyEval 基准排行（64 场景 x 16 维度）</div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>模型</th>
+          <th>总分</th>
+          <th>ESHCC-R<br><span style="font-weight:400;font-size:10px;">共情/安全/温暖/连贯/认知</span></th>
+          <th>DLC<br><span style="font-weight:400;font-size:10px;">对话逻辑一致性</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="best">
+          <td><strong>PsyLLM-Large-250519</strong></td>
+          <td class="highlight">90.93</td>
+          <td>54.53</td>
+          <td>9.16</td>
+        </tr>
+        <tr class="best">
+          <td><strong>PsyLLM-Mini-250519</strong></td>
+          <td class="highlight">90.72</td>
+          <td>54.46</td>
+          <td>9.15</td>
+        </tr>
+        <tr>
+          <td>Claude 3.7 Sonnet</td>
+          <td>88.89</td>
+          <td>53.13</td>
+          <td>9.03</td>
+        </tr>
+        <tr>
+          <td>GPT-4.1</td>
+          <td>85.65</td>
+          <td>50.87</td>
+          <td>8.77</td>
+        </tr>
+        <tr>
+          <td>GPT-4.1-mini</td>
+          <td>83.80</td>
+          <td>49.82</td>
+          <td>8.69</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout callout-green" style="margin-top:16px;">
+    <div class="callout-title">关键发现</div>
+    <ul>
+      <li>PsyLLM（MCTSr-Zero 微调的小模型）超越 Claude 3.7 Sonnet（+2.04 分）和 GPT-4.1（+5.28 分）</li>
+      <li>Large 和 Mini 版本差距极小（0.21 分），说明训练数据质量比模型大小更重要</li>
+      <li>合成数据微调的小模型 > 未微调的大模型——这是 MCTSr-Zero 的核心价值</li>
+    </ul>
+  </div>
+
+  <!-- Ablation -->
+  <div class="section-subtitle" style="margin-top:24px;">消融实验：迭代次数 vs 搜索方法</div>
+
+  <div class="card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>方法</th>
+          <th>0 次<br><span style="font-weight:400;">baseline</span></th>
+          <th>1 次</th>
+          <th>2 次</th>
+          <th>4 次</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Self-Refine（纯迭代改写）</td>
+          <td>83.60</td>
+          <td>86.39</td>
+          <td>~87.5</td>
+          <td>~88.5</td>
+        </tr>
+        <tr>
+          <td>MCTSr (无 Meta-Prompt)</td>
+          <td>83.60</td>
+          <td>~87.0</td>
+          <td>~88.5</td>
+          <td>~89.5</td>
+        </tr>
+        <tr class="best">
+          <td><strong>MCTSr-Zero（完整版）</strong></td>
+          <td>83.60</td>
+          <td>~87.5</td>
+          <td>~89.0</td>
+          <td class="highlight">90.18</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:16px; display:flex; gap:12px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px; padding:12px 16px; background:var(--warm-bg); border-radius:8px; font-size:13px;">
+        <strong>Self-Refine &rarr; MCTSr</strong>：加入树搜索（UCT 选择 + 多分支）比线性 refine 提升约 1 分。MCTS 的结构化探索确实有用。
+      </div>
+      <div style="flex:1; min-width:200px; padding:12px 16px; background:var(--accent-light); border-radius:8px; font-size:13px;">
+        <strong>MCTSr &rarr; MCTSr-Zero</strong>：加入 Meta-Prompt Adaptation 再提升约 0.7 分。策略层面的广度探索（换咨询风格）有独立贡献。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 8: 对 moodcoco 的价值 -->
+<div class="section">
+  <div class="section-title">对 moodcoco 的价值</div>
+
+  <div class="callout callout-green">
+    <div class="callout-title">直接可用：合成数据流水线</div>
+    <ul>
+      <li><strong>核心价值</strong>：用 MCTSr-Zero 批量生成高质量咨询对话，微调小模型做 fast-path 回复</li>
+      <li>论文证明：4,000 条合成数据微调的小模型 > GPT-4.1 级别的大模型</li>
+      <li>训练成本可控：4 x A800，SFT 2 epochs + SimPO 3 epochs</li>
+    </ul>
+  </div>
+
+  <div class="callout callout-purple">
+    <div class="callout-title">可借鉴：16 原则评估体系</div>
+    <ul>
+      <li>moodcoco 现有 5 维评估（看见情绪/原因/模式/方法 + 安全边界）可以参考这 16 条原则做细粒度拆分</li>
+      <li>特别是 Resistance Handling（阻抗处理）和 Dialogue Pacing（节奏调谐）两个维度，moodcoco 目前未覆盖</li>
+      <li>PsyEval 的"第三方观察者视角"评估方式值得借鉴——用推断性语言（"系统似乎..."）而非绝对判断</li>
+    </ul>
+  </div>
+
+  <div class="callout callout-orange">
+    <div class="callout-title">实施路径</div>
+    <ul>
+      <li><strong>Phase 1</strong>：定义 moodcoco 版"原则宪法"（基于现有 5 维 + 论文 16 维，取并集去重）</li>
+      <li><strong>Phase 2</strong>：搭建 MCTSr-Zero 数据生成流水线，用 minimax-m2.7 做搜索引擎</li>
+      <li><strong>Phase 3</strong>：生成中文/印尼语咨询对话数据（16 类场景 x 目标市场文化适配）</li>
+      <li><strong>Phase 4</strong>：SFT + SimPO 微调 fast-path 小模型</li>
+    </ul>
+  </div>
+
+  <div class="card" style="border-left:3px solid var(--red);">
+    <div class="card-title" style="color:var(--red);">需要注意</div>
+    <ul>
+      <li>MCTSr-Zero 的计算成本高（每个 case 要跑 T 次 MCTS 迭代，每次涉及 LLM 多次调用），适合离线数据生成，不适合在线推理</li>
+      <li>论文的评估用 AI Judge（deepseek-v3），自身可能有偏差——moodcoco 如果用此方法，需要抽样做人工评估校验</li>
+      <li>16 类场景覆盖面需要根据 moodcoco 目标用户（大学生）做定制</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Section 9: 局限性 -->
+<div class="section">
+  <div class="section-title">局限性</div>
+
+  <div class="compare-container">
+    <div class="card" style="border-top:3px solid var(--red);">
+      <div class="card-title">论文自述</div>
+      <ul>
+        <li><strong>计算成本高</strong>：每个 case 需要多次 LLM 调用（Selection + Expansion + Evaluation + Meta-Prompt），只适合离线数据生成</li>
+        <li><strong>AI Judge 偏差</strong>：PsyEval 用 deepseek-v3 做评估，AI 评分器自身的偏好和盲点会传递到结果中</li>
+        <li><strong>缺少人工评估</strong>：没有真人心理咨询师对生成对话的质量评定</li>
+      </ul>
+    </div>
+    <div class="card" style="border-top:3px solid var(--orange);">
+      <div class="card-title">我们的观察</div>
+      <ul>
+        <li><strong>场景覆盖</strong>：16 类心理困扰的分类粒度较粗（如"学业压力"内部差异很大）</li>
+        <li><strong>文化适配</strong>：论文聚焦中文场景，跨文化适用性未验证</li>
+        <li><strong>Meta-Prompt 边际收益</strong>：消融实验显示 Meta-Prompt Adaptation 仅贡献约 0.7 分提升，投入产出比需要评估</li>
+        <li><strong>与真实咨询的差距</strong>：合成对话的来访者反应是 LLM 模拟的，可能不反映真实来访者的不可预测性</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Section 10: 技术细节速查 -->
+<div class="section">
+  <div class="section-title">技术细节速查</div>
+
+  <div class="compare-container">
+    <div class="card">
+      <div class="card-title">UCT Selection 公式</div>
+      <div class="formula-block">
+UCT(a) = Q(a) + c &times; &radic;(ln N(P) / N(a))
+      </div>
+      <p style="font-size:13px; margin-top:8px;">Q(a) = 节点质量估计<br>N(P) = 父节点访问次数<br>N(a) = 当前节点访问次数<br>c = 探索常数</p>
+    </div>
+    <div class="card">
+      <div class="card-title">数据集参数</div>
+      <table class="data-table" style="font-size:12px;">
+        <tr><td>数据集名</td><td><strong>MCTSr-Zero-Psy</strong></td></tr>
+        <tr><td>对话数量</td><td>4,000</td></tr>
+        <tr><td>场景类别</td><td>16 类</td></tr>
+        <tr><td>每类对话数</td><td>~250</td></tr>
+        <tr><td>平均轮数</td><td>~20 轮/对话</td></tr>
+        <tr><td>PsyEval 测试集</td><td>64 case (4/类 x 16 类)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">训练超参数</div>
+    <div class="compare-container" style="margin-bottom:0;">
+      <div>
+        <table class="data-table" style="font-size:12px;">
+          <tr><th colspan="2">SFT 阶段</th></tr>
+          <tr><td>Epochs</td><td>2</td></tr>
+          <tr><td>Learning Rate</td><td>1 x 10<sup>-4</sup></td></tr>
+          <tr><td>Batch Size</td><td>1</td></tr>
+          <tr><td>Optimizer</td><td>AdamW</td></tr>
+          <tr><td>Hardware</td><td>4 x A800</td></tr>
+        </table>
+      </div>
+      <div>
+        <table class="data-table" style="font-size:12px;">
+          <tr><th colspan="2">SimPO 阶段</th></tr>
+          <tr><td>Epochs</td><td>3</td></tr>
+          <tr><td>Learning Rate</td><td>5 x 10<sup>-7</sup></td></tr>
+          <tr><td>Batch Size</td><td>1</td></tr>
+          <tr><td>Optimizer</td><td>AdamW</td></tr>
+          <tr><td>Hardware</td><td>4 x A800</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="text-align:center; color:var(--muted); font-size:12px; margin-top:40px; padding-top:20px; border-top:1px solid var(--border);">
+  moodcoco 论文解读系列 &middot; MCTSr-Zero &middot; 2026-05-13
+</div>
+
+</body>
+</html>

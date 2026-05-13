@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TOOL-ED: 把咨询技能建模为 Tool Call 的范式</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --text: #1c1917;
+    --text-secondary: #78716c;
+    --accent: #0c0a09;
+    --blue: #2563eb;
+    --blue-light: #dbeafe;
+    --green: #16a34a;
+    --green-light: #dcfce7;
+    --amber: #d97706;
+    --amber-light: #fef3c7;
+    --red: #dc2626;
+    --red-light: #fee2e2;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --teal: #0d9488;
+    --teal-light: #ccfbf1;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --slate: #475569;
+    --slate-light: #f1f5f9;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --indigo: #4f46e5;
+    --indigo-light: #eef2ff;
+    --radius: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .header .subtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+  }
+  .header .meta {
+    display: inline-flex;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .header .meta span {
+    background: var(--slate-light);
+    padding: 4px 12px;
+    border-radius: 20px;
+  }
+
+  /* TLDR */
+  .tldr {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 40px;
+    box-shadow: var(--shadow);
+  }
+  .tldr h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--blue);
+  }
+  .tldr p {
+    font-size: 15px;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .tldr .highlight {
+    background: var(--amber-light);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+
+  /* Sections */
+  .section {
+    margin-bottom: 40px;
+  }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    letter-spacing: -0.3px;
+  }
+  .section h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    margin-top: 20px;
+  }
+  .section p {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: var(--text);
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    margin-top: 0;
+  }
+  .card p, .card li {
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .card ul {
+    padding-left: 20px;
+    margin-top: 8px;
+  }
+  .card li {
+    margin-bottom: 6px;
+  }
+
+  /* Architecture Diagram */
+  .arch-diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    margin-bottom: 32px;
+    box-shadow: var(--shadow-md);
+    overflow-x: auto;
+  }
+  .arch-diagram h3 {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 600;
+    margin-bottom: 32px;
+    color: var(--text-secondary);
+  }
+
+  /* Two-stage layout */
+  .stages {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 700px) {
+    .stages { grid-template-columns: 1fr; }
+  }
+  .stage-box {
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+  }
+  .stage-box.stage-1 { border-color: var(--blue); }
+  .stage-box.stage-2 { border-color: var(--green); }
+  .stage-label {
+    position: absolute;
+    top: -12px;
+    left: 16px;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 12px;
+    border-radius: 10px;
+    letter-spacing: 0.5px;
+  }
+  .stage-1 .stage-label { background: var(--blue); color: white; }
+  .stage-2 .stage-label { background: var(--green); color: white; }
+
+  /* Flow elements */
+  .flow-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .flow-node .icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .flow-arrow {
+    text-align: center;
+    font-size: 18px;
+    color: var(--text-secondary);
+    padding: 4px 0;
+  }
+  .flow-decision {
+    border: 2px dashed var(--amber);
+    background: var(--amber-light);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    text-align: center;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .flow-branch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .flow-branch-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  /* Tool Schema Box */
+  .tool-schema {
+    background: #1c1917;
+    color: #e7e5e4;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .tool-schema .key { color: #93c5fd; }
+  .tool-schema .str { color: #86efac; }
+  .tool-schema .comment { color: #78716c; font-style: italic; }
+  .tool-schema .type { color: #fbbf24; }
+
+  /* Comparison Table */
+  .comparison {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .comparison th {
+    background: var(--slate-light);
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 2px solid var(--border);
+  }
+  .comparison td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .comparison tr:last-child td { border-bottom: none; }
+  .comparison .dim { font-weight: 600; white-space: nowrap; }
+  .comparison .winner { background: var(--green-light); }
+
+  /* Metrics */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 16px 0;
+  }
+  @media (max-width: 600px) {
+    .metric-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .metric-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .metric-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .metric-card .label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .metric-card.win .value { color: var(--green); }
+  .metric-card.blue .value { color: var(--blue); }
+  .metric-card.amber .value { color: var(--amber); }
+
+  /* Pipeline Diagram */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 24px 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .pipe-step {
+    flex: 1;
+    min-width: 140px;
+    max-width: 200px;
+    padding: 16px 14px;
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+  }
+  .pipe-step .pipe-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .pipe-step .pipe-desc {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .pipe-connector {
+    display: flex;
+    align-items: center;
+    font-size: 20px;
+    color: var(--text-secondary);
+    padding: 0 4px;
+  }
+
+  /* Tag */
+  .tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+  .tag-blue { background: var(--blue-light); color: var(--blue); }
+  .tag-green { background: var(--green-light); color: var(--green); }
+  .tag-amber { background: var(--amber-light); color: var(--amber); }
+  .tag-purple { background: var(--purple-light); color: var(--purple); }
+  .tag-red { background: var(--red-light); color: var(--red); }
+  .tag-teal { background: var(--teal-light); color: var(--teal); }
+  .tag-pink { background: var(--pink-light); color: var(--pink); }
+
+  /* Insight box */
+  .insight {
+    border-left: 4px solid var(--purple);
+    background: var(--purple-light);
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .insight strong { color: var(--purple); }
+
+  .warn {
+    border-left: 4px solid var(--red);
+    background: var(--red-light);
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .warn strong { color: var(--red); }
+
+  .note {
+    border-left: 4px solid var(--amber);
+    background: var(--amber-light);
+    padding: 16px 20px;
+    border-radius: 0 12px 12px 0;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .note strong { color: var(--amber); }
+
+  /* Knowledge base visual */
+  .kb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 16px 0;
+  }
+  @media (max-width: 600px) {
+    .kb-grid { grid-template-columns: 1fr; }
+  }
+  .kb-card {
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    background: var(--card);
+  }
+  .kb-card h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .kb-relation {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .kb-relation:last-child { border-bottom: none; }
+  .kb-relation .rel-name {
+    font-weight: 600;
+    min-width: 80px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+  .footer a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .footer a:hover { text-decoration: underline; }
+
+  /* ReAct format visual */
+  .react-demo {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin: 16px 0;
+    font-size: 13px;
+  }
+  .react-line {
+    padding: 6px 12px;
+    margin: 4px 0;
+    border-radius: 8px;
+    font-family: 'SF Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .react-line.thought { background: var(--purple-light); color: var(--purple); }
+  .react-line.action { background: var(--blue-light); color: var(--blue); }
+  .react-line.observation { background: var(--green-light); color: var(--green); }
+  .react-line.response { background: var(--amber-light); color: var(--amber); }
+  .react-label {
+    font-weight: 700;
+    margin-right: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>TOOL-ED</h1>
+    <div class="subtitle">把共情技能建模为 Tool Call：LLM 情绪对话的新范式</div>
+    <div class="meta">
+      <span>COLING 2025</span>
+      <span>Cao, Zhang, Feng et al.</span>
+      <span>EKTC Framework</span>
+      <span>arXiv: 2412.03096</span>
+    </div>
+  </div>
+
+  <!-- 30-Second Version -->
+  <div class="tldr">
+    <h2>30 秒版本</h2>
+    <p>
+      传统做法：把心理咨询技能写进 system prompt，让 LLM 自行判断何时使用。问题是要么每轮都用（引入噪声），要么根本不用。
+      TOOL-ED 的核心洞察：<span class="highlight">把共情知识库封装为标准 tool schema，让 LLM 像调 API 一样按需调用</span>。
+      模型自己学会了只在 26% 的对话轮次调用 tool——不是每轮都查，也不是完全不查，而是根据用户情绪强度和上下文自适应决策。
+      GPT-4 评估：共情 71% win，一致性 86% win，流畅度 87% win。
+    </p>
+  </div>
+
+  <!-- Core Architecture -->
+  <div class="section">
+    <h2>核心架构：EKTC 框架</h2>
+
+    <div class="arch-diagram">
+      <h3>Emotional Knowledge Tool Calling (EKTC) 两阶段架构</h3>
+
+      <div class="stages">
+        <!-- Stage 1: Dataset Construction -->
+        <div class="stage-box stage-1">
+          <div class="stage-label">Stage 1 数据集构建</div>
+
+          <div class="flow-node" style="background: var(--blue-light);">
+            <div class="icon" style="background: var(--blue); color: white;">D</div>
+            <div><strong>EmpatheticDialogue</strong><br>33,090 对话 / 32 情绪标签</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--purple-light);">
+            <div class="icon" style="background: var(--purple); color: white;">A</div>
+            <div><strong>Annotator</strong> (LLaMA3-70B)<br>判断是否需要 tool call</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--teal-light);">
+            <div class="icon" style="background: var(--teal); color: white;">T</div>
+            <div><strong>Tool Execution</strong><br>COMET / CICERO 生成知识</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--pink-light);">
+            <div class="icon" style="background: var(--pink); color: white;">R</div>
+            <div><strong>Reflector</strong> 评估相关性<br>因果/意图/情绪一致性</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--green-light);">
+            <div class="icon" style="background: var(--green); color: white;">&#10003;</div>
+            <div><strong>TOOL-ED Dataset</strong><br>高质量 tool-use 训练数据</div>
+          </div>
+        </div>
+
+        <!-- Stage 2: Inference -->
+        <div class="stage-box stage-2">
+          <div class="stage-label">Stage 2 训练 &amp; 推理</div>
+
+          <div class="flow-node" style="background: var(--green-light);">
+            <div class="icon" style="background: var(--green); color: white;">M</div>
+            <div><strong>LLM + LoRA Fine-tuning</strong><br>Qwen-14B / Vicuna-7B</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--slate-light);">
+            <div class="icon" style="background: var(--slate); color: white;">U</div>
+            <div><strong>User Input</strong><br>用户情绪表达 + 对话上下文</div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-decision">
+            模型自主判断：需要外部知识吗？
+          </div>
+
+          <div class="flow-branch">
+            <div class="flow-branch-item" style="background: var(--blue-light); border: 1px solid var(--blue);">
+              <strong>Yes: function_call</strong><br>
+              <span style="font-size:11px;">Action + Action Input<br>调用 EmotionKnowledgebase</span>
+            </div>
+            <div class="flow-branch-item" style="background: var(--amber-light); border: 1px solid var(--amber);">
+              <strong>No: assistant</strong><br>
+              <span style="font-size:11px;">直接生成共情回复<br>不引入外部知识</span>
+            </div>
+          </div>
+
+          <div class="flow-arrow">&#8595;</div>
+
+          <div class="flow-node" style="background: var(--green-light);">
+            <div class="icon" style="background: var(--green); color: white;">R</div>
+            <div><strong>Empathetic Response</strong><br>融合知识的共情回复</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="insight">
+        <strong>关键设计：</strong>模型在训练数据中只有 26.46% 的轮次包含 tool call。这意味着模型必须自己学会何时调用、何时不调用——而不是规则触发。
+      </div>
+    </div>
+  </div>
+
+  <!-- Tool Definition -->
+  <div class="section">
+    <h2>Tool 定义方式：把知识库封装为 Tool Schema</h2>
+
+    <p>TOOL-ED 的核心创新不在于知识库本身，而在于<strong>如何把知识库包装成 LLM 可理解、可调用的 tool 接口</strong>。两个知识库被定义为一个统一的 tool：</p>
+
+    <div class="tool-schema">
+      <span class="comment">// EmotionKnowledgebase Tool Definition</span><br>
+      {<br>
+      &nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"EmotionKnowledgebase"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"description"</span>: <span class="str">"查询情绪相关的常识知识库，</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">获取用户可能的意图、需求、期望、</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="str">行为后果、情绪反应等推理信息"</span>,<br>
+      &nbsp;&nbsp;<span class="key">"parameters"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="str">"object"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"properties"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"dialogue_context"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"type"</span>: <span class="str">"string"</span>,<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="str">"当前对话上下文 C"</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;}<br>
+      &nbsp;&nbsp;},<br>
+      &nbsp;&nbsp;<span class="key">"returns"</span>: {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// observation = COMET(C) + CICERO(C)</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"xIntent"</span>: <span class="type">string</span>,&nbsp;&nbsp;<span class="comment">// 用户意图</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"xNeed"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 用户需求</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"xWant"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 用户期望</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"xEffect"</span>: <span class="type">string</span>,&nbsp;&nbsp;<span class="comment">// 行为影响</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"xReact"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;<span class="comment">// 情绪反应</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"Cause"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 因果关系</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"SubEv"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 后续事件</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"Motiv"</span>: <span class="type">string</span>,&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 动机</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"React"</span>: <span class="type">string</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// 反应</span><br>
+      &nbsp;&nbsp;}<br>
+      }
+    </div>
+
+    <div class="kb-grid">
+      <div class="kb-card" style="border-color: var(--blue);">
+        <h4><span class="tag tag-blue">COMET</span> 基于 ATOMIC2020</h4>
+        <div class="kb-relation">
+          <span class="rel-name tag-blue" style="color:var(--blue)">xIntent</span>
+          <span>"他可能想要被理解"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name tag-blue" style="color:var(--blue)">xNeed</span>
+          <span>"他需要先冷静下来"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name tag-blue" style="color:var(--blue)">xWant</span>
+          <span>"他希望有人倾听"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name tag-blue" style="color:var(--blue)">xEffect</span>
+          <span>"他可能会更焦虑"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name tag-blue" style="color:var(--blue)">xReact</span>
+          <span>"感到沮丧和无助"</span>
+        </div>
+      </div>
+
+      <div class="kb-card" style="border-color: var(--teal);">
+        <h4><span class="tag tag-teal">CICERO</span> 对话常识</h4>
+        <div class="kb-relation">
+          <span class="rel-name" style="color:var(--teal)">Cause</span>
+          <span>"因为工作压力太大"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name" style="color:var(--teal)">SubEv</span>
+          <span>"接下来可能会请假"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name" style="color:var(--teal)">Motiv</span>
+          <span>"他想要改变现状"</span>
+        </div>
+        <div class="kb-relation">
+          <span class="rel-name" style="color:var(--teal)">React</span>
+          <span>"对方会感到被关心"</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <strong>注意：</strong>TOOL-ED 并不是把"倾听""共情""认知重评"这些咨询技能直接定义为 tool。它把<strong>常识推理能力</strong>定义为 tool——让模型在需要时获取关于用户意图/需求/因果的推理信息，然后用这些信息生成更好的共情回复。
+    </div>
+  </div>
+
+  <!-- Calling Mechanism -->
+  <div class="section">
+    <h2>调用机制：ReAct 格式的自适应 Tool Call</h2>
+
+    <p>推理时，模型遵循 ReAct (Reasoning + Acting) 格式，在两种输出模式之间自主切换：</p>
+
+    <div class="react-demo">
+      <div style="font-weight:600; margin-bottom:12px; font-size:14px;">示例：用户说 "我被裁员了，不知道该怎么办"</div>
+
+      <div class="react-line thought">
+        <span class="react-label">Thought:</span> 用户表达了强烈的负面情绪（焦虑+迷茫），需要理解其深层需求和可能的后续影响
+      </div>
+      <div class="react-line action">
+        <span class="react-label">Action:</span> EmotionKnowledgebase
+      </div>
+      <div class="react-line action">
+        <span class="react-label">Action Input:</span> {"dialogue_context": "用户: 我被裁员了，不知道该怎么办"}
+      </div>
+      <div class="react-line observation">
+        <span class="react-label">Observation:</span> xIntent: 寻求安慰和方向 | xNeed: 经济安全感 | xReact: 恐惧、自我怀疑 | Cause: 公司裁员 | SubEv: 可能开始找新工作
+      </div>
+      <div class="react-line response">
+        <span class="react-label">Response:</span> 被裁员的冲击一定很大。失去工作不只是收入的问题，也会让人对自己的价值产生怀疑。你现在最需要的可能不是马上行动，而是先让自己稳下来...
+      </div>
+    </div>
+
+    <div class="react-demo" style="margin-top:12px;">
+      <div style="font-weight:600; margin-bottom:12px; font-size:14px;">示例：用户说 "嗯，说得对"</div>
+
+      <div class="react-line response">
+        <span class="react-label">Response:</span> 你想多聊聊现在的感受，还是我们一起想想下一步可以做什么？
+      </div>
+      <div style="padding:8px 12px; font-size:12px; color: var(--text-secondary);">
+        (模型判断这个上下文不需要外部知识，直接回复，不调用 tool)
+      </div>
+    </div>
+
+    <h3>自适应决策的三个维度</h3>
+
+    <div class="pipeline">
+      <div class="pipe-step" style="background: var(--blue-light);">
+        <div class="pipe-title" style="color: var(--blue);">情绪强度</div>
+        <div class="pipe-desc">用户表达的情绪越强烈<br>越需要深层理解<br>越倾向调用 tool</div>
+      </div>
+      <div class="pipe-connector">&#8594;</div>
+      <div class="pipe-step" style="background: var(--purple-light);">
+        <div class="pipe-title" style="color: var(--purple);">上下文充分性</div>
+        <div class="pipe-desc">已有对话信息是否足够<br>生成有质量的回复<br>不够则调 tool 补充</div>
+      </div>
+      <div class="pipe-connector">&#8594;</div>
+      <div class="pipe-step" style="background: var(--green-light);">
+        <div class="pipe-title" style="color: var(--green);">知识收益</div>
+        <div class="pipe-desc">外部知识是否真能<br>提升回复质量<br>无益则不调</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison: Tool-based vs Prompt-based -->
+  <div class="section">
+    <h2>Tool-based vs. Prompt-based Skill Selection</h2>
+
+    <div class="card">
+      <table class="comparison">
+        <thead>
+          <tr>
+            <th style="width:140px;">维度</th>
+            <th>Prompt-based (传统)</th>
+            <th>Tool-based (TOOL-ED)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="dim">知识接入方式</td>
+            <td>把所有知识塞进 system prompt<br>或 few-shot examples</td>
+            <td class="winner">按需调用外部 API/知识库<br>即插即用，不占 context window</td>
+          </tr>
+          <tr>
+            <td class="dim">选择机制</td>
+            <td>Prompt 中描述何时用什么技能<br>依赖 LLM 的指令遵循能力</td>
+            <td class="winner">模型通过训练学会自主判断<br>输出结构化 function_call</td>
+          </tr>
+          <tr>
+            <td class="dim">可扩展性</td>
+            <td>技能越多 prompt 越长<br>互相干扰，context window 爆炸</td>
+            <td class="winner">新增 tool 只需定义 schema<br>不影响已有 tool</td>
+          </tr>
+          <tr>
+            <td class="dim">噪声控制</td>
+            <td>要么全用（噪声大）<br>要么靠 LLM 自觉（不可控）</td>
+            <td class="winner">训练数据中学到的调用比例<br>自适应 ~26% 的调用率</td>
+          </tr>
+          <tr>
+            <td class="dim">可观测性</td>
+            <td>黑箱：不知道模型"用了"哪个技能</td>
+            <td class="winner">白箱：每次 tool call 有明确记录<br>可审计、可调试</td>
+          </tr>
+          <tr>
+            <td class="dim">训练成本</td>
+            <td class="winner">零成本，改 prompt 即可</td>
+            <td>需要构建 tool-use 数据集<br>需要 LoRA fine-tuning</td>
+          </tr>
+          <tr>
+            <td class="dim">推理延迟</td>
+            <td class="winner">单次推理</td>
+            <td>Tool call 增加一次额外推理<br>~26% 的请求有额外延迟</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Evaluation -->
+  <div class="section">
+    <h2>评估方法与结果</h2>
+
+    <h3>GPT-4 评估：TOOL-ED (Qwen+COMET) vs. Qwen LoRA</h3>
+    <div class="metric-grid">
+      <div class="metric-card win">
+        <div class="value">71%</div>
+        <div class="label">共情 Empathy Win</div>
+      </div>
+      <div class="metric-card win">
+        <div class="value">86%</div>
+        <div class="label">一致性 Consistency Win</div>
+      </div>
+      <div class="metric-card win">
+        <div class="value">87%</div>
+        <div class="label">流畅度 Fluency Win</div>
+      </div>
+    </div>
+
+    <h3>人类评估：TOOL-ED (Qwen+COMET) vs. Qwen LoRA</h3>
+    <div class="metric-grid">
+      <div class="metric-card blue">
+        <div class="value">61.3%</div>
+        <div class="label">共情 Win</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="value">63.7%</div>
+        <div class="label">一致性 Win</div>
+      </div>
+      <div class="metric-card blue">
+        <div class="value">60.0%</div>
+        <div class="label">流畅度 Win</div>
+      </div>
+    </div>
+
+    <h3>自动指标对比</h3>
+    <div class="card">
+      <table class="comparison">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>BLEU-1</th>
+            <th>BLEU-4</th>
+            <th>BERTScore</th>
+            <th>ROUGE-1</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="dim">MIME (baseline)</td>
+            <td>0.2182</td>
+            <td>0.0280</td>
+            <td>0.8613</td>
+            <td>0.1882</td>
+          </tr>
+          <tr>
+            <td class="dim">Qwen LoRA</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+          </tr>
+          <tr style="font-weight:600;">
+            <td class="dim">Qwen + COMET Tool</td>
+            <td class="winner">0.1936</td>
+            <td class="winner">0.0360</td>
+            <td class="winner">0.8765</td>
+            <td class="winner">0.1941</td>
+          </tr>
+          <tr>
+            <td class="dim">Vicuna + COMET Tool</td>
+            <td>0.1859</td>
+            <td>0.0339</td>
+            <td>0.8755</td>
+            <td>0.1888</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px; color:var(--text-secondary); margin-top:8px;">
+        BLEU-1 略低于 MIME 但 BLEU-4、BERTScore、ROUGE 均胜出。BLEU-1 低是因为 tool 知识引入了不同的词汇分布。
+      </p>
+    </div>
+
+    <div class="insight">
+      <strong>关键发现：</strong>Tool-call 比例 ~26% 是模型自学的。强制每轮调用反而降低质量——选择性调用优于全量调用，这验证了"按需取用"的直觉。
+    </div>
+  </div>
+
+  <!-- Value for moodcoco -->
+  <div class="section">
+    <h2>对 moodcoco 的价值</h2>
+
+    <div class="card" style="border-left: 4px solid var(--green);">
+      <h3 style="color: var(--green);">可借鉴：Skill-as-Tool 范式</h3>
+      <ul>
+        <li><strong>Skill routing 用 tool call 而非 prompt instruction：</strong>把每个咨询技能（倾听、认知重评、情绪命名...）定义为 tool schema，模型通过 function_call 结构化调用。比"请根据情况选择合适的技能"的 prompt 更可控、可观测</li>
+        <li><strong>自适应调用率是对的方向：</strong>不是每轮都需要"施展技能"，大部分时候安静倾听就够了。26% 的调用率与真实咨询场景吻合</li>
+        <li><strong>可审计的 skill trace：</strong>每次 tool call 都有记录，可以做质量回溯——"这次对话调了哪些技能、效果如何"</li>
+        <li><strong>即插即用扩展：</strong>新增一个技能只需要定义 tool schema + 实现后端，不需要改 system prompt</li>
+      </ul>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--amber);">
+      <h3 style="color: var(--amber);">需改造：TOOL-ED 的 tool 不是咨询技能</h3>
+      <ul>
+        <li><strong>TOOL-ED 的 tool = 常识知识库查询</strong>，本质是 RAG；moodcoco 需要的 tool = 咨询行动（倾听/共情/认知重评/安全转介）</li>
+        <li><strong>TOOL-ED 的 tool 返回知识</strong>（用户可能在想什么）；moodcoco 的 tool 应该返回<strong>行动指令</strong>（用什么方式回应）</li>
+        <li>moodcoco 如果要用这个范式，需要把 ESConv/MITI/Hill 的技能编码系统映射成 tool schema</li>
+      </ul>
+    </div>
+
+    <div class="card" style="border-left: 4px solid var(--blue);">
+      <h3 style="color: var(--blue);">假想：moodcoco skill-as-tool schema</h3>
+      <div class="tool-schema">
+        <span class="comment">// 示例：把咨询技能建模为 tool</span><br>
+        [<br>
+        &nbsp;&nbsp;{<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"emotion_naming"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="str">"帮用户从模糊感受到精确情绪命名"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"when"</span>: <span class="str">"用户表达模糊负面感受但无法命名"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"returns"</span>: <span class="str">"suggested_emotion_words, probing_question"</span><br>
+        &nbsp;&nbsp;},<br>
+        &nbsp;&nbsp;{<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"cognitive_reframe"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="str">"引导用户发现思维模式并重新理解"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"when"</span>: <span class="str">"用户表达绝对化思维或灾难化推理"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"returns"</span>: <span class="str">"identified_pattern, reframe_prompt"</span><br>
+        &nbsp;&nbsp;},<br>
+        &nbsp;&nbsp;{<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"name"</span>: <span class="str">"safety_check"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"description"</span>: <span class="str">"检测自伤/自杀风险并触发安全协议"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"when"</span>: <span class="str">"检测到自伤意图或极端绝望表达"</span>,<br>
+        &nbsp;&nbsp;&nbsp;&nbsp;<span class="key">"returns"</span>: <span class="str">"risk_level, safety_response, escalation_action"</span><br>
+        &nbsp;&nbsp;}<br>
+        ]
+      </div>
+    </div>
+  </div>
+
+  <!-- Limitations -->
+  <div class="section">
+    <h2>局限性</h2>
+
+    <div class="card">
+      <h3>论文自述局限</h3>
+      <ul>
+        <li><strong>单 tool 限制：</strong>只定义了一个 EmotionKnowledgebase tool，不支持多 tool 协调。真实咨询需要多技能组合使用</li>
+        <li><strong>知识库边界：</strong>COMET/CICERO 是通用常识，缺乏心理学专业知识（如 CBT 认知扭曲、依恋理论等）</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>我们观察到的局限</h3>
+      <ul>
+        <li><strong>评估偏差：</strong>用 GPT-4 评"共情"本身就有问题——GPT-4 的共情标准和心理咨询师的标准不一样</li>
+        <li><strong>不是真正的 skill selection：</strong>模型选择的是"查不查知识库"，不是"用哪种咨询技能"。这是一个二值决策，不是多技能路由</li>
+        <li><strong>数据集偏差：</strong>EmpatheticDialogue 是众包对话，情绪深度有限；26% 的调用率可能反映的是数据集的浅层对话偏多</li>
+        <li><strong>缺乏跨轮记忆：</strong>每次 tool call 独立，不跟踪用户跨轮的情绪变化模式</li>
+        <li><strong>延迟代价：</strong>每次 tool call = 知识库推理 + 额外一轮 LLM 生成。在语音场景（moodcoco 的核心）中，这个延迟可能不可接受</li>
+      </ul>
+    </div>
+
+    <div class="warn">
+      <strong>语音场景适配风险：</strong>TOOL-ED 的设计基于文本对话。在 moodcoco 的 fast/slow 架构中，tool call 引入的额外延迟需要仔细评估。可能只适用于 slow path，fast path 仍需 prompt-based 方案。
+    </div>
+  </div>
+
+  <!-- Training Data Construction -->
+  <div class="section">
+    <h2>附录：训练数据构建流程</h2>
+
+    <div class="card">
+      <h3>从 EmpatheticDialogue 到 TOOL-ED</h3>
+      <div class="pipeline" style="flex-wrap: wrap;">
+        <div class="pipe-step" style="background: var(--slate-light);">
+          <div class="pipe-title">ED 原始数据</div>
+          <div class="pipe-desc">33,090 对话<br>32 情绪标签<br>80/10/10 split</div>
+        </div>
+        <div class="pipe-connector">&#8594;</div>
+        <div class="pipe-step" style="background: var(--purple-light);">
+          <div class="pipe-title">Annotator</div>
+          <div class="pipe-desc">LLaMA3-70B<br>判断每轮是否需要<br>tool call</div>
+        </div>
+        <div class="pipe-connector">&#8594;</div>
+        <div class="pipe-step" style="background: var(--teal-light);">
+          <div class="pipe-title">Tool 执行</div>
+          <div class="pipe-desc">COMET/CICERO<br>生成知识<br>插入对话</div>
+        </div>
+        <div class="pipe-connector">&#8594;</div>
+        <div class="pipe-step" style="background: var(--pink-light);">
+          <div class="pipe-title">Reflector</div>
+          <div class="pipe-desc">评估知识与<br>golden response<br>的相关性</div>
+        </div>
+        <div class="pipe-connector">&#8594;</div>
+        <div class="pipe-step" style="background: var(--green-light);">
+          <div class="pipe-title">TOOL-ED</div>
+          <div class="pipe-desc">高质量数据集<br>26.46% 含 tool call<br>LoRA 训练</div>
+        </div>
+      </div>
+
+      <p style="font-size:14px; margin-top:12px;">
+        <strong>Reflector 的三重一致性检验：</strong>
+      </p>
+      <ul style="font-size:14px;">
+        <li><strong>因果一致性 (Causal)：</strong>tool 返回的原因推理与 golden response 的因果逻辑一致</li>
+        <li><strong>意图一致性 (Intent)：</strong>tool 推断的用户意图与 golden response 的回应方向一致</li>
+        <li><strong>情绪一致性 (Emotional)：</strong>tool 推断的情绪状态与 golden response 的情绪匹配</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>
+      论文：<a href="https://aclanthology.org/2025.coling-main.355/" target="_blank">ACL Anthology</a> |
+      arXiv：<a href="https://arxiv.org/abs/2412.03096" target="_blank">2412.03096</a> |
+      代码：<a href="https://github.com/caohy123/EKTC" target="_blank">github.com/caohy123/EKTC</a>
+    </p>
+    <p style="margin-top:8px;">moodcoco benchmark 调研系列 | 2026-05-13</p>
+  </div>
+
+</div>
+</body>
+</html>

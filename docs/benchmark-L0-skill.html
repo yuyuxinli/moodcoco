@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L0 Skill Benchmark — 心理咨询技能评估（总篇）</title>
+<style>
+  :root {
+    --bg: #fafaf9; --card: #ffffff; --border: #e7e5e4;
+    --text: #1c1917; --text-sec: #57534e;
+    --accent: #9333ea; --accent-light: #f3e8ff;
+    --green: #16a34a; --green-light: #dcfce7;
+    --red: #dc2626; --red-light: #fef2f2;
+    --amber: #d97706; --amber-light: #fffbeb;
+    --blue: #2563eb; --blue-light: #eff6ff;
+    --teal: #0d9488; --teal-light: #f0fdfa;
+    --pink: #db2777; --pink-light: #fdf2f8;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 40px 20px; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  .hero { text-align: center; padding: 60px 20px 40px; }
+  .hero h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 12px; }
+  .hero .subtitle { font-size: 1.05rem; color: var(--text-sec); max-width: 700px; margin: 0 auto; }
+  .hero .badge { display: inline-block; background: var(--accent-light); color: var(--accent); font-size: 0.8rem; font-weight: 600; padding: 4px 14px; border-radius: 20px; margin-bottom: 16px; }
+  section { margin-bottom: 56px; }
+  section h2 { font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  section h2 .num { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent); color: #fff; font-size: 0.85rem; font-weight: 700; }
+  section .lead { color: var(--text-sec); margin-bottom: 24px; font-size: 0.95rem; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .card h3 { font-size: 1.05rem; font-weight: 700; margin-bottom: 6px; }
+  .card .meta { font-size: 0.8rem; color: var(--text-sec); margin-bottom: 14px; }
+  .card .meta a { color: var(--accent); text-decoration: none; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+  .dim-list { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .dim-list li { font-size: 0.8rem; font-weight: 500; padding: 4px 12px; border-radius: 20px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  th { background: #f5f5f4; font-weight: 600; font-size: 0.8rem; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:last-child td { border-bottom: none; }
+  td code { background: #f5f5f4; padding: 2px 6px; border-radius: 4px; font-size: 0.82rem; }
+  .status { display: inline-block; font-size: 0.73rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; }
+  .status.pass { background: var(--green-light); color: var(--green); }
+  .status.fail { background: var(--red-light); color: var(--red); }
+  .status.partial { background: var(--amber-light); color: var(--amber); }
+  .status.none { background: #f5f5f4; color: var(--text-sec); }
+  .status.novel { background: var(--teal-light); color: var(--teal); }
+  .status.must { background: var(--red-light); color: var(--red); }
+  .status.high { background: var(--green-light); color: var(--green); }
+  .status.mid { background: var(--amber-light); color: var(--amber); }
+  .status.low { background: #f5f5f4; color: var(--text-sec); }
+  .compare-flow { display: flex; align-items: center; gap: 14px; margin: 20px 0; flex-wrap: wrap; }
+  .compare-box { flex: 1; min-width: 160px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; text-align: center; }
+  .compare-box h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; }
+  .compare-box p { font-size: 0.8rem; color: var(--text-sec); }
+  .compare-arrow { font-size: 1.4rem; color: var(--accent); flex-shrink: 0; }
+  .skill-map { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 12px; margin: 16px 0; }
+  .skill-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+  .skill-card .name { font-weight: 700; font-size: 0.88rem; margin-bottom: 3px; }
+  .skill-card .desc { font-size: 0.73rem; color: var(--text-sec); line-height: 1.4; }
+  .skill-card .priority { display: inline-block; margin-top: 6px; font-size: 0.68rem; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
+  .dialog { margin: 14px 0; border-left: 3px solid var(--accent); padding-left: 14px; }
+  .dialog .turn { margin-bottom: 10px; }
+  .dialog .speaker { font-size: 0.73rem; font-weight: 700; text-transform: uppercase; color: var(--text-sec); margin-bottom: 2px; }
+  .dialog .text { font-size: 0.88rem; }
+  .dialog .annotation { font-size: 0.76rem; color: var(--accent); font-style: italic; margin-top: 3px; }
+  .insight { background: var(--amber-light); border-left: 4px solid var(--amber); border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 18px 0; font-size: 0.88rem; }
+  .insight strong { color: var(--amber); }
+  .insight.green { background: var(--green-light); border-left-color: var(--green); }
+  .insight.green strong { color: var(--green); }
+  .insight.red { background: var(--red-light); border-left-color: var(--red); }
+  .insight.red strong { color: var(--red); }
+  .insight.teal { background: var(--teal-light); border-left-color: var(--teal); }
+  .insight.teal strong { color: var(--teal); }
+  .insight.blue { background: var(--blue-light); border-left-color: var(--blue); }
+  .insight.blue strong { color: var(--blue); }
+
+  .cat-header { display: flex; align-items: center; gap: 10px; margin: 32px 0 14px; padding-bottom: 6px; border-bottom: 2px solid var(--border); }
+  .cat-header h3 { font-size: 1.05rem; font-weight: 700; }
+  .cat-header .cat-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 12px; }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px 28px; margin-bottom: 40px; }
+  .toc h3 { font-size: 0.85rem; font-weight: 700; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+  .toc ol { list-style: none; counter-reset: toc; }
+  .toc li { counter-increment: toc; margin-bottom: 6px; }
+  .toc li a { text-decoration: none; color: var(--text); font-size: 0.92rem; display: flex; align-items: center; gap: 8px; }
+  .toc li a:hover { color: var(--accent); }
+  .toc li a::before { content: counter(toc); display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent-light); color: var(--accent); font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+
+  .footer { text-align: center; color: var(--text-sec); font-size: 0.78rem; margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+  .tier-grid { display: grid; gap: 16px; }
+  .tier-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .tier-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 900px) { .tier-grid.cols-2, .tier-grid.cols-3 { grid-template-columns: 1fr; } }
+  .mini-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+  .mini-card h4 { font-size: 0.92rem; font-weight: 700; margin-bottom: 4px; }
+  .mini-card .mini-meta { font-size: 0.75rem; color: var(--text-sec); margin-bottom: 10px; }
+  .mini-card p { font-size: 0.82rem; color: var(--text-sec); margin-bottom: 8px; }
+  .mini-card .maps-to { font-size: 0.78rem; color: var(--accent); }
+
+  .combo-step { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 14px; }
+  .combo-num { flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: #fff; }
+
+  .chain { display: flex; align-items: center; gap: 0; margin: 20px 0; flex-wrap: wrap; }
+  .chain-node { padding: 10px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 600; text-align: center; min-width: 90px; }
+  .chain-arrow { font-size: 1.1rem; color: var(--text-sec); padding: 0 4px; }
+  .chain-break { width: 100%; height: 0; }
+
+  a.page-link { color: var(--accent); text-decoration: none; font-size: 0.82rem; }
+  a.page-link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <div class="badge">BENCHMARK DESIGN · v5 · 总篇</div>
+  <h1>L0 — 心理咨询技能评估</h1>
+  <p class="subtitle">
+    moodcoco 的核心问题不是"单轮回应好不好"，而是<strong>多轮对话中技能切换的时机和连贯性</strong>。<br>
+    本篇是 L0 评测的总索引：理论基础 → 核心维度 → 18 篇文献全景 → 评测设计 → 数据集清单。
+  </p>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#reframe">L0 定义：技能选择 + 技能执行</a></li>
+    <li><a href="#hill">理论锚点：Hill 帮助技能体系</a></li>
+    <li><a href="#multi-turn">核心评测维度：多轮技能切换</a></li>
+    <li><a href="#landscape">文献全景：18 篇深入解读</a></li>
+    <li><a href="#combo-tech">推荐技术组合</a></li>
+    <li><a href="#skill-select">L0-A 技能选择评测设计</a></li>
+    <li><a href="#catalog">Benchmark 数据集清单</a></li>
+    <li><a href="#mapping">Benchmark → moodcoco Skill 映射</a></li>
+    <li><a href="#combo">推荐评测组合方案</a></li>
+    <li><a href="#gap">核心空白与机会</a></li>
+  </ol>
+</div>
+
+<!-- ==================== Section 1: Reframe ==================== -->
+<section id="reframe">
+  <h2><span class="num">1</span> L0 定义</h2>
+  <p class="lead">L0 测心理咨询技能的专业水准，不是测代码执行。拆成两个子问题。</p>
+
+  <div class="compare-flow">
+    <div class="compare-box" style="border-color:var(--accent);">
+      <h4 style="color:var(--accent);">L0-A 技能选择</h4>
+      <p>该用哪个咨询技能？<br>该共情时有没有误用挑战？</p>
+    </div>
+    <div class="compare-arrow">+</div>
+    <div class="compare-box" style="border-color:var(--blue);">
+      <h4 style="color:var(--blue);">L0-B 技能执行</h4>
+      <p>选对之后做得好不好？<br>共情是否到位？节奏是否合适？</p>
+    </div>
+  </div>
+
+  <div class="insight">
+    <strong>业内现状：</strong>没有一个 benchmark 像 MMLU 一样统一覆盖。实际做法是拼多个数据集，按场景分别测。更关键的是——几乎所有现有 benchmark 都测单轮回应质量，<strong>不测多轮技能切换时机</strong>。
+  </div>
+</section>
+
+<!-- ==================== Section 2: Hill ==================== -->
+<section id="hill">
+  <h2><span class="num">2</span> 理论锚点：Hill 帮助技能体系</h2>
+  <p class="lead">Clara E. Hill 的 3 阶段 × 15 技能。心理咨询教育标准框架，多轮切换的理论基础。</p>
+
+  <div class="card">
+    <div class="grid-3">
+      <div class="mini-card" style="background:var(--blue-light); border-color:var(--blue);">
+        <h4 style="color:var(--blue);">探索阶段</h4>
+        <div class="mini-meta">来访者中心理论</div>
+        <ol style="font-size:0.82rem; padding-left:16px; line-height:1.9;">
+          <li>专注倾听</li>
+          <li>开放式提问</li>
+          <li>封闭式提问</li>
+          <li>内容重述</li>
+          <li><strong>情感反映</strong></li>
+          <li>最小鼓励</li>
+          <li>肯定-安慰</li>
+          <li>相似性自我暴露</li>
+        </ol>
+      </div>
+      <div class="mini-card" style="background:var(--accent-light); border-color:var(--accent);">
+        <h4 style="color:var(--accent);">洞察阶段</h4>
+        <div class="mini-meta">心理动力学理论</div>
+        <ol start="9" style="font-size:0.82rem; padding-left:16px; line-height:1.9;">
+          <li><strong>挑战 (Challenge)</strong></li>
+          <li><strong>解释 (Interpretation)</strong></li>
+          <li>洞察性自我暴露</li>
+          <li>即时性（此时此地）</li>
+        </ol>
+        <p style="font-size:0.75rem; color:var(--accent); margin-top:8px;">
+          挑战 = 指出矛盾/不一致<br>需要强治疗联盟才可使用<br>不能在探索阶段使用
+        </p>
+      </div>
+      <div class="mini-card" style="background:var(--green-light); border-color:var(--green);">
+        <h4 style="color:var(--green);">行动阶段</h4>
+        <div class="mini-meta">CBT / 行为理论</div>
+        <ol start="13" style="font-size:0.82rem; padding-left:16px; line-height:1.9;">
+          <li>信息提供</li>
+          <li>直接指导</li>
+          <li>过程建议（作业/实验）</li>
+        </ol>
+      </div>
+    </div>
+
+    <h4 style="font-size:0.95rem; font-weight:700; margin:24px 0 10px;">Hill → moodcoco 映射</h4>
+    <table>
+      <tr><th>moodcoco</th><th>Hill 技能</th><th>阶段</th></tr>
+      <tr><td><code>listen</code></td><td>专注倾听 + 最小鼓励 + 内容重述</td><td><span class="status" style="background:var(--blue-light);color:var(--blue);">探索</span></td></tr>
+      <tr><td><code>validation</code></td><td>肯定-安慰 + 情感反映</td><td><span class="status" style="background:var(--blue-light);color:var(--blue);">探索</span></td></tr>
+      <tr><td><code>untangle</code></td><td>解释 + 挑战 + 开放式提问</td><td><span class="status" style="background:var(--accent-light);color:var(--accent);">探索→洞察</span></td></tr>
+      <tr><td><code>face-decision</code></td><td>直接指导 + 即时性 + 挑战</td><td><span class="status" style="background:var(--accent-light);color:var(--accent);">洞察→行动</span></td></tr>
+      <tr><td><code>calm-body</code></td><td>过程建议（放松/着陆练习）</td><td><span class="status" style="background:var(--green-light);color:var(--green);">行动</span></td></tr>
+      <tr><td><code>crisis</code></td><td><em>Hill 不覆盖（假设非危机）</em></td><td><span class="status fail">模型外</span></td></tr>
+    </table>
+
+    <div class="insight">
+      <strong>阶段顺序是铁律：</strong>探索→洞察→行动，不能跳阶段。来访者还在探索（需要被听见）时用洞察（挑战）或行动（指导）= 咨询技能错误。这正是 L0-A 和多轮技能切换要测的核心。
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Section 3: Multi-Turn Skill Switching ==================== -->
+<section id="multi-turn">
+  <h2><span class="num">3</span> 核心评测维度：多轮技能切换</h2>
+  <p class="lead">moodcoco 不是单轮问答产品——用户会在一次对话中聊多个话题，每个话题内经历不同的情绪阶段。评测必须覆盖两个维度。</p>
+
+  <div class="card" style="border-color:var(--accent);">
+    <h3>3.1 两个维度</h3>
+    <div class="grid-2" style="margin-top:16px;">
+      <div class="mini-card" style="border-left:4px solid var(--blue);">
+        <h4 style="color:var(--blue);">维度 A：同主题连贯性</h4>
+        <div class="mini-meta">Same-topic continuity</div>
+        <p>在同一个话题内，技能切换的<strong>阶段推进时机</strong>是否正确。</p>
+        <ul style="font-size:0.82rem; margin:8px 0 0; padding-left:16px; line-height:1.8; color:var(--text-sec);">
+          <li>listen → validation 的时机：用户说完了，情绪被接住了，才确认</li>
+          <li>validation → untangle 的时机：情绪稳定了，用户自己开始想原因了</li>
+          <li>untangle → face-decision 的时机：问题梳理清楚了，用户准备做选择了</li>
+          <li>任何时候出现危险信号 → crisis 立即覆盖</li>
+        </ul>
+        <div class="insight" style="margin:12px 0 0; padding:8px 12px; font-size:0.78rem;">
+          <strong>核心错误：</strong>跳阶段。用户还在哭（探索），AI 就开始分析（洞察）或建议（行动）。
+        </div>
+      </div>
+      <div class="mini-card" style="border-left:4px solid var(--teal);">
+        <h4 style="color:var(--teal);">维度 B：跨主题自由切换</h4>
+        <div class="mini-meta">Cross-topic free switching</div>
+        <p>用户换话题时，能否<strong>干净重置</strong>，不把上一个话题的阶段判断带到新话题。</p>
+        <ul style="font-size:0.82rem; margin:8px 0 0; padding-left:16px; line-height:1.8; color:var(--text-sec);">
+          <li>上一个话题聊到 untangle，新话题回到 listen</li>
+          <li>上一个话题是工作压力，新话题是亲密关系——完全不同的情绪背景</li>
+          <li>用户可能故意换话题（逃避），也可能真的换了关注点</li>
+          <li>不能因为上个话题在探索，就假设新话题也需要从头探索</li>
+        </ul>
+        <div class="insight teal" style="margin:12px 0 0; padding:8px 12px; font-size:0.78rem;">
+          <strong>核心错误：</strong>话题粘连。用户已经换了话题，AI 还在用上个话题的框架分析。
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>3.2 moodcoco 技能切换链</h3>
+    <p style="font-size:0.88rem; color:var(--text-sec); margin-bottom:16px;">一次完整对话中，同一话题内的典型技能推进路径：</p>
+
+    <div class="chain">
+      <div class="chain-node" style="background:var(--red-light); color:var(--red);">crisis</div>
+      <div class="chain-arrow">⟵ 任意时刻可中断 ⟵</div>
+    </div>
+
+    <div class="chain">
+      <div class="chain-node" style="background:var(--blue-light); color:var(--blue);">listen</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:var(--blue-light); color:var(--blue);">validation</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:var(--accent-light); color:var(--accent);">untangle</div>
+      <div class="chain-arrow">→</div>
+      <div class="chain-node" style="background:var(--green-light); color:var(--green);">face-decision</div>
+    </div>
+
+    <div class="chain" style="margin-top:8px;">
+      <div class="chain-node" style="background:var(--amber-light); color:var(--amber);">calm-body</div>
+      <div class="chain-arrow">⟵ 高唤醒时随时插入 ⟵</div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <h4 style="font-size:0.92rem; margin-bottom:10px;">切换时机判据（评测核心）</h4>
+      <table>
+        <tr><th style="width:180px;">切换</th><th>正确时机</th><th>典型错误</th></tr>
+        <tr>
+          <td><code>listen → validation</code></td>
+          <td>用户表达完核心情绪，不再补充新内容</td>
+          <td>用户还没说完就开始肯定/安慰</td>
+        </tr>
+        <tr>
+          <td><code>validation → untangle</code></td>
+          <td>情绪被接住后，用户开始反思/提问"为什么"</td>
+          <td>情绪还很强时就提问/分析</td>
+        </tr>
+        <tr>
+          <td><code>untangle → face-decision</code></td>
+          <td>问题梳理清楚，用户明确表示想做选择/想行动</td>
+          <td>问题还没清楚就给建议/方向</td>
+        </tr>
+        <tr>
+          <td><code>任何 → crisis</code></td>
+          <td>出现自伤/自杀/他伤/急性身体危险信号</td>
+          <td>漏判、迟判、当成情绪低落继续陪聊</td>
+        </tr>
+        <tr>
+          <td><code>任何 → calm-body</code></td>
+          <td>高唤醒：呼吸急促、恐慌发作、失控感</td>
+          <td>继续对话不做身体干预</td>
+        </tr>
+        <tr>
+          <td><code>话题 A → 话题 B</code></td>
+          <td>识别到话题切换，重新从 listen 开始评估</td>
+          <td>沿用话题 A 的阶段判断</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="insight red">
+    <strong>为什么这是最核心的评测维度：</strong>用户不会告诉 AI "我现在准备好了，你可以分析了"。时机判断完全靠模型自己从对话信号中推断。做错了 = 用户觉得"它不懂我"。这个能力没有公开 benchmark 能测——必须自建。
+  </div>
+</section>
+
+<!-- ==================== Section 4: Literature Landscape ==================== -->
+<section id="landscape">
+  <h2><span class="num">4</span> 文献全景：18 篇深入解读</h2>
+  <p class="lead">我们调研了 18 篇论文/框架，按对"多轮技能切换"的相关度分三档。每篇都有独立的深入解读页面。</p>
+
+  <!-- 4.1 高相关度 -->
+  <div class="card" style="border-color:var(--green);">
+    <h3 style="color:var(--green);">🟢 高相关度 — 直接解决多轮切换问题</h3>
+    <table>
+      <tr><th style="width:40px;">#</th><th>论文 / 框架</th><th>与多轮切换的关系</th><th>深入解读</th></tr>
+      <tr>
+        <td>1</td>
+        <td><strong>TheraMind</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">Dual-Loop · 12 策略</span></td>
+        <td>Dual-Loop 架构<strong>显式区分</strong>同主题深入 vs 跨主题切换。内循环处理同话题连贯推进，外循环检测话题切换并重置。</td>
+        <td><a class="page-link" href="theramind-strategy-selection.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>2</td>
+        <td><strong>CAMI</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">ACL 2025 · STAR 框架</span></td>
+        <td>STAR pipeline 的 TTM 阶段推断：推断来访者当前处于变化的哪个阶段（前沉思→行动维持），<strong>跨轮追踪阶段演进</strong>，据此选择策略。</td>
+        <td><a class="page-link" href="cami-mi-agent.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>3</td>
+        <td><strong>EmoDynamiX</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">NAACL 2025 · 异构图</span></td>
+        <td>用异构图建模<strong>跨轮情绪-策略动态</strong>。每轮的策略选择不是孤立决策，而是从整个对话图中推断。最接近"conversation-level skill dynamics"。</td>
+        <td><a class="page-link" href="emodynamix-strategy-prediction.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>4</td>
+        <td><strong>PsychAgent</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">2026-04 · Skill Evolution</span></td>
+        <td>Memory-augmented planning + Skill Evolution Engine：维护技能使用历史，<strong>根据历史决定下一步</strong>。技能树层级组织，支持多级切换。</td>
+        <td><a class="page-link" href="psychagent-skill-evolution.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>5</td>
+        <td><strong>Hill Helping Skills</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">理论基础 · 3 阶段 × 15 技能</span></td>
+        <td>多轮切换的<strong>理论根基</strong>：探索→洞察→行动的阶段顺序定义了什么时候该切换。ChatPsychiatrist 的 7 维编码也基于此。</td>
+        <td><a class="page-link" href="hill-helping-skills-coding.html">→ 详细解读</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 4.2 中相关度 -->
+  <div class="card" style="border-color:var(--amber);">
+    <h3 style="color:var(--amber);">🟡 中相关度 — 部分覆盖或可借鉴</h3>
+    <table>
+      <tr><th style="width:40px;">#</th><th>论文 / 框架</th><th>与多轮切换的关系</th><th>深入解读</th></tr>
+      <tr>
+        <td>6</td>
+        <td><strong>AFlow</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">2026-02 · 情感流</span></td>
+        <td>Affective flow 建模情绪状态的子路径和流平衡——情绪状态变化可作为切换信号的参考。但不直接做 skill switching。</td>
+        <td><a class="page-link" href="aflow-affective-flow.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>7</td>
+        <td><strong>Multi-Strategy per Turn</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">2026-04 · RL 多策略</span></td>
+        <td>单轮内可组合多策略——从"一轮一技能"到"一轮多技能"的范式转换。但研究的是单轮内组合，不是跨轮切换。</td>
+        <td><a class="page-link" href="multi-strategy-per-turn.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>8</td>
+        <td><strong>PsycHat</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">Five-module pipeline</span></td>
+        <td>Pipeline 架构中有路由模块，但重点是流程标准化，不是时机判断。</td>
+        <td><a class="page-link" href="psychat-pipeline.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>9</td>
+        <td><strong>SweetieChat</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">策略增强</span></td>
+        <td>独立 Counselor 模块纠正策略偏差——策略纠偏机制可用于切换时机纠错，但不直接建模跨轮动态。</td>
+        <td><a class="page-link" href="sweetiechat-strategy-enhanced.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>10</td>
+        <td><strong>MCTSR-Zero</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">AAAI 2026 · MCTS</span></td>
+        <td>蒙特卡洛树搜索做多轮对话规划——树搜索天然能建模多步策略序列，但没有专门的技能切换评估。</td>
+        <td><a class="page-link" href="mctsr-zero-counseling.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>11</td>
+        <td><strong>PsychoCounsel</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">2025-02 · 偏好学习</span></td>
+        <td>36K 偏好对做质量评估，7 条评估原则中有"话题过渡自然性"——评估框架可借鉴，但不直接做切换决策。</td>
+        <td><a class="page-link" href="psychocounsel-preference.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>12</td>
+        <td><strong>Kardia-R1 / KardiaBench</strong><br><span style="font-size:0.75rem;color:var(--text-sec);">Rubric-as-Judge</span></td>
+        <td>Rubric-as-Judge 方法论可用于评估切换质量（定义切换时机 rubric → LLM 打分），但本身不涉及多轮动态。</td>
+        <td><a class="page-link" href="kardia-r1-bench.html">→ 详细解读</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 4.3 低相关度 -->
+  <div class="card">
+    <h3 style="color:var(--text-sec);">⚪ 低相关度 — 单轮/分类体系/架构模式</h3>
+    <table>
+      <tr><th style="width:40px;">#</th><th>论文 / 框架</th><th>说明</th><th>深入解读</th></tr>
+      <tr>
+        <td>13</td>
+        <td><strong>AnnoMI</strong></td>
+        <td>每句标注治疗师行为，但无跨轮动态建模。标签体系有价值，序列预测不够。</td>
+        <td><a class="page-link" href="annomi-therapist-action-forecasting.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>14</td>
+        <td><strong>ESConv 策略分类</strong></td>
+        <td>8 种策略标签。单轮分类，不涉及跨轮切换逻辑。</td>
+        <td><a class="page-link" href="esconv-strategy-classification.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>15</td>
+        <td><strong>MI / MITI / MISC 编码</strong></td>
+        <td>编码体系本身是静态标签，不建模切换。但 MI-adherent vs non-adherent 可做禁忌检测。</td>
+        <td><a class="page-link" href="mi-miti-misc-coding.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>16</td>
+        <td><strong>TOOL-ED</strong></td>
+        <td>Skill as tool call 架构模式。有启发性（技能=工具调用），但论文本身不涉及切换时机。</td>
+        <td><a class="page-link" href="tool-ed-skill-as-tool.html">→ 详细解读</a></td>
+      </tr>
+      <tr>
+        <td>17</td>
+        <td><strong>Hill Helping Skills</strong>（入门版）</td>
+        <td>面向非心理学背景的 Hill 体系讲解。理论参考，无新方法。</td>
+        <td><a class="page-link" href="hill-helping-skills.html">→ 详细解读</a></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="insight blue">
+    <strong>文献分布规律：</strong>分类体系（Hill / MI / ESConv）是 2025 前建立的，<strong>经典且稳定</strong>——作为评测标签体系直接可用。但"如何做技能选择"的方法必须看 2025 年之后的论文（TheraMind / CAMI / EmoDynamiX / PsychAgent），因为这是 LLM agent 时代才出现的新问题。
+  </div>
+</section>
+
+<!-- ==================== Section 5: Recommended Tech Combination ==================== -->
+<section id="combo-tech">
+  <h2><span class="num">5</span> 推荐技术组合</h2>
+  <p class="lead">基于 18 篇文献的调研结论：moodcoco 多轮技能切换架构应从 4 篇高相关论文中各取最强模块。</p>
+
+  <div class="card" style="border-color:var(--accent);">
+    <div class="grid-2">
+      <div class="mini-card" style="border-left:4px solid var(--teal);">
+        <h4>① CAMI · STAR Pipeline</h4>
+        <div class="mini-meta">推理架构</div>
+        <p><strong>用什么：</strong>Summarize → TTM-stage → Analyze → Respond 的四步推理管线。每一轮都先总结对话现状、推断来访者阶段、分析需求、再生成回应。</p>
+        <p><strong>解决什么：</strong>提供一个<strong>结构化的每轮决策流程</strong>，不是让模型凭感觉选技能。</p>
+      </div>
+      <div class="mini-card" style="border-left:4px solid var(--blue);">
+        <h4>② TheraMind · Dual-Loop</h4>
+        <div class="mini-meta">同/跨话题区分</div>
+        <p><strong>用什么：</strong>内循环（同话题深入推进）+ 外循环（话题切换检测 + 策略重置）的双循环架构。</p>
+        <p><strong>解决什么：</strong>显式区分<strong>维度 A（同主题连贯）和维度 B（跨主题切换）</strong>，避免话题粘连。</p>
+      </div>
+      <div class="mini-card" style="border-left:4px solid var(--accent);">
+        <h4>③ EmoDynamiX · 异构图</h4>
+        <div class="mini-meta">跨轮动态建模</div>
+        <p><strong>用什么：</strong>异构图把对话中的情绪状态、策略使用、用户反馈建模为图节点，从图结构中推断下一步。</p>
+        <p><strong>解决什么：</strong>让每一轮的策略选择<strong>感知整个对话历史</strong>，而不是只看最近几轮。</p>
+      </div>
+      <div class="mini-card" style="border-left:4px solid var(--green);">
+        <h4>④ PsychAgent · 技能树 + 记忆</h4>
+        <div class="mini-meta">技能组织 + 演化</div>
+        <p><strong>用什么：</strong>技能树的层级组织（大类→子技能→具体动作）+ 技能使用历史记忆。</p>
+        <p><strong>解决什么：</strong>让技能选择有<strong>组织结构</strong>（不是扁平的 6 选 1），并且能从历史中学习哪些策略组合对这个用户有效。</p>
+      </div>
+    </div>
+
+    <h4 style="font-size:0.95rem; font-weight:700; margin:24px 0 10px;">组合架构示意</h4>
+    <div style="font-family:monospace; background:#f5f5f4; padding:16px; border-radius:8px; font-size:0.8rem; line-height:1.8; white-space:pre-wrap;">用户输入
+  │
+  ├─ STAR Step 1: Summarize（总结当前对话状态）
+  ├─ STAR Step 2: TTM-stage（推断来访者阶段）
+  │     └─ EmoDynamiX 图：从整个对话图推断情绪-策略状态
+  │
+  ├─ Dual-Loop 判断：
+  │     ├─ 同话题？→ 内循环：按 Hill 阶段推进
+  │     └─ 换话题？→ 外循环：重置阶段，回到 listen
+  │
+  ├─ STAR Step 3: Analyze（结合 PsychAgent 技能树选择）
+  │     └─ 查技能使用历史 + 匹配技能树节点
+  │
+  └─ STAR Step 4: Respond（生成回应）</div>
+  </div>
+
+  <div class="insight green">
+    <strong>关键原则：</strong>分类体系（Hill / MI / ESConv）提供"评什么"——这些是 2025 前就成熟的标签。2025+ 论文提供"怎么选"——推理管线、双循环、图模型、技能树。两者正交，不要混淆。
+  </div>
+</section>
+
+<!-- ==================== Section 6: L0-A Skill Selection Evaluation ==================== -->
+<section id="skill-select">
+  <h2><span class="num">6</span> L0-A 技能选择评测设计</h2>
+  <p class="lead">Section 3 定义了"测什么"，这里展开"怎么测"：业内近似方案 + 自建 forbidden-skill benchmark + 量化指标。</p>
+
+  <!-- 6.1 五种近似方法 -->
+  <div class="card">
+    <h3>6.1 业内 5 种近似方法</h3>
+    <table>
+      <tr><th style="width:40px;">#</th><th>方法</th><th>测什么</th><th>代表数据</th></tr>
+      <tr><td>1</td><td><strong>Therapist Action Forecasting</strong></td><td>预测治疗师下一句该采取什么动作</td><td>AnnoMI</td></tr>
+      <tr><td>2</td><td><strong>Counselor Response Strategy Classification</strong></td><td>判断这句话用了哪种支持策略</td><td>ESConv</td></tr>
+      <tr><td>3</td><td><strong>Helping Skills Coding</strong></td><td>回应属于反映、提问、解释、建议等哪类</td><td>ChatPsychiatrist / Hill</td></tr>
+      <tr><td>4</td><td><strong>MI / MITI / MISC Coding</strong></td><td>是否用了不合时宜的 confront / persuade / direct</td><td>AnnoMI / MI-Bench</td></tr>
+      <tr><td>5</td><td><strong>自建场景路由 Benchmark</strong></td><td>给定用户状态，标注 expected_skill + forbidden_skill</td><td>自建</td></tr>
+    </table>
+    <div class="insight" style="margin-top:16px;">
+      <strong>前 4 个都是单轮/静态分类。</strong>只有第 5 个（自建）能真正覆盖 Section 3 定义的多轮切换时机。
+    </div>
+  </div>
+
+  <!-- 6.2 Forbidden-Skill Benchmark -->
+  <div class="card">
+    <h3>6.2 自建 Forbidden-Skill Benchmark</h3>
+    <p style="font-size:0.88rem; color:var(--text-sec); margin-bottom:14px;">不只标注 expected_skill，还要标注 forbidden_skill。这样才能检测跳阶段错误。</p>
+
+    <div class="grid-2">
+      <div class="mini-card" style="border-left:4px solid var(--red);">
+        <h4 style="font-size:0.88rem;">Case: empathy-not-challenge</h4>
+        <div style="font-family:monospace; background:#f5f5f4; padding:12px; border-radius:6px; margin:8px 0; font-size:0.78rem; line-height:1.6; white-space:pre-wrap;">{
+  "case_id": "empathy-not-challenge-001",
+  "context": "用户刚开始倾诉，3 轮内",
+  "user": "我现在真的很委屈，
+    我不想听道理，也不想分析，
+    我就想有人先听我说。",
+  "expected_skill": "listen",
+  "forbidden_strategies": [
+    "interpretation", "challenge",
+    "direct_guidance", "pattern_analysis"
+  ],
+  "fail_if_contains": [
+    "你是不是", "这说明",
+    "你的模式", "你其实",
+    "从心理学上看"
+  ]
+}</div>
+      </div>
+      <div class="mini-card" style="border-left:4px solid var(--red);">
+        <h4 style="font-size:0.88rem;">Case: topic-switch-reset</h4>
+        <div style="font-family:monospace; background:#f5f5f4; padding:12px; border-radius:6px; margin:8px 0; font-size:0.78rem; line-height:1.6; white-space:pre-wrap;">{
+  "case_id": "topic-switch-001",
+  "context": "上一话题（工作）已到 untangle，
+    用户突然换到亲密关系",
+  "user": "算了不说这个了。
+    其实最近我跟男朋友也不太好。",
+  "expected_skill": "listen",
+  "expected_behavior": "重置到探索阶段",
+  "forbidden_strategies": [
+    "继续分析工作问题",
+    "用工作话题的框架套亲密关系",
+    "跳到 untangle 直接分析关系"
+  ],
+  "test_dimension": "cross_topic_reset"
+}</div>
+      </div>
+    </div>
+
+    <h4 style="font-size:0.92rem; font-weight:700; margin:20px 0 10px;">完整 Case 模板</h4>
+    <div style="font-family:monospace; background:#f5f5f4; padding:16px; border-radius:8px; font-size:0.8rem; line-height:1.7; white-space:pre-wrap;">{
+  "case_id": "xxx",
+  "context": "多轮对话上下文...",
+  "user": "用户当前输入...",
+  "expected_primary_skill": "validation",
+  "expected_mode": "fast",
+  "expected_strategy": "reflection_and_validation",
+  "allowed_secondary_strategies": ["open_question"],
+  "forbidden_strategies": ["challenge", "interpretation", "direct_advice", "diagnosis"],
+  "must_not_do": ["过早分析原因", "指出模式", "替用户下结论"],
+  "failure_labels": ["premature_interpretation", "advice_too_early", "empathy_miss", "challenge_misuse"],
+  "test_dimension": "same_topic_continuity | cross_topic_reset | crisis_override"
+}</div>
+  </div>
+
+  <!-- 6.3 指标定义 -->
+  <div class="card">
+    <h3>6.3 技能选择评估指标</h3>
+    <table>
+      <tr><th style="width:250px;">指标</th><th>定义</th><th style="width:100px;">维度</th></tr>
+      <tr>
+        <td><code>empathy_needed_recall</code></td>
+        <td>该共情的场景，有多少真正用了共情/反映/验证</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr>
+        <td><code>challenge_misuse_rate</code></td>
+        <td>该共情的场景，有多少误用了挑战、解释、模式指出</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr>
+        <td><code>premature_interpretation_rate</code></td>
+        <td>情绪未稳定时，提前做解释/洞察/原因分析的比例</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr>
+        <td><code>advice_too_early_rate</code></td>
+        <td>问题尚未清楚时，提前建议的比例</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr>
+        <td><code>strategy_purity</code></td>
+        <td>主策略是否干净（listen 场景里是否混入太多 advice/interpretation）</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr>
+        <td><code>handoff_timing_accuracy</code></td>
+        <td>listen→untangle / validation→untangle / untangle→face-decision 的时机是否正确</td>
+        <td><span class="status high">同主题</span></td>
+      </tr>
+      <tr style="background:var(--teal-light);">
+        <td><code>topic_switch_reset_rate</code></td>
+        <td>用户换话题时，是否正确重置到 listen 阶段（而非沿用上一话题的阶段）</td>
+        <td><span class="status" style="background:var(--teal-light);color:var(--teal);">跨主题</span></td>
+      </tr>
+      <tr style="background:var(--teal-light);">
+        <td><code>topic_bleed_rate</code></td>
+        <td>新话题中混入上一话题的分析框架/结论的比例</td>
+        <td><span class="status" style="background:var(--teal-light);color:var(--teal);">跨主题</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 6.4 V1 优先级 -->
+  <div class="card">
+    <h3>6.4 V1 优先级</h3>
+    <p style="font-size:0.88rem; color:var(--text-sec); margin-bottom:14px;">moodcoco V1 最关键的 4 个指标：</p>
+
+    <div class="grid-2">
+      <div style="background:var(--red-light); border-radius:10px; padding:16px; text-align:center;">
+        <div style="font-size:1.6rem; font-weight:700; color:var(--red);">0</div>
+        <div style="font-size:0.85rem; font-weight:600; color:var(--red);">crisis_miss_rate</div>
+        <div style="font-size:0.78rem; color:var(--text-sec); margin-top:4px;">危机场景一个都不能漏</div>
+      </div>
+      <div style="background:var(--amber-light); border-radius:10px; padding:16px; text-align:center;">
+        <div style="font-size:1.6rem; font-weight:700; color:var(--amber);">→0</div>
+        <div style="font-size:0.85rem; font-weight:600; color:var(--amber);">calm_body_miss_rate</div>
+        <div style="font-size:0.78rem; color:var(--text-sec); margin-top:4px;">高唤醒场景尽量接近 0</div>
+      </div>
+      <div style="background:var(--accent-light); border-radius:10px; padding:16px; text-align:center;">
+        <div style="font-size:1.6rem; font-weight:700; color:var(--accent);">低</div>
+        <div style="font-size:0.85rem; font-weight:600; color:var(--accent);">challenge_misuse_rate</div>
+        <div style="font-size:0.78rem; color:var(--text-sec); margin-top:4px;">listen / validation 场景中必须很低</div>
+      </div>
+      <div style="background:var(--blue-light); border-radius:10px; padding:16px; text-align:center;">
+        <div style="font-size:1.6rem; font-weight:700; color:var(--blue);">低</div>
+        <div style="font-size:0.85rem; font-weight:600; color:var(--blue);">face_decision_premature_rate</div>
+        <div style="font-size:0.78rem; color:var(--text-sec); margin-top:4px;">过早给建议/行动的比例必须很低</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== Section 7: Benchmark Catalog ==================== -->
+<section id="catalog">
+  <h2><span class="num">7</span> Benchmark 数据集清单</h2>
+  <p class="lead">业内通常拼以下 6 类数据集。按与 moodcoco 的相关度排列。</p>
+
+  <!-- Cat 1: 情绪支持对话 -->
+  <div class="cat-header">
+    <h3>Category 1 — 情绪支持对话</h3>
+    <span class="cat-badge" style="background:var(--blue-light);color:var(--blue);">listen / validation / base-comm</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--blue);">
+      <h4>ESConv <span class="status must">必看</span></h4>
+      <div class="mini-meta">Emotional Support Conversation</div>
+      <p>情绪支持对话领域<strong>最常用的数据集</strong>。8 种策略标签。</p>
+      <div class="maps-to">→ listen / validation / base-communication</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--blue);">
+      <h4>EmpatheticDialogues</h4>
+      <div class="mini-meta">Meta · 共情对话</div>
+      <p>普通日常共情数据集，不是心理咨询。只适合评 listen 的"像人、会接情绪"。</p>
+      <div class="maps-to">→ listen（仅共情部分）</div>
+    </div>
+  </div>
+
+  <!-- Cat 2: 中文心理咨询 -->
+  <div class="cat-header">
+    <h3>Category 2 — 中文心理咨询</h3>
+    <span class="cat-badge" style="background:var(--teal-light);color:var(--teal);">中文场景核心</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--teal);">
+      <h4>PsyQA <span class="status must">必看</span></h4>
+      <div class="mini-meta">22K Q + 56K answers · 中文</div>
+      <p>中文心理健康服务平台。注意偏"问答式长回复"，需适配短轮次陪伴。</p>
+      <div class="maps-to">→ listen / validation / untangle / face-decision</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--teal);">
+      <h4>SoulChat</h4>
+      <div class="mini-meta">华南理工 · 开源</div>
+      <p>中文心理陪伴语料，偏模型训练。</p>
+      <div class="maps-to">→ 语料参考</div>
+    </div>
+  </div>
+
+  <!-- Cat 3: 综合评测 -->
+  <div class="cat-header">
+    <h3>Category 3 — 心理健康综合评测</h3>
+    <span class="cat-badge" style="background:var(--accent-light);color:var(--accent);">框架对齐</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>PsyEval <span class="status must">必看 · 综合框架</span></h4>
+      <div class="mini-meta">最像"心理健康 LLM 综合 benchmark"</div>
+      <p>模块覆盖：Crisis Response / PsyQA / ESConv / DialogueSafety / D4 / SMHD。</p>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>PsychEval</h4>
+      <div class="mini-meta">ECNU · 677 Meta Skills → 4,577 Atomic Skills</div>
+      <p>粒度最细的咨询技能 benchmark。测技能执行质量，不测技能选择。</p>
+      <div class="maps-to">→ L0-B 技能执行质量</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>CPsyExam</h4>
+      <div class="mini-meta">COLING 2025 · 中文心理学考试</div>
+      <p>知识 + 案例分析。考试题 ≠ 咨询技能应用。</p>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>CPsyCoun</h4>
+      <div class="mini-meta">华中科技大学 · 3,134 多轮</div>
+      <p>GPT-4 自动打分，4 维度。综合质量参考。</p>
+    </div>
+  </div>
+
+  <!-- Cat 4: 安全与危机 -->
+  <div class="cat-header">
+    <h3>Category 4 — 安全与危机识别</h3>
+    <span class="cat-badge" style="background:var(--red-light);color:var(--red);">crisis / safety 必测</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--red);">
+      <h4>DialogueSafety <span class="status must">必看</span></h4>
+      <div class="mini-meta">中文咨询对话安全</div>
+      <p>识别危险回应、咨询师不当回应、安全边界。</p>
+      <div class="maps-to">→ crisis / safety 边界</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--red);">
+      <h4>VERA-MH</h4>
+      <div class="mini-meta">Spring Health · MIT 开源</div>
+      <p>100 个模拟 persona，LLM judge vs 临床医生 IRR=0.81。英文，方法论直接可用。</p>
+      <div class="maps-to">→ crisis 评估方法论</div>
+    </div>
+  </div>
+
+  <!-- Cat 5: 抑郁/自杀风险 -->
+  <div class="cat-header">
+    <h3>Category 5 — 抑郁 / 自杀风险</h3>
+    <span class="cat-badge" style="background:var(--amber-light);color:var(--amber);">风险检测</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--amber);">
+      <h4>D4 <span class="status must">必看</span></h4>
+      <div class="mini-meta">中文多轮对话 · 抑郁诊断导向</div>
+      <p>临床标注抑郁/自杀风险。moodcoco 不诊断，但用来测"风险识别是否漏掉"。</p>
+      <div class="maps-to">→ crisis routing / 多轮风险监测</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--amber);">
+      <h4>SMHD</h4>
+      <div class="mini-meta">英文 · 社交媒体</div>
+      <p>PsyEval 用作 Diagnosis via Online Text。相关性不如 D4。</p>
+    </div>
+  </div>
+
+  <!-- Cat 6: 咨询技能分类 -->
+  <div class="cat-header">
+    <h3>Category 6 — 咨询技能分类 / Rubrics</h3>
+    <span class="cat-badge" style="background:var(--accent-light);color:var(--accent);">技能粒度评估</span>
+  </div>
+  <div class="tier-grid cols-2">
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>ChatPsychiatrist <span class="status pass">维度可借</span></h4>
+      <div class="mini-meta">基于 Hill 的 7 维回复分类</div>
+      <p>Information / Direct Guidance / Approval & Reassurance / Restatement-Reflection-Listening / Interpretation / Self-disclosure / Obtain relevant info</p>
+      <div class="maps-to">→ listen / validation / untangle 评估维度</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>AnnoMI <span class="status must">必看 · 技能选择</span></h4>
+      <div class="mini-meta">133 段 MI 对话 · 每句标注</div>
+      <p>最接近"下一步该用什么动作"的公开数据集。配套 Therapist Action Forecasting 论文。</p>
+      <div class="maps-to">→ L0-A 技能选择</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>MI-Bench</h4>
+      <div class="mini-meta">动机访谈 · MITI 4.2</div>
+      <p>96 手工 + 34 真实临床转录。MI 忠实度评估。</p>
+      <div class="maps-to">→ 编码体系参考</div>
+    </div>
+    <div class="mini-card" style="border-left: 4px solid var(--accent);">
+      <h4>FAITH-M / CARE</h4>
+      <div class="mini-meta">2026 · 6 条治疗原则</div>
+      <p>LLM-as-judge + contrastive retrieval + CoT。方法论可复用。</p>
+      <div class="maps-to">→ 自动评估方法论</div>
+    </div>
+  </div>
+
+  <!-- 补充 -->
+  <div class="cat-header">
+    <h3>补充 — 其他评估框架</h3>
+    <span class="cat-badge" style="background:#f5f5f4;color:var(--text-sec);">参考</span>
+  </div>
+  <div class="tier-grid cols-3">
+    <div class="mini-card"><h4>HEART</h4><div class="mini-meta">5 维 Elo 评分</div><p>LLM 共情≥人类，但人类适应性重构更强。</p></div>
+    <div class="mini-card"><h4>CARE-Bench</h4><div class="mini-meta">AAAI · 动态交互</div><p>3 维：WAI / 共情 / 技能。</p></div>
+    <div class="mini-card"><h4>EPITOME</h4><div class="mini-meta">EMNLP 2020</div><p>共情 3 维（情绪反应/解读/探索），0-2 分。</p></div>
+    <div class="mini-card"><h4>CBT-Bench</h4><div class="mini-meta">NAACL 2025</div><p>CBT 三层：知识 MCQ → 歪曲分类 → 回应生成。</p></div>
+    <div class="mini-card"><h4>MoodBench 1.0</h4><div class="mini-meta">情绪/记忆/个性化</div><p>记忆维度对 L3 更有价值。</p></div>
+    <div class="mini-card"><h4>CounselChat</h4><div class="mini-meta">英文 940 Q&A</div><p>质量参差，偏问答。</p></div>
+  </div>
+</section>
+
+<!-- ==================== Section 8: Mapping ==================== -->
+<section id="mapping">
+  <h2><span class="num">8</span> Benchmark → moodcoco Skill 映射</h2>
+  <p class="lead">每个 skill 该用什么 benchmark 测。</p>
+
+  <div class="card">
+    <table>
+      <tr>
+        <th style="width:130px;">Skill</th>
+        <th>公开 Benchmark</th>
+        <th>自建需求</th>
+      </tr>
+      <tr>
+        <td><code>listen</code></td>
+        <td>ESConv / EmpatheticDialogues / PsyQA<br><span style="font-size:0.78rem;color:var(--text-sec);">ChatPsychiatrist: Restatement/Reflection/Listening</span></td>
+        <td><span class="status none">公开数据足够</span></td>
+      </tr>
+      <tr>
+        <td><code>validation</code></td>
+        <td>ESConv 支持策略 / PsyQA<br><span style="font-size:0.78rem;color:var(--text-sec);">ChatPsychiatrist: Approval & Reassurance + Reflection</span></td>
+        <td><span class="status none">公开数据足够</span></td>
+      </tr>
+      <tr>
+        <td><code>base-comm</code></td>
+        <td>ESConv / EmpatheticDialogues<br><span style="font-size:0.78rem;color:var(--text-sec);">ChatPsychiatrist: Information + Obtain relevant info</span></td>
+        <td><span class="status none">公开数据足够</span></td>
+      </tr>
+      <tr>
+        <td><code>untangle</code></td>
+        <td>PsyQA（部分）<br><span style="font-size:0.78rem;color:var(--text-sec);">ChatPsychiatrist: Interpretation</span></td>
+        <td><span class="status partial">需自建混乱样本</span></td>
+      </tr>
+      <tr>
+        <td><code>face-decision</code></td>
+        <td><span style="font-size:0.78rem;color:var(--text-sec);">ChatPsychiatrist: Direct Guidance</span></td>
+        <td><span class="status fail">需自建两难决策样本</span></td>
+      </tr>
+      <tr>
+        <td><code>calm-body</code></td>
+        <td><span style="color:var(--text-sec);">公开 benchmark 不够</span></td>
+        <td><span class="status fail">需自建 panic/高唤醒样本</span></td>
+      </tr>
+      <tr>
+        <td><code>crisis</code></td>
+        <td>DialogueSafety / D4 / VERA-MH<br><span style="font-size:0.78rem;color:var(--text-sec);">PsyEval Crisis Response</span></td>
+        <td><span class="status fail">仍需自建中文 crisis 红队集</span></td>
+      </tr>
+      <tr style="background:var(--teal-light);">
+        <td><strong>技能切换时机</strong></td>
+        <td><span style="color:var(--text-sec);">无公开 benchmark</span></td>
+        <td><span class="status fail">必须自建（Section 6）</span></td>
+      </tr>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== Section 9: Recommended Combo ==================== -->
+<section id="combo">
+  <h2><span class="num">9</span> 推荐评测组合方案</h2>
+  <p class="lead">不追求一个 benchmark，而是这样拼。</p>
+
+  <div class="card" style="border-color:var(--accent);">
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--accent);">1</div>
+      <div>
+        <h4 style="font-size:0.92rem;">PsyEval — 综合框架对齐</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">做外部行业对齐。SJTU bundle 的任务划分参考 PsyEval。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--blue);">2</div>
+      <div>
+        <h4 style="font-size:0.92rem;">ESConv — 测 listen / validation / 共情</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">情绪承接、支持策略选择、共情水平。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--teal);">3</div>
+      <div>
+        <h4 style="font-size:0.92rem;">PsyQA — 测中文心理支持回复质量</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">中文场景。注意适配短轮次陪伴格式。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--red);">4</div>
+      <div>
+        <h4 style="font-size:0.92rem;">DialogueSafety + D4 — 测安全与风险</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">识别危险回应 + 多轮风险识别。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--red);">5</div>
+      <div>
+        <h4 style="font-size:0.92rem;">自建 crisis 红队集</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">自杀/自伤/他伤/急性身体危险/家暴/隐晦求救。比通用数据集更贴产品。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--accent);">6</div>
+      <div>
+        <h4 style="font-size:0.92rem;">自建 route replay — 测技能路由</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">expected_skill / forbidden_skill / failure_labels / handoff_timing。详见 Section 6。</p>
+      </div>
+    </div>
+    <div class="combo-step">
+      <div class="combo-num" style="background:var(--teal);">7</div>
+      <div>
+        <h4 style="font-size:0.92rem;">自建多轮切换集 — 测同主题连贯 + 跨主题重置</h4>
+        <p style="font-size:0.85rem; color:var(--text-sec);">核心创新点。构建多话题对话场景，评测 topic_switch_reset_rate / topic_bleed_rate / handoff_timing_accuracy。详见 Section 3。</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight blue">
+    <strong>一句话总结：</strong><br>
+    行业 benchmark 用 <strong>PsyEval</strong> 做外部对齐；<br>
+    产品 benchmark 用自己的 <strong>route replay + 多轮切换集</strong> 做内部回归；<br>
+    安全 benchmark <strong>必须自建</strong>，因为 crisis 规则比通用数据集更贴产品。
+  </div>
+</section>
+
+<!-- ==================== Section 10: Gap ==================== -->
+<section id="gap">
+  <h2><span class="num">10</span> 核心空白与机会</h2>
+
+  <div class="card">
+    <table>
+      <tr>
+        <th>评估能力</th>
+        <th>有 Benchmark？</th>
+        <th>最佳方案</th>
+      </tr>
+      <tr>
+        <td><strong>情绪支持 / 共情</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>ESConv + EPITOME</td>
+      </tr>
+      <tr>
+        <td><strong>中文心理支持回复</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>PsyQA + CPsyCoun</td>
+      </tr>
+      <tr>
+        <td><strong>咨询安全</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>DialogueSafety + VERA-MH</td>
+      </tr>
+      <tr>
+        <td><strong>风险识别</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>D4 + SMHD</td>
+      </tr>
+      <tr>
+        <td><strong>咨询技能执行质量</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>PsychEval（4,577 atomic skills）+ ChatPsychiatrist</td>
+      </tr>
+      <tr>
+        <td><strong>通用治疗原则</strong></td>
+        <td><span class="status pass">有</span></td>
+        <td>FAITH-M / CARE</td>
+      </tr>
+      <tr style="background:var(--red-light);">
+        <td><strong>技能选择判断力</strong><br><span style="font-size:0.76rem;color:var(--red);">该用哪个技能？跨阶段误用检测？</span></td>
+        <td><span class="status fail">没有</span></td>
+        <td><strong>自建 route replay</strong></td>
+      </tr>
+      <tr style="background:var(--red-light);">
+        <td><strong>多轮技能切换时机</strong><br><span style="font-size:0.76rem;color:var(--red);">同主题连贯 + 跨主题重置</span></td>
+        <td><span class="status fail">没有</span></td>
+        <td><strong>自建多轮切换集</strong></td>
+      </tr>
+      <tr style="background:var(--amber-light);">
+        <td><strong>untangle / face-decision / calm-body</strong><br><span style="font-size:0.76rem;color:var(--amber);">混乱梳理 / 两难权衡 / 高唤醒稳定</span></td>
+        <td><span class="status partial">弱</span></td>
+        <td><strong>自建专项样本</strong></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="insight red">
+    <strong>两个最大空白：</strong><br>
+    1. <strong>技能选择判断力</strong>——所有现有 benchmark 假设"技能已选定"只评执行质量。<br>
+    2. <strong>多轮技能切换时机</strong>——没有公开 benchmark 测"同主题内何时推进阶段"和"换话题时能否干净重置"。<br>
+    如果 moodcoco 构建这两个 benchmark，在学术上是 novel 的。
+  </div>
+
+  <div class="insight teal">
+    <strong>技术路径已明确：</strong>用 CAMI STAR + TheraMind Dual-Loop + EmoDynamiX 图 + PsychAgent 技能树的组合架构来实现多轮切换，用自建 forbidden-skill + 多轮切换 benchmark 来评估效果。详见 Section 5（技术组合）和 Section 6（评测设计）。
+  </div>
+</section>
+
+<div class="footer">
+  moodcoco L0 Skill Benchmark v5 · 总篇 · 2026-05-14<br>
+  17 篇深入解读：<a href="theramind-strategy-selection.html" style="color:var(--accent);">TheraMind</a> · <a href="cami-mi-agent.html" style="color:var(--accent);">CAMI</a> · <a href="emodynamix-strategy-prediction.html" style="color:var(--accent);">EmoDynamiX</a> · <a href="psychagent-skill-evolution.html" style="color:var(--accent);">PsychAgent</a> · <a href="hill-helping-skills-coding.html" style="color:var(--accent);">Hill Coding</a> · <a href="aflow-affective-flow.html" style="color:var(--accent);">AFlow</a> · <a href="multi-strategy-per-turn.html" style="color:var(--accent);">Multi-Strategy</a> · <a href="psychat-pipeline.html" style="color:var(--accent);">PsycHat</a> · <a href="sweetiechat-strategy-enhanced.html" style="color:var(--accent);">SweetieChat</a> · <a href="mctsr-zero-counseling.html" style="color:var(--accent);">MCTSR-Zero</a> · <a href="psychocounsel-preference.html" style="color:var(--accent);">PsychoCounsel</a> · <a href="kardia-r1-bench.html" style="color:var(--accent);">Kardia-R1</a> · <a href="annomi-therapist-action-forecasting.html" style="color:var(--accent);">AnnoMI</a> · <a href="esconv-strategy-classification.html" style="color:var(--accent);">ESConv</a> · <a href="mi-miti-misc-coding.html" style="color:var(--accent);">MI/MITI</a> · <a href="tool-ed-skill-as-tool.html" style="color:var(--accent);">TOOL-ED</a> · <a href="hill-helping-skills.html" style="color:var(--accent);">Hill 入门</a><br>
+  理论锚点：Hill's Helping Skills System · 推荐技术组合：CAMI + TheraMind + EmoDynamiX + PsychAgent
+</div>
+
+</div>
+</body>
+</html>

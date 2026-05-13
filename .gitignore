@@ -32,6 +32,8 @@ node_modules/
 .evolve/*/eval_prompt.md
 .evolve.old-*/
 .evolve.bak-*/
+.evolve.sjtu-*/
+.evolve.archived-*/
 
 # Local evolve framework symlink（指向用户本地 framework 目录，其他机器不通）
 .claude/skills/evolve
@@ -61,3 +63,11 @@ SJTU_skills/moodcoco-psych-companion-v1/dist/
 # Local evaluation datasets and transcripts
 Moodcoco_data/
 .screenshot*.png
+.gstack/
+
+# Codex / Agents 本地工具配置（每个开发者各自）
+.codex/
+.agents/
+.evolve/
+/web/public/voice-demo/
+/web/public/voice-room/livekit-client.esm.mjs
