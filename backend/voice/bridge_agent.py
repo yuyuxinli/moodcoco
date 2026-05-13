@@ -29,6 +29,12 @@ def _extract_speaker_text(collected_tool_calls: list[dict[str, Any]]) -> str:
     return ""
 
 
+def _parse_skill_key(context_name: str) -> str:
+    """Extract skill key from context name like 'untangle(困惑)' → 'untangle'."""
+    paren = context_name.find("(")
+    return context_name[:paren].strip() if paren > 0 else context_name.strip()
+
+
 def _build_prewarmed_contexts(next_likely: list[str]) -> dict[str, str]:
     """Load skill content for predicted next-turn contexts."""
     if not next_likely:
@@ -37,9 +43,10 @@ def _build_prewarmed_contexts(next_likely: list[str]) -> dict[str, str]:
 
     result: dict[str, str] = {}
     for name in next_likely:
-        skill_path = SKILLS_DIR / name / "SKILL.md"
+        key = _parse_skill_key(name)
+        skill_path = SKILLS_DIR / key / "SKILL.md"
         if skill_path.exists():
-            result[name] = skill_path.read_text(encoding="utf-8")
+            result[key] = skill_path.read_text(encoding="utf-8")
     return result
 
 
@@ -368,6 +375,7 @@ class VoiceBridgeAgent(Agent):
         self._last_speaker_text = _extract_speaker_text(
             fast_deps.collected_tool_calls
         )
+        slow_deps.speaker_output = self._last_speaker_text
         raise StopResponse()
 
     def _persist_slow_state_sync(
